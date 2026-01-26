@@ -2,6 +2,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     const userId = getUserIdFromUrl();
     if (userId) {
+        // 添加调试信息
+        addDebugInfo(userId);
+        
         loadCandidateInfo(userId);
         setupVoteButtons(userId);
         checkVoteEligibility(userId);
@@ -9,6 +12,53 @@ document.addEventListener('DOMContentLoaded', function() {
         showError('无效的用户ID');
     }
 });
+
+function addDebugInfo(targetUserId) {
+    // 在开发环境中显示调试信息
+    const currentUserId = localStorage.getItem('annual_party_user_id');
+    const currentUserName = localStorage.getItem('annual_party_user_name');
+    
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        const debugDiv = document.createElement('div');
+        debugDiv.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 200px;
+        `;
+        
+        const isSelfVote = currentUserId === targetUserId;
+        debugDiv.innerHTML = `
+            <strong>调试信息</strong><br>
+            当前用户: ${currentUserName || '未登录'}<br>
+            当前用户ID: ${currentUserId || '无'}<br>
+            目标用户ID: ${targetUserId}<br>
+            <span style="color: ${isSelfVote ? '#ff6b6b' : '#51cf66'}">
+                ${isSelfVote ? '⚠️ 自投票' : '✅ 正常投票'}
+            </span>
+        `;
+        
+        document.body.appendChild(debugDiv);
+        
+        // 5秒后自动隐藏
+        setTimeout(() => {
+            if (debugDiv.parentNode) {
+                debugDiv.style.opacity = '0.3';
+            }
+        }, 5000);
+        
+        // 点击隐藏
+        debugDiv.addEventListener('click', () => {
+            debugDiv.remove();
+        });
+    }
+}
 
 function getUserIdFromUrl() {
     const pathParts = window.location.pathname.split('/');
@@ -38,7 +88,7 @@ async function loadCandidateInfo(userId) {
 
 function displayCandidateInfo(userData) {
     document.getElementById('candidateName').textContent = userData.name;
-    document.getElementById('candidateGender').textContent = `性别: ${userData.gender === 'male' ? '男性' : '女性'}`;
+    document.getElementById('candidateGender').textContent = `性别: ${userData.gender === 'male' ? '男士' : '女士'}`;
     document.getElementById('candidateVotes').textContent = `当前票数: ${userData.voteCount || 0}`;
     
     const avatarImg = document.getElementById('candidateAvatar');
@@ -51,11 +101,22 @@ function getDefaultAvatar(gender) {
 }
 
 async function checkVoteEligibility(targetUserId) {
-    // 获取或生成投票者ID
-    let voterId = localStorage.getItem('voterId');
+    // 获取当前用户ID（如果已注册）
+    let voterId = localStorage.getItem('annual_party_user_id');
+    
+    // 如果没有注册用户ID，生成临时投票者ID
     if (!voterId) {
-        voterId = generateVoterId();
-        localStorage.setItem('voterId', voterId);
+        voterId = localStorage.getItem('voterId');
+        if (!voterId) {
+            voterId = generateVoterId();
+            localStorage.setItem('voterId', voterId);
+        }
+    }
+    
+    // 前端自投票检查
+    if (voterId === targetUserId) {
+        showVoteRestriction('不能为自己投票', null);
+        return;
     }
     
     try {
@@ -97,10 +158,10 @@ function showVoteEligible(voterStatus) {
     if (voterStatus.maleVoted && voterStatus.femaleVoted) {
         statusText += '\n\n注意：您已完成所有投票。';
     } else if (voterStatus.maleVoted || voterStatus.femaleVoted) {
-        const remainingGender = voterStatus.maleVoted ? '女性' : '男性';
+        const remainingGender = voterStatus.maleVoted ? '女士' : '男士';
         statusText += `\n\n您还可以为一名${remainingGender}参与者投票。`;
     } else {
-        statusText += '\n\n您可以为一名男性和一名女性参与者各投一票。';
+        statusText += '\n\n您可以为一名男士和一名女士参与者各投一票。';
     }
     
     questionElement.textContent = statusText;
@@ -114,29 +175,58 @@ function showVoteRestriction(reason, voterStatus) {
     questionElement.textContent = reason;
     questionElement.className = 'vote-question restriction';
     
-    // 隐藏投票按钮，显示其他选项
-    buttonsDiv.innerHTML = `
-        <button id="view-results-btn" class="btn-secondary">查看统计</button>
-        <button id="continue-scan-btn" class="btn-primary">继续扫码</button>
-    `;
-    
-    // 添加事件监听器
-    document.getElementById('view-results-btn').addEventListener('click', viewStats);
-    document.getElementById('continue-scan-btn').addEventListener('click', continueScan);
-    
-    // 显示已投票信息
-    if (voterStatus.votedUsers && voterStatus.votedUsers.length > 0) {
-        const votedInfo = document.createElement('div');
-        votedInfo.className = 'voted-info';
-        votedInfo.innerHTML = `
-            <h4>您已投票的参与者：</h4>
+    // 根据不同的限制类型显示不同的按钮
+    if (reason.includes('不能为自己投票')) {
+        // 自投票情况
+        buttonsDiv.innerHTML = `
+            <button id="scan-others-btn" class="btn-primary">为其他人投票</button>
+            <button id="view-results-btn" class="btn-secondary">查看统计</button>
+        `;
+        
+        document.getElementById('scan-others-btn').addEventListener('click', () => {
+            window.location.href = '/scan';
+        });
+        document.getElementById('view-results-btn').addEventListener('click', viewStats);
+        
+        // 显示自投票提示
+        const selfVoteInfo = document.createElement('div');
+        selfVoteInfo.className = 'voted-info';
+        selfVoteInfo.innerHTML = `
+            <h4>💡 投票提示</h4>
+            <p>系统不允许为自己投票，这是为了确保投票的公平性。</p>
+            <p>您可以：</p>
             <ul>
-                ${voterStatus.votedUsers.map(user => 
-                    `<li>${user.name} (${user.gender === 'male' ? '男性' : '女性'})</li>`
-                ).join('')}
+                <li>扫描其他参与者的二维码进行投票</li>
+                <li>通过用户列表为其他人投票</li>
+                <li>查看当前的投票统计结果</li>
             </ul>
         `;
-        voteAction.appendChild(votedInfo);
+        voteAction.appendChild(selfVoteInfo);
+        
+    } else {
+        // 其他投票限制情况（重复投票等）
+        buttonsDiv.innerHTML = `
+            <button id="view-results-btn" class="btn-secondary">查看统计</button>
+            <button id="continue-scan-btn" class="btn-primary">继续扫码</button>
+        `;
+        
+        document.getElementById('view-results-btn').addEventListener('click', viewStats);
+        document.getElementById('continue-scan-btn').addEventListener('click', continueScan);
+        
+        // 显示已投票信息
+        if (voterStatus && voterStatus.votedUsers && voterStatus.votedUsers.length > 0) {
+            const votedInfo = document.createElement('div');
+            votedInfo.className = 'voted-info';
+            votedInfo.innerHTML = `
+                <h4>您已投票的参与者：</h4>
+                <ul>
+                    ${voterStatus.votedUsers.map(user => 
+                        `<li>${user.name} (${user.gender === 'male' ? '男士' : '女士'})</li>`
+                    ).join('')}
+                </ul>
+            `;
+            voteAction.appendChild(votedInfo);
+        }
     }
 }
 
@@ -158,11 +248,30 @@ function setupVoteButtons(targetUserId) {
 }
 
 async function submitVote(targetUserId) {
-    // 获取或生成投票者ID
-    let voterId = localStorage.getItem('voterId');
+    // 获取当前用户ID（如果已注册）
+    let voterId = localStorage.getItem('annual_party_user_id');
+    
+    // 如果没有注册用户ID，生成临时投票者ID
     if (!voterId) {
-        voterId = generateVoterId();
-        localStorage.setItem('voterId', voterId);
+        voterId = localStorage.getItem('voterId');
+        if (!voterId) {
+            voterId = generateVoterId();
+            localStorage.setItem('voterId', voterId);
+        }
+    }
+    
+    // 前端自投票检查
+    if (voterId === targetUserId) {
+        showVoteResult({
+            success: false,
+            errorCode: 'SELF_VOTE_NOT_ALLOWED',
+            message: '不能为自己投票',
+            details: {
+                reason: '系统不允许为自己投票',
+                allowedActions: ['为其他参与者投票', '查看投票结果']
+            }
+        });
+        return;
     }
     
     // 禁用投票按钮防止重复提交
@@ -227,21 +336,29 @@ function showVoteResult(result) {
         titleElement.textContent = '投票失败';
         let message = result.message || '投票提交失败，请重试';
         
-        // 如果是重复投票错误，显示详细信息
-        if (result.errorCode === 'DUPLICATE_VOTE' && result.details) {
+        // 处理不同类型的错误
+        if (result.errorCode === 'SELF_VOTE_NOT_ALLOWED') {
+            titleElement.textContent = '不能为自己投票';
+            message = '系统不允许为自己投票，这是为了确保投票的公平性。';
+            if (result.details && result.details.allowedActions) {
+                message += `\n\n您可以：${result.details.allowedActions.join('、')}`;
+            }
+            resultDiv.className = 'vote-result error';
+            addSelfVoteActions(resultDiv);
+            
+        } else if (result.errorCode === 'DUPLICATE_VOTE' && result.details) {
             message += `\n\n您已投票给：${result.details.votedUser}`;
             if (result.details.allowedActions) {
                 message += `\n\n您可以：${result.details.allowedActions.join('、')}`;
             }
+            resultDiv.className = 'vote-result error';
+            addDuplicateVoteActions(resultDiv);
+            
+        } else {
+            resultDiv.className = 'vote-result error';
         }
         
         messageElement.textContent = message;
-        resultDiv.className = 'vote-result error';
-        
-        // 为重复投票错误添加特殊操作
-        if (result.errorCode === 'DUPLICATE_VOTE') {
-            addDuplicateVoteActions(resultDiv);
-        }
     }
     
     resultDiv.style.display = 'block';
@@ -283,6 +400,26 @@ function addDuplicateVoteActions(resultDiv) {
     document.getElementById('continue-scan-duplicate').addEventListener('click', continueScan);
     document.getElementById('view-results-duplicate').addEventListener('click', viewStats);
     document.getElementById('go-home-duplicate').addEventListener('click', goHome);
+}
+
+function addSelfVoteActions(resultDiv) {
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'self-vote-actions';
+    actionsDiv.innerHTML = `
+        <button id="scan-others-self" class="btn-primary">扫码为其他人投票</button>
+        <button id="user-list-self" class="btn-primary">按姓名投票</button>
+        <button id="view-results-self" class="btn-secondary">查看统计</button>
+        <button id="go-home-self" class="btn-secondary">返回首页</button>
+    `;
+    resultDiv.appendChild(actionsDiv);
+    
+    // 添加事件监听器
+    document.getElementById('scan-others-self').addEventListener('click', continueScan);
+    document.getElementById('user-list-self').addEventListener('click', () => {
+        window.location.href = '/user-list';
+    });
+    document.getElementById('view-results-self').addEventListener('click', viewStats);
+    document.getElementById('go-home-self').addEventListener('click', goHome);
 }
 
 // 全局函数供按钮调用

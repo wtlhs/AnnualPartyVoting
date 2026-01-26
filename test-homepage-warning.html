@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试首页重要提醒隐藏功能</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .result { margin-top: 10px; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>首页重要提醒隐藏功能测试</h1>
+    
+    <div class="test-section">
+        <h3>测试说明</h3>
+        <p>这个测试用于验证当用户已注册时，首页的性别选择重要提醒是否会被隐藏。</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>测试控制</h3>
+        <button onclick="clearStorage()">清除本地存储</button>
+        <button onclick="setValidRegistration()">设置有效注册</button>
+        <button onclick="checkWarningVisibility()">检查提醒显示状态</button>
+        <button onclick="openHomepage()">打开首页测试</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>测试步骤</h3>
+        <ol>
+            <li>点击"清除本地存储"，然后打开首页 - 应该看到重要提醒</li>
+            <li>点击"设置有效注册"，然后打开首页 - 重要提醒应该被隐藏</li>
+            <li>在已注册状态下，点击"重新注册"按钮 - 重要提醒应该重新显示</li>
+        </ol>
+    </div>
+    
+    <div id="result" class="result" style="display: none;"></div>
+    
+    <script>
+        const STORAGE_KEYS = {
+            USER_ID: 'annual_party_user_id',
+            USER_NAME: 'annual_party_user_name',
+            USER_GENDER: 'annual_party_user_gender',
+            NUMERIC_ID: 'annual_party_numeric_id',
+            REGISTRATION_TIME: 'annual_party_registration_time'
+        };
+        
+        function clearStorage() {
+            Object.values(STORAGE_KEYS).forEach(key => {
+                localStorage.removeItem(key);
+            });
+            showResult('本地存储已清除，现在打开首页应该显示重要提醒', 'success');
+        }
+        
+        function setValidRegistration() {
+            localStorage.setItem(STORAGE_KEYS.USER_ID, 'test-user-123');
+            localStorage.setItem(STORAGE_KEYS.USER_NAME, '测试用户');
+            localStorage.setItem(STORAGE_KEYS.USER_GENDER, 'male');
+            localStorage.setItem(STORAGE_KEYS.NUMERIC_ID, '123456');
+            localStorage.setItem(STORAGE_KEYS.REGISTRATION_TIME, new Date().toISOString());
+            showResult('已设置有效注册信息，现在打开首页应该隐藏重要提醒', 'success');
+        }
+        
+        function checkWarningVisibility() {
+            const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+            const userName = localStorage.getItem(STORAGE_KEYS.USER_NAME);
+            const registrationTime = localStorage.getItem(STORAGE_KEYS.REGISTRATION_TIME);
+            
+            if (!userId || !userName || !registrationTime) {
+                showResult('当前状态：未注册 - 首页应该显示重要提醒', 'info');
+                return;
+            }
+            
+            const regTime = new Date(registrationTime);
+            const now = new Date();
+            const hoursDiff = (now - regTime) / (1000 * 60 * 60);
+            
+            if (hoursDiff >= 24) {
+                showResult('当前状态：注册已过期 - 首页应该显示重要提醒', 'warning');
+            } else {
+                showResult('当前状态：已注册且有效 - 首页应该隐藏重要提醒', 'success');
+            }
+        }
+        
+        function openHomepage() {
+            window.open('/', '_blank');
+        }
+        
+        function showResult(message, type) {
+            const result = document.getElementById('result');
+            result.textContent = message;
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+        }
+        
+        // 页面加载时检查状态
+        window.addEventListener('load', checkWarningVisibility);
+    </script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票页面自投票测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .test-link {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            margin: 10px 5px;
+        }
+        .test-link:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>投票页面自投票检查测试</h1>
+    
+    <div class="section">
+        <h3>测试说明</h3>
+        <p>这个页面用于测试投票确认页面的自投票检查功能。</p>
+        <p>当用户尝试为自己投票时，系统应该在前端就阻止这个操作。</p>
+    </div>
+    
+    <div class="section">
+        <h3>设置测试环境</h3>
+        <div id="currentStatus"></div>
+        <button onclick="setupTestUser()">设置测试用户</button>
+        <button onclick="clearTestUser()">清除测试用户</button>
+        <button onclick="checkCurrentUser()">检查当前用户</button>
+    </div>
+    
+    <div class="section">
+        <h3>测试链接</h3>
+        <p>点击下面的链接测试不同场景：</p>
+        <div id="testLinks"></div>
+        <button onclick="generateTestLinks()">生成测试链接</button>
+    </div>
+    
+    <div class="section">
+        <h3>测试结果</h3>
+        <div id="testResults"></div>
+    </div>
+    
+    <script>
+        let testUserId = null;
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('currentStatus');
+            statusDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+        
+        function setupTestUser() {
+            testUserId = 'test_user_' + Date.now();
+            const testUserName = '测试用户';
+            const testUserGender = 'male';
+            
+            localStorage.setItem('annual_party_user_id', testUserId);
+            localStorage.setItem('annual_party_user_name', testUserName);
+            localStorage.setItem('annual_party_user_gender', testUserGender);
+            localStorage.setItem('annual_party_registration_time', new Date().toISOString());
+            
+            updateStatus(`
+                已设置测试用户:<br>
+                ID: ${testUserId}<br>
+                姓名: ${testUserName}<br>
+                性别: ${testUserGender}
+            `, 'success');
+            
+            generateTestLinks();
+        }
+        
+        function clearTestUser() {
+            const keys = ['annual_party_user_id', 'annual_party_user_name', 'annual_party_user_gender', 'annual_party_registration_time'];
+            keys.forEach(key => localStorage.removeItem(key));
+            testUserId = null;
+            updateStatus('测试用户已清除', 'info');
+            document.getElementById('testLinks').innerHTML = '';
+        }
+        
+        function checkCurrentUser() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            const userName = localStorage.getItem('annual_party_user_name');
+            
+            if (userId) {
+                updateStatus(`
+                    当前用户:<br>
+                    ID: ${userId}<br>
+                    姓名: ${userName || '未知'}
+                `, 'success');
+            } else {
+                updateStatus('当前没有用户', 'error');
+            }
+        }
+        
+        function generateTestLinks() {
+            const currentUserId = localStorage.getItem('annual_party_user_id');
+            const linksDiv = document.getElementById('testLinks');
+            
+            if (!currentUserId) {
+                linksDiv.innerHTML = '<div class="error">请先设置测试用户</div>';
+                return;
+            }
+            
+            const otherUserId = 'other_user_' + Date.now();
+            
+            linksDiv.innerHTML = `
+                <div class="info">测试链接已生成：</div>
+                <a href="/vote/${currentUserId}" class="test-link" target="_blank">
+                    🚫 自投票测试 (应该被阻止)
+                </a>
+                <a href="/vote/${otherUserId}" class="test-link" target="_blank">
+                    ✅ 正常投票测试 (应该正常)
+                </a>
+                <div style="margin-top: 15px;">
+                    <small>
+                        <strong>自投票链接:</strong> /vote/${currentUserId}<br>
+                        <strong>正常投票链接:</strong> /vote/${otherUserId}
+                    </small>
+                </div>
+            `;
+        }
+        
+        async function testVoteAPI() {
+            const currentUserId = localStorage.getItem('annual_party_user_id');
+            const resultsDiv = document.getElementById('testResults');
+            
+            if (!currentUserId) {
+                resultsDiv.innerHTML = '<div class="error">请先设置测试用户</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div class="info">正在测试投票API...</div>';
+            
+            try {
+                // 测试自投票
+                const selfVoteResponse = await fetch('/api/votes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        voterId: currentUserId,
+                        targetUserId: currentUserId
+                    })
+                });
+                
+                const selfVoteResult = await selfVoteResponse.json();
+                
+                let html = '<h4>API测试结果:</h4>';
+                
+                if (selfVoteResponse.status === 400 && selfVoteResult.errorCode === 'SELF_VOTE_NOT_ALLOWED') {
+                    html += '<div class="success">✅ 自投票被正确阻止</div>';
+                    html += `<div class="info">错误信息: ${selfVoteResult.message}</div>`;
+                } else {
+                    html += '<div class="error">❌ 自投票检查失败</div>';
+                    html += `<div class="error">响应: ${JSON.stringify(selfVoteResult)}</div>`;
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">测试出错: ${error.message}</div>`;
+            }
+        }
+        
+        // 页面加载时检查当前用户
+        document.addEventListener('DOMContentLoaded', function() {
+            checkCurrentUser();
+        });
+    </script>
+    
+    <div class="section">
+        <h3>API测试</h3>
+        <button onclick="testVoteAPI()">测试投票API</button>
+        <p><small>这将直接调用投票API来测试后端的自投票检查</small></p>
+    </div>
+</body>
+</html>

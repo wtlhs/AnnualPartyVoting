@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试注册验证</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .result { margin-top: 10px; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>注册验证测试</h1>
+    
+    <div class="test-section">
+        <h3>测试控制</h3>
+        <button onclick="clearStorage()">清除本地存储</button>
+        <button onclick="setValidRegistration()">设置有效注册</button>
+        <button onclick="setExpiredRegistration()">设置过期注册</button>
+        <button onclick="checkRegistrationStatus()">检查注册状态</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>页面测试链接</h3>
+        <a href="/user-list" target="_blank">用户列表页面</a> |
+        <a href="/mobile-stats" target="_blank">移动统计页面</a> |
+        <a href="/scan" target="_blank">扫码页面</a>
+    </div>
+    
+    <div id="result" class="result" style="display: none;"></div>
+    
+    <script>
+        const STORAGE_KEYS = {
+            USER_ID: 'annual_party_user_id',
+            USER_NAME: 'annual_party_user_name',
+            USER_GENDER: 'annual_party_user_gender',
+            NUMERIC_ID: 'annual_party_numeric_id',
+            REGISTRATION_TIME: 'annual_party_registration_time'
+        };
+        
+        function clearStorage() {
+            Object.values(STORAGE_KEYS).forEach(key => {
+                localStorage.removeItem(key);
+            });
+            showResult('本地存储已清除', 'success');
+        }
+        
+        function setValidRegistration() {
+            localStorage.setItem(STORAGE_KEYS.USER_ID, 'test-user-123');
+            localStorage.setItem(STORAGE_KEYS.USER_NAME, '测试用户');
+            localStorage.setItem(STORAGE_KEYS.USER_GENDER, 'male');
+            localStorage.setItem(STORAGE_KEYS.NUMERIC_ID, '123456');
+            localStorage.setItem(STORAGE_KEYS.REGISTRATION_TIME, new Date().toISOString());
+            showResult('已设置有效注册信息', 'success');
+        }
+        
+        function setExpiredRegistration() {
+            const expiredTime = new Date();
+            expiredTime.setHours(expiredTime.getHours() - 25); // 25小时前
+            
+            localStorage.setItem(STORAGE_KEYS.USER_ID, 'test-user-expired');
+            localStorage.setItem(STORAGE_KEYS.USER_NAME, '过期用户');
+            localStorage.setItem(STORAGE_KEYS.USER_GENDER, 'female');
+            localStorage.setItem(STORAGE_KEYS.NUMERIC_ID, '654321');
+            localStorage.setItem(STORAGE_KEYS.REGISTRATION_TIME, expiredTime.toISOString());
+            showResult('已设置过期注册信息', 'success');
+        }
+        
+        function checkRegistrationStatus() {
+            const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+            const userName = localStorage.getItem(STORAGE_KEYS.USER_NAME);
+            const registrationTime = localStorage.getItem(STORAGE_KEYS.REGISTRATION_TIME);
+            
+            if (!userId || !userName || !registrationTime) {
+                showResult('未注册状态', 'error');
+                return;
+            }
+            
+            const regTime = new Date(registrationTime);
+            const now = new Date();
+            const hoursDiff = (now - regTime) / (1000 * 60 * 60);
+            
+            if (hoursDiff >= 24) {
+                showResult(`注册已过期 (${hoursDiff.toFixed(1)}小时前)`, 'error');
+            } else {
+                showResult(`注册有效 (${hoursDiff.toFixed(1)}小时前注册)`, 'success');
+            }
+        }
+        
+        function showResult(message, type) {
+            const result = document.getElementById('result');
+            result.textContent = message;
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+        }
+        
+        // 页面加载时检查状态
+        window.addEventListener('load', checkRegistrationStatus);
+    </script>
+</body>
+</html>

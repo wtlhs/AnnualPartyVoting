@@ -216,8 +216,8 @@ ADMIN_PASSWORD=your_password # 管理员密码（默认：admin123）
 ### 添加默认头像
 
 将默认头像文件放置在 `public/static/images/` 目录下：
-- `default-male.png` - 男性默认头像
-- `default-female.png` - 女性默认头像
+- `default-male.png` - 男士默认头像
+- `default-female.png` - 女士默认头像
 
 ### 数据库
 

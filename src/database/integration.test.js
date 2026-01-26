@@ -240,8 +240,8 @@ describe('Database Operations Integration', () => {
   });
 
   test('vote restriction enforcement', async () => {
-    const male1 = await createUser({ name: '男性1', gender: 'male' });
-    const male2 = await createUser({ name: '男性2', gender: 'male' });
+    const male1 = await createUser({ name: '男士1', gender: 'male' });
+    const male2 = await createUser({ name: '男士2', gender: 'male' });
     const voter = await createUser({ name: '投票者', gender: 'female' });
 
     // First vote for male1
@@ -256,6 +256,6 @@ describe('Database Operations Integration', () => {
     const restrictions = await checkVoteRestrictions(voter.id);
     expect(restrictions.maleVoted).toBe(true);
     expect(restrictions.maleVotedUserId).toBe(male1.id);
-    expect(restrictions.maleVotedName).toBe('男性1');
+    expect(restrictions.maleVotedName).toBe('男士1');
   });
 });

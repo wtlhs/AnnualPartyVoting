@@ -417,9 +417,9 @@ describe('Database Operations', () => {
       });
 
       test('should calculate statistics correctly', async () => {
-        const maleUser1 = await createUser({ name: '男性1', gender: 'male' });
-        const maleUser2 = await createUser({ name: '男性2', gender: 'male' });
-        const femaleUser1 = await createUser({ name: '女性1', gender: 'female' });
+        const maleUser1 = await createUser({ name: '男士1', gender: 'male' });
+        const maleUser2 = await createUser({ name: '男士2', gender: 'male' });
+        const femaleUser1 = await createUser({ name: '女士1', gender: 'female' });
 
         // Record votes
         await recordVote({ targetUserId: maleUser1.id });
@@ -446,9 +446,9 @@ describe('Database Operations', () => {
       });
 
       test('should calculate ranking correctly', async () => {
-        const male1 = await createUser({ name: '男性1', gender: 'male' });
-        const male2 = await createUser({ name: '男性2', gender: 'male' });
-        const female1 = await createUser({ name: '女性1', gender: 'female' });
+        const male1 = await createUser({ name: '男士1', gender: 'male' });
+        const male2 = await createUser({ name: '男士2', gender: 'male' });
+        const female1 = await createUser({ name: '女士1', gender: 'female' });
 
         // Record votes (male1 gets 2 votes, male2 gets 1, female1 gets 3)
         await recordVote({ targetUserId: male1.id });
@@ -479,8 +479,8 @@ describe('Database Operations', () => {
       });
 
       test('should filter by gender', async () => {
-        const male1 = await createUser({ name: '男性1', gender: 'male' });
-        const female1 = await createUser({ name: '女性1', gender: 'female' });
+        const male1 = await createUser({ name: '男士1', gender: 'male' });
+        const female1 = await createUser({ name: '女士1', gender: 'female' });
 
         const maleRanking = await getRanking('male');
         const femaleRanking = await getRanking('female');
@@ -539,8 +539,8 @@ describe('Database Operations', () => {
 
       test('should return restrictions after voting', async () => {
         const voter = await createUser({ name: '投票者', gender: 'male' });
-        const maleTarget = await createUser({ name: '男性被投票者', gender: 'male' });
-        const femaleTarget = await createUser({ name: '女性被投票者', gender: 'female' });
+        const maleTarget = await createUser({ name: '男士被投票者', gender: 'male' });
+        const femaleTarget = await createUser({ name: '女士被投票者', gender: 'female' });
 
         // Vote for male target
         await updateVoteRestrictions(voter.id, maleTarget.id, 'male');
@@ -576,8 +576,8 @@ describe('Database Operations', () => {
 
       test('should update existing restriction record', async () => {
         const voter = await createUser({ name: '投票者', gender: 'male' });
-        const maleTarget = await createUser({ name: '男性被投票者', gender: 'male' });
-        const femaleTarget = await createUser({ name: '女性被投票者', gender: 'female' });
+        const maleTarget = await createUser({ name: '男士被投票者', gender: 'male' });
+        const femaleTarget = await createUser({ name: '女士被投票者', gender: 'female' });
 
         // First vote
         await updateVoteRestrictions(voter.id, maleTarget.id, 'male');

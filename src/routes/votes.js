@@ -49,6 +49,19 @@ router.post('/', async (req, res) => {
       });
     }
     
+    // Check for self-voting
+    if (voterId === targetUserId) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'SELF_VOTE_NOT_ALLOWED',
+        message: '不能为自己投票',
+        details: {
+          reason: '系统不允许为自己投票',
+          allowedActions: ['为其他参与者投票', '查看投票结果']
+        }
+      });
+    }
+    
     // Check if target user exists
     const targetUser = await getUserById(targetUserId);
     if (!targetUser) {
@@ -70,11 +83,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({
         success: false,
         errorCode: 'DUPLICATE_VOTE',
-        message: `您已经为${targetUser.gender === 'male' ? '男性' : '女性'}参与者投过票了`,
+        message: `您已经为${targetUser.gender === 'male' ? '男士' : '女士'}参与者投过票了`,
         details: {
           votedUser: votedUser,
-          targetGender: targetUser.gender === 'male' ? '男性' : '女性',
-          allowedActions: ['查看结果', `为${targetUser.gender === 'male' ? '女性' : '男性'}参与者投票`]
+          targetGender: targetUser.gender === 'male' ? '男士' : '女士',
+          allowedActions: ['查看结果', `为${targetUser.gender === 'male' ? '女士' : '男士'}参与者投票`]
         }
       });
     }
@@ -268,6 +281,18 @@ router.post('/check-eligibility', async (req, res) => {
       });
     }
     
+    // Check for self-voting
+    if (voterId === targetUserId) {
+      return res.json({
+        success: true,
+        canVote: false,
+        targetUser: null,
+        voterStatus: null,
+        reason: '不能为自己投票',
+        errorCode: 'SELF_VOTE_NOT_ALLOWED'
+      });
+    }
+    
     // Check if target user exists
     const targetUser = await getUserById(targetUserId);
     if (!targetUser) {
@@ -297,7 +322,7 @@ router.post('/check-eligibility', async (req, res) => {
         femaleVoted: restrictions.femaleVoted,
         votedUsers: restrictions.votedUsers
       },
-      reason: canVote ? null : `您已经为${targetUser.gender === 'male' ? '男性' : '女性'}参与者投过票了`
+      reason: canVote ? null : `您已经为${targetUser.gender === 'male' ? '男士' : '女士'}参与者投过票了`
     });
     
   } catch (error) {

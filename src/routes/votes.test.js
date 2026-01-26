@@ -117,8 +117,24 @@ describe('Vote Routes', () => {
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
       expect(response.body.errorCode).toBe('DUPLICATE_VOTE');
-      expect(response.body.message).toContain('您已经为男性参与者投过票了');
+      expect(response.body.message).toContain('您已经为男士参与者投过票了');
       expect(response.body.details.votedUser).toBe('李四');
+    });
+
+    it('should prevent self-voting', async () => {
+      const response = await request(app)
+        .post('/api/votes')
+        .send({
+          voterId: 'user123',
+          targetUserId: 'user123'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.errorCode).toBe('SELF_VOTE_NOT_ALLOWED');
+      expect(response.body.message).toBe('不能为自己投票');
+      expect(response.body.details.reason).toBe('系统不允许为自己投票');
+      expect(response.body.details.allowedActions).toContain('为其他参与者投票');
     });
 
     it('should reject vote when target user does not exist', async () => {
@@ -329,7 +345,24 @@ describe('Vote Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.canVote).toBe(false);
-      expect(response.body.reason).toContain('您已经为男性参与者投过票了');
+      expect(response.body.reason).toContain('您已经为男士参与者投过票了');
+    });
+
+    it('should prevent self-voting eligibility check', async () => {
+      const response = await request(app)
+        .post('/api/votes/check-eligibility')
+        .send({
+          voterId: 'user123',
+          targetUserId: 'user123'
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.canVote).toBe(false);
+      expect(response.body.reason).toBe('不能为自己投票');
+      expect(response.body.errorCode).toBe('SELF_VOTE_NOT_ALLOWED');
+      expect(response.body.targetUser).toBe(null);
+      expect(response.body.voterStatus).toBe(null);
     });
   });
 

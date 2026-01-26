@@ -334,6 +334,51 @@
         .error-state .btn-secondary:hover {
             background: #5a1a1a;
         }
+        
+        /* 未注册用户提示样式 */
+        .unregistered-notice {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60vh;
+            padding: 20px;
+        }
+        
+        .notice-content {
+            text-align: center;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 12px;
+            padding: 40px 30px;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .notice-content h2 {
+            color: #856404;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+        
+        .notice-content p {
+            color: #856404;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        
+        .notice-actions {
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .notice-actions .btn-primary,
+        .notice-actions .btn-secondary {
+            min-width: 120px;
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -360,6 +405,10 @@
                 <button class="refresh-btn" id="refreshBtn">
                     <span class="icon">🔄</span>
                     刷新列表
+                </button>
+                <button class="refresh-btn" id="debugBtn" style="background: #28a745; margin-left: 8px;">
+                    <span class="icon">🔍</span>
+                    调试信息
                 </button>
                 <div style="text-align: center; margin-top: 8px;">
                     <button class="help-btn" id="helpBtn" style="
@@ -452,6 +501,15 @@
     </div>
     
     <script>
+        // 本地缓存键名
+        const STORAGE_KEYS = {
+            USER_ID: 'annual_party_user_id',
+            USER_NAME: 'annual_party_user_name',
+            USER_GENDER: 'annual_party_user_gender',
+            NUMERIC_ID: 'annual_party_numeric_id',
+            REGISTRATION_TIME: 'annual_party_registration_time'
+        };
+
         // 全局变量
         let allUsers = [];
         let filteredUsers = [];
@@ -472,9 +530,63 @@
         
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 首先检查用户注册状态
+            if (!checkUserRegistration()) {
+                return; // 如果未注册，不继续初始化功能
+            }
+            
             setupEventListeners();
+            debugCurrentUser(); // 调试当前用户信息
             loadUsers();
         });
+        
+        function checkUserRegistration() {
+            const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+            const userName = localStorage.getItem(STORAGE_KEYS.USER_NAME);
+            const registrationTime = localStorage.getItem(STORAGE_KEYS.REGISTRATION_TIME);
+            
+            if (!userId || !userName || !registrationTime) {
+                showUnregisteredMessage();
+                return false;
+            }
+            
+            // 检查注册时间是否在合理范围内（24小时内）
+            const regTime = new Date(registrationTime);
+            const now = new Date();
+            const hoursDiff = (now - regTime) / (1000 * 60 * 60);
+            
+            if (hoursDiff >= 24) {
+                // 清除过期的缓存
+                clearRegistrationCache();
+                showUnregisteredMessage();
+                return false;
+            }
+            
+            return true;
+        }
+
+        function clearRegistrationCache() {
+            Object.values(STORAGE_KEYS).forEach(key => {
+                localStorage.removeItem(key);
+            });
+        }
+
+        function showUnregisteredMessage() {
+            const main = document.querySelector('main');
+            main.innerHTML = `
+                <div class="unregistered-notice">
+                    <div class="notice-content">
+                        <h2>⚠️ 需要先注册</h2>
+                        <p>您还没有注册参与年会最佳服装评选活动。</p>
+                        <p>只有注册用户才能进行投票。</p>
+                        <div class="notice-actions">
+                            <a href="/" class="btn-primary">立即注册</a>
+                            <a href="/" class="btn-secondary">返回首页</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
         
         // 设置事件监听器
         function setupEventListeners() {
@@ -488,6 +600,25 @@
             
             clearSearchBtn.addEventListener('click', clearSearch);
             refreshBtn.addEventListener('click', refreshUsers);
+            
+            // 调试按钮
+            const debugBtn = document.getElementById('debugBtn');
+            if (debugBtn) {
+                debugBtn.addEventListener('click', function() {
+                    debugCurrentUser();
+                    console.log('=== Debug Info ===');
+                    console.log('localStorage contents:');
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key.includes('annual_party') || key.includes('user') || key.includes('voter')) {
+                            console.log(`${key}: ${localStorage.getItem(key)}`);
+                        }
+                    }
+                    console.log('Current allUsers:', allUsers);
+                    console.log('Current filteredUsers:', filteredUsers);
+                    console.log('==================');
+                });
+            }
             
             // 帮助按钮
             document.getElementById('helpBtn').addEventListener('click', function() {
@@ -515,6 +646,25 @@
                 
                 if (result.success) {
                     allUsers = result.users || [];
+                    console.log('All users loaded:', allUsers.length);
+                    
+                    // 过滤掉当前用户自己（如果已登录）
+                    const currentUserId = getCurrentUserId();
+                    if (currentUserId) {
+                        const originalCount = allUsers.length;
+                        allUsers = allUsers.filter(user => {
+                            // 注意：API返回的用户对象中ID字段名为userId，不是id
+                            const isCurrentUser = user.userId === currentUserId;
+                            if (isCurrentUser) {
+                                console.log('Filtering out current user:', user);
+                            }
+                            return !isCurrentUser;
+                        });
+                        console.log(`Filtered users: ${originalCount} -> ${allUsers.length} (removed current user: ${currentUserId})`);
+                    } else {
+                        console.log('No current user ID found, showing all users');
+                    }
+                    
                     filteredUsers = [...allUsers];
                     renderUsers();
                     updateSearchStats();
@@ -527,6 +677,46 @@
             } finally {
                 isLoading = false;
                 hideLoading();
+            }
+        }
+        
+        // 获取当前用户ID
+        function getCurrentUserId() {
+            // 从localStorage获取当前用户ID
+            const userId = localStorage.getItem('annual_party_user_id');
+            console.log('Current user ID from localStorage:', userId);
+            return userId;
+        }
+        
+        // 调试函数：显示当前用户信息
+        function debugCurrentUser() {
+            const userId = getCurrentUserId();
+            const userName = localStorage.getItem('annual_party_user_name');
+            console.log('Debug - Current user info:', { userId, userName });
+            
+            if (userId) {
+                // 在页面上显示当前用户信息
+                const debugInfo = document.createElement('div');
+                debugInfo.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: #007bff;
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 1000;
+                `;
+                debugInfo.textContent = `当前用户: ${userName || userId}`;
+                document.body.appendChild(debugInfo);
+                
+                // 5秒后移除
+                setTimeout(() => {
+                    if (debugInfo.parentNode) {
+                        debugInfo.remove();
+                    }
+                }, 5000);
             }
         }
         

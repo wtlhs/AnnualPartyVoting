@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户列表过滤测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .user-card {
+            background: #f8f9fa;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px;
+            display: inline-block;
+            min-width: 150px;
+        }
+        .current-user {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .filtered-out {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>用户列表过滤测试</h1>
+    
+    <div class="section">
+        <h3>当前状态</h3>
+        <div id="currentStatus"></div>
+        <button onclick="checkCurrentUser()">检查当前用户</button>
+        <button onclick="simulateRegistration()">模拟用户注册</button>
+        <button onclick="clearUserData()">清除用户数据</button>
+    </div>
+    
+    <div class="section">
+        <h3>用户列表测试</h3>
+        <button onclick="loadAndTestUsers()">加载并测试用户列表</button>
+        <div id="userListResults"></div>
+    </div>
+    
+    <div class="section">
+        <h3>实际用户列表</h3>
+        <div id="actualUsers"></div>
+    </div>
+    
+    <script>
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('currentStatus');
+            statusDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+        
+        function checkCurrentUser() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            const userName = localStorage.getItem('annual_party_user_name');
+            const userGender = localStorage.getItem('annual_party_user_gender');
+            
+            if (userId) {
+                updateStatus(`
+                    当前用户已登录:<br>
+                    ID: ${userId}<br>
+                    姓名: ${userName || '未知'}<br>
+                    性别: ${userGender || '未知'}
+                `, 'success');
+            } else {
+                updateStatus('当前没有登录用户', 'error');
+            }
+        }
+        
+        function simulateRegistration() {
+            const testUserId = 'test_user_' + Date.now();
+            const testUserName = '测试用户';
+            const testUserGender = 'male';
+            
+            localStorage.setItem('annual_party_user_id', testUserId);
+            localStorage.setItem('annual_party_user_name', testUserName);
+            localStorage.setItem('annual_party_user_gender', testUserGender);
+            localStorage.setItem('annual_party_registration_time', new Date().toISOString());
+            
+            updateStatus(`
+                已模拟用户注册:<br>
+                ID: ${testUserId}<br>
+                姓名: ${testUserName}<br>
+                性别: ${testUserGender}
+            `, 'success');
+        }
+        
+        function clearUserData() {
+            const keys = ['annual_party_user_id', 'annual_party_user_name', 'annual_party_user_gender', 'annual_party_registration_time'];
+            keys.forEach(key => localStorage.removeItem(key));
+            updateStatus('用户数据已清除', 'info');
+        }
+        
+        async function loadAndTestUsers() {
+            const resultsDiv = document.getElementById('userListResults');
+            resultsDiv.innerHTML = '<div class="info">正在加载用户列表...</div>';
+            
+            try {
+                const response = await fetch('/api/users');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const allUsers = result.users || [];
+                    const currentUserId = localStorage.getItem('annual_party_user_id');
+                    
+                    let html = `<div class="info">加载了 ${allUsers.length} 个用户</div>`;
+                    
+                    if (currentUserId) {
+                        const currentUser = allUsers.find(user => user.userId === currentUserId);
+                        if (currentUser) {
+                            html += `<div class="success">找到当前用户: ${currentUser.name} (${currentUser.userId})</div>`;
+                        } else {
+                            html += `<div class="error">当前用户 ${currentUserId} 不在用户列表中</div>`;
+                        }
+                        
+                        const filteredUsers = allUsers.filter(user => user.userId !== currentUserId);
+                        html += `<div class="info">过滤后剩余 ${filteredUsers.length} 个用户</div>`;
+                        
+                        html += '<h4>用户列表（红色为当前用户，应被过滤）:</h4>';
+                        allUsers.forEach(user => {
+                            const isCurrentUser = user.userId === currentUserId;
+                            const cssClass = isCurrentUser ? 'user-card current-user' : 'user-card';
+                            html += `<div class="${cssClass}">
+                                ${user.name}<br>
+                                <small>${user.userId}</small><br>
+                                <small>${user.gender === 'male' ? '男' : '女'}</small>
+                                ${isCurrentUser ? '<br><strong>当前用户</strong>' : ''}
+                            </div>`;
+                        });
+                        
+                    } else {
+                        html += '<div class="error">没有当前用户，无法测试过滤</div>';
+                    }
+                    
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = `<div class="error">加载失败: ${result.message}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">网络错误: ${error.message}</div>`;
+            }
+        }
+        
+        async function loadActualUsers() {
+            const actualDiv = document.getElementById('actualUsers');
+            actualDiv.innerHTML = '<div class="info">正在加载实际用户列表页面的逻辑...</div>';
+            
+            try {
+                const response = await fetch('/api/users');
+                const result = await response.json();
+                
+                if (result.success) {
+                    let allUsers = result.users || [];
+                    const currentUserId = localStorage.getItem('annual_party_user_id');
+                    
+                    // 应用与用户列表页面相同的过滤逻辑
+                    if (currentUserId) {
+                        allUsers = allUsers.filter(user => user.userId !== currentUserId);
+                    }
+                    
+                    let html = `<div class="success">实际显示的用户列表 (${allUsers.length} 个用户):</div>`;
+                    allUsers.forEach(user => {
+                        html += `<div class="user-card">
+                            ${user.name}<br>
+                            <small>${user.userId}</small><br>
+                            <small>${user.gender === 'male' ? '男' : '女'}</small>
+                        </div>`;
+                    });
+                    
+                    actualDiv.innerHTML = html;
+                } else {
+                    actualDiv.innerHTML = `<div class="error">加载失败: ${result.message}</div>`;
+                }
+            } catch (error) {
+                actualDiv.innerHTML = `<div class="error">网络错误: ${error.message}</div>`;
+            }
+        }
+        
+        // 页面加载时检查当前用户
+        document.addEventListener('DOMContentLoaded', function() {
+            checkCurrentUser();
+            loadActualUsers();
+        });
+    </script>
+</body>
+</html>

@@ -8,69 +8,6 @@ const { v4: uuidv4 } = require('uuid');
 
 // ==================== NUMERIC ID OPERATIONS ====================
 
-/**
- * Generate a unique 6-digit numeric ID
- * @param {Array<string>} existingIds - Array of existing numeric IDs to avoid duplicates
- * @returns {string} Unique 6-digit numeric ID
- */
-function generateUniqueNumericId(existingIds = []) {
-  const maxAttempts = 100;
-  let attempts = 0;
-  
-  while (attempts < maxAttempts) {
-    // Generate random 6-digit number (100000 to 999999)
-    const numericId = Math.floor(Math.random() * 900000 + 100000).toString();
-    
-    if (!existingIds.includes(numericId)) {
-      return numericId;
-    }
-    
-    attempts++;
-  }
-  
-  throw new Error('Failed to generate unique numeric ID after maximum attempts');
-}
-
-/**
- * Get all existing numeric IDs from database
- * @returns {Promise<Array<string>>} Array of existing numeric IDs
- */
-async function getExistingNumericIds() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    
-    // First check if numeric_id column exists
-    db.all("PRAGMA table_info(users)", (err, columns) => {
-      if (err) {
-        db.close();
-        return reject(err);
-      }
-      
-      const hasNumericId = columns.some(col => col.name === 'numeric_id');
-      
-      if (!hasNumericId) {
-        // Column doesn't exist yet, return empty array
-        db.close();
-        return resolve([]);
-      }
-      
-      // Column exists, query for existing numeric IDs
-      const sql = 'SELECT numeric_id FROM users WHERE numeric_id IS NOT NULL';
-      
-      db.all(sql, [], (err, rows) => {
-        db.close();
-        
-        if (err) {
-          return reject(err);
-        }
-        
-        const numericIds = rows.map(row => row.numeric_id);
-        resolve(numericIds);
-      });
-    });
-  });
-}
-
 // ==================== USER OPERATIONS ====================
 
 /**
@@ -100,15 +37,6 @@ async function createUser(userData) {
     }
     
     try {
-      // Check if numeric_id column exists
-      const existingNumericIds = await getExistingNumericIds();
-      let numericId = null;
-      
-      // Only generate numeric ID if we got a valid array (column exists)
-      if (Array.isArray(existingNumericIds)) {
-        numericId = generateUniqueNumericId(existingNumericIds);
-      }
-      
       // Check if numeric_id column exists by querying table info
       const hasNumericIdColumn = await new Promise((resolve, reject) => {
         const checkDb = getDatabase();
@@ -119,40 +47,88 @@ async function createUser(userData) {
         });
       });
       
-      // Determine SQL based on whether numeric_id column exists
-      let sql, params;
-      if (hasNumericIdColumn && numericId) {
-        sql = `
-          INSERT INTO users (id, numeric_id, name, gender, avatar_url, qr_code, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        `;
-        params = [userId, numericId, name.trim(), gender, avatarUrl, qrCode];
+      let numericId = null;
+      let insertSuccess = false;
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      // If numeric_id column exists, generate unique ID with retry logic
+      if (hasNumericIdColumn) {
+        while (!insertSuccess && attempts < maxAttempts) {
+          attempts++;
+          
+          // Generate a new numeric ID for each attempt
+          numericId = Math.floor(Math.random() * 900000 + 100000).toString();
+          
+          try {
+            // Try to insert with the generated numeric ID
+            const sql = `
+              INSERT INTO users (id, numeric_id, name, gender, avatar_url, qr_code, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            `;
+            const params = [userId, numericId, name.trim(), gender, avatarUrl, qrCode];
+            
+            await new Promise((resolve, reject) => {
+              db.run(sql, params, function(err) {
+                if (err) {
+                  // Check if it's a unique constraint violation for numeric_id
+                  if (err.message && err.message.includes('UNIQUE constraint failed: users.numeric_id')) {
+                    // This numeric ID is already taken, try again
+                    return resolve(false);
+                  }
+                  // Other error, reject
+                  return reject(err);
+                }
+                // Success
+                resolve(true);
+              });
+            });
+            
+            insertSuccess = true;
+            
+          } catch (error) {
+            if (attempts >= maxAttempts) {
+              db.close();
+              return reject(new Error(`Failed to generate unique numeric ID after ${maxAttempts} attempts: ${error.message}`));
+            }
+            // Continue to next attempt
+          }
+        }
+        
+        if (!insertSuccess) {
+          db.close();
+          return reject(new Error(`Failed to generate unique numeric ID after ${maxAttempts} attempts`));
+        }
+        
       } else {
-        sql = `
+        // No numeric_id column, insert without it
+        const sql = `
           INSERT INTO users (id, name, gender, avatar_url, qr_code, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         `;
-        params = [userId, name.trim(), gender, avatarUrl, qrCode];
+        const params = [userId, name.trim(), gender, avatarUrl, qrCode];
+        
+        await new Promise((resolve, reject) => {
+          db.run(sql, params, function(err) {
+            if (err) return reject(err);
+            resolve();
+          });
+        });
       }
       
-      db.run(sql, params, function(err) {
-        db.close();
-        
-        if (err) {
-          return reject(err);
-        }
-        
-        resolve({
-          id: userId,
-          numericId: hasNumericIdColumn ? numericId : null,
-          name: name.trim(),
-          gender,
-          avatarUrl,
-          qrCode,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
+      db.close();
+      
+      resolve({
+        id: userId,
+        numericId: hasNumericIdColumn ? numericId : null,
+        name: name.trim(),
+        gender,
+        avatarUrl,
+        qrCode,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
+      
     } catch (error) {
       db.close();
       reject(error);
@@ -541,7 +517,7 @@ async function getUserByName(name) {
 // ==================== VOTING OPERATIONS ====================
 
 /**
- * Record a vote
+ * Record a vote (internal function - use atomicVote for concurrent safety)
  * @param {Object} voteData - Vote data object
  * @param {string} voteData.voterId - ID of the voter (can be null for anonymous votes)
  * @param {string} voteData.targetUserId - ID of the target user being voted for
@@ -576,6 +552,171 @@ async function recordVote(voteData) {
         targetUserId,
         voteTime: new Date().toISOString(),
         ipAddress
+      });
+    });
+  });
+}
+
+/**
+ * Atomic vote operation that handles voting and restrictions in a single transaction
+ * This function ensures concurrent voting consistency by using database transactions
+ * @param {Object} voteData - Vote data object
+ * @param {string} voteData.voterId - ID of the voter
+ * @param {string} voteData.targetUserId - ID of the target user being voted for
+ * @param {string} voteData.targetGender - Gender of the target user ('male' or 'female')
+ * @param {string} [voteData.ipAddress] - IP address of the voter
+ * @returns {Promise<Object>} Vote result with success status and details
+ */
+async function atomicVote(voteData) {
+  return new Promise((resolve, reject) => {
+    const db = getDatabase();
+    const { voterId, targetUserId, targetGender, ipAddress = null } = voteData;
+    
+    // Validate required fields
+    if (!voterId) {
+      db.close();
+      return reject(new Error('Voter ID is required for atomic voting'));
+    }
+    
+    if (!targetUserId) {
+      db.close();
+      return reject(new Error('Target user ID is required'));
+    }
+    
+    if (!['male', 'female'].includes(targetGender)) {
+      db.close();
+      return reject(new Error('Target gender must be either "male" or "female"'));
+    }
+    
+    db.serialize(() => {
+      // Start transaction
+      db.run('BEGIN IMMEDIATE TRANSACTION', (err) => {
+        if (err) {
+          db.close();
+          return reject(err);
+        }
+        
+        // Check current vote restrictions within the transaction
+        const checkSql = 'SELECT * FROM vote_restrictions WHERE voter_id = ?';
+        db.get(checkSql, [voterId], (err, row) => {
+          if (err) {
+            db.run('ROLLBACK');
+            db.close();
+            return reject(err);
+          }
+          
+          // Determine if voter can vote for this gender
+          let canVote = false;
+          if (!row) {
+            // No restrictions exist, can vote
+            canVote = true;
+          } else {
+            // Check gender-specific restrictions
+            if (targetGender === 'male' && !row.male_voted_user_id) {
+              canVote = true;
+            } else if (targetGender === 'female' && !row.female_voted_user_id) {
+              canVote = true;
+            }
+          }
+          
+          if (!canVote) {
+            db.run('ROLLBACK');
+            db.close();
+            return resolve({
+              success: false,
+              reason: 'already_voted',
+              message: `已经为${targetGender === 'male' ? '男士' : '女士'}参与者投过票了`
+            });
+          }
+          
+          // Record the vote
+          const voteSql = `
+            INSERT INTO votes (voter_id, target_user_id, vote_time, ip_address)
+            VALUES (?, ?, CURRENT_TIMESTAMP, ?)
+          `;
+          
+          db.run(voteSql, [voterId, targetUserId, ipAddress], function(voteErr) {
+            if (voteErr) {
+              db.run('ROLLBACK');
+              db.close();
+              return reject(voteErr);
+            }
+            
+            const voteId = this.lastID;
+            
+            // Update or create vote restrictions
+            if (row) {
+              // Update existing record
+              const field = targetGender === 'male' ? 'male_voted_user_id' : 'female_voted_user_id';
+              const updateSql = `
+                UPDATE vote_restrictions 
+                SET ${field} = ?, updated_at = CURRENT_TIMESTAMP 
+                WHERE voter_id = ?
+              `;
+              
+              db.run(updateSql, [targetUserId, voterId], (updateErr) => {
+                if (updateErr) {
+                  db.run('ROLLBACK');
+                  db.close();
+                  return reject(updateErr);
+                }
+                
+                // Commit transaction
+                db.run('COMMIT', (commitErr) => {
+                  db.close();
+                  if (commitErr) {
+                    return reject(commitErr);
+                  }
+                  
+                  resolve({
+                    success: true,
+                    voteId,
+                    voterId,
+                    targetUserId,
+                    targetGender,
+                    voteTime: new Date().toISOString(),
+                    ipAddress
+                  });
+                });
+              });
+            } else {
+              // Create new record
+              const maleVotedUserId = targetGender === 'male' ? targetUserId : null;
+              const femaleVotedUserId = targetGender === 'female' ? targetUserId : null;
+              
+              const insertSql = `
+                INSERT INTO vote_restrictions (voter_id, male_voted_user_id, female_voted_user_id, created_at, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+              `;
+              
+              db.run(insertSql, [voterId, maleVotedUserId, femaleVotedUserId], (insertErr) => {
+                if (insertErr) {
+                  db.run('ROLLBACK');
+                  db.close();
+                  return reject(insertErr);
+                }
+                
+                // Commit transaction
+                db.run('COMMIT', (commitErr) => {
+                  db.close();
+                  if (commitErr) {
+                    return reject(commitErr);
+                  }
+                  
+                  resolve({
+                    success: true,
+                    voteId,
+                    voterId,
+                    targetUserId,
+                    targetGender,
+                    voteTime: new Date().toISOString(),
+                    ipAddress
+                  });
+                });
+              });
+            }
+          });
+        });
       });
     });
   });
@@ -1033,6 +1174,7 @@ module.exports = {
   
   // Voting operations
   recordVote,
+  atomicVote,
   getVoteStatistics,
   getRanking,
   getVotesForUser,
@@ -1044,9 +1186,5 @@ module.exports = {
   updateVoteRestrictions,
   canVoteForGender,
   clearAllVoteRestrictions,
-  clearAllData,
-  
-  // Numeric ID operations
-  generateUniqueNumericId,
-  getExistingNumericIds
+  clearAllData
 };

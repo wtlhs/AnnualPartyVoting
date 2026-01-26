@@ -518,3 +518,48 @@
 .pull-refresh-hint.show {
     opacity: 1;
 }
+
+/* 未注册用户提示样式 */
+.unregistered-notice {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: 20px;
+}
+
+.notice-content {
+    text-align: center;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 12px;
+    padding: 40px 30px;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.notice-content h2 {
+    color: #856404;
+    margin-bottom: 16px;
+    font-size: 20px;
+}
+
+.notice-content p {
+    color: #856404;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.notice-actions {
+    margin-top: 24px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.notice-actions .btn-primary,
+.notice-actions .btn-secondary {
+    min-width: 120px;
+    margin: 0;
+}

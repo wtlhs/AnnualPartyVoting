@@ -41,7 +41,7 @@ async function loadUserProfile(userId) {
 
 function displayUserInfo(result) {
     document.getElementById('userName').textContent = result.name;
-    document.getElementById('userGender').textContent = `性别: ${result.gender === 'male' ? '男性' : '女性'}`;
+    document.getElementById('userGender').textContent = `性别: ${result.gender === 'male' ? '男士' : '女士'}`;
     document.getElementById('numericId').textContent = `数字ID: ${result.numericId || '未分配'}`;
     document.getElementById('voteCount').textContent = `获得票数: ${result.voteCount || 0}`;
     

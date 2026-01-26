@@ -297,12 +297,22 @@ async function loadDashboard() {
                         <div class="stat-change">+0 今日新增</div>
                     </div>
                     <div class="stat-card">
-                        <h3>男性参与者</h3>
-                        <span id="maleParticipants">0</span>
+                        <div class="stat-icon blue">
+                            <i class="fas fa-mars"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>男士参与者</h3>
+                            <p class="stat-number" id="maleParticipants">0</p>
+                        </div>
                     </div>
                     <div class="stat-card">
-                        <h3>女性参与者</h3>
-                        <span id="femaleParticipants">0</span>
+                        <div class="stat-icon pink">
+                            <i class="fas fa-venus"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>女士参与者</h3>
+                            <p class="stat-number" id="femaleParticipants">0</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -310,7 +320,7 @@ async function loadDashboard() {
         
         <div class="rankings">
             <div class="ranking-section">
-                <h2><i class="fas fa-mars"></i> 男性前三名</h2>
+                <h2><i class="fas fa-mars"></i> 男士前三名</h2>
                 <div id="maleRanking" class="ranking-list">
                     <div class="loading">
                         <i class="fas fa-spinner fa-spin"></i>
@@ -320,7 +330,7 @@ async function loadDashboard() {
             </div>
             
             <div class="ranking-section">
-                <h2><i class="fas fa-venus"></i> 女性前三名</h2>
+                <h2><i class="fas fa-venus"></i> 女士前三名</h2>
                 <div id="femaleRanking" class="ranking-list">
                     <div class="loading">
                         <i class="fas fa-spinner fa-spin"></i>
@@ -373,8 +383,8 @@ async function loadParticipants() {
                     <input type="text" id="searchInput" class="search-input" placeholder="搜索参与者...">
                     <select id="genderFilter" class="filter-select">
                         <option value="">所有性别</option>
-                        <option value="male">男性</option>
-                        <option value="female">女性</option>
+                        <option value="male">男士</option>
+                        <option value="female">女士</option>
                     </select>
                 </div>
             </div>
@@ -791,7 +801,7 @@ function updateParticipantsTable(participants) {
             </td>
             <td>
                 <span class="gender-badge ${participant.gender}">
-                    ${participant.gender === 'male' ? '男性' : '女性'}
+                    ${participant.gender === 'male' ? '男士' : '女士'}
                 </span>
             </td>
             <td>${participant.numericId || '-'}</td>
@@ -842,11 +852,11 @@ function updateVotingProgress(progress) {
                     <span><strong>${progress.activeVoters || 0}</strong></span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span>男性投票数</span>
+                    <span>男士投票数</span>
                     <span><strong>${progress.maleVotesCast || 0}</strong></span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span>女性投票数</span>
+                    <span>女士投票数</span>
                     <span><strong>${progress.femaleVotesCast || 0}</strong></span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
@@ -876,7 +886,7 @@ function updateVoteDistribution(stats) {
         <div style="padding: 16px;">
             <div style="margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span><i class="fas fa-mars" style="color: #3498db;"></i> 男性得票</span>
+                    <span><i class="fas fa-mars" style="color: #3498db;"></i> 男士得票</span>
                     <span><strong>${stats.maleVotes || 0}</strong> (${malePercent}%)</span>
                 </div>
                 <div style="background: #f0f0f0; border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 12px;">
@@ -884,7 +894,7 @@ function updateVoteDistribution(stats) {
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span><i class="fas fa-venus" style="color: #e91e63;"></i> 女性得票</span>
+                    <span><i class="fas fa-venus" style="color: #e91e63;"></i> 女士得票</span>
                     <span><strong>${stats.femaleVotes || 0}</strong> (${femalePercent}%)</span>
                 </div>
                 <div style="background: #f0f0f0; border-radius: 4px; height: 6px; overflow: hidden;">
@@ -1038,7 +1048,7 @@ function displayWinners(winners) {
     
     container.innerHTML = `
         <div class="winners-group">
-            <h3><i class="fas fa-mars"></i> 男性组获奖者</h3>
+            <h3><i class="fas fa-mars"></i> 男士组获奖者</h3>
             ${maleWinners.length > 0 ? maleWinners.map((winner, index) => `
                 <div class="winner-item ${['first', 'second', 'third'][index] || ''}">
                     <span class="winner-rank">${winner.prize}</span>
@@ -1049,7 +1059,7 @@ function displayWinners(winners) {
         </div>
         
         <div class="winners-group">
-            <h3><i class="fas fa-venus"></i> 女性组获奖者</h3>
+            <h3><i class="fas fa-venus"></i> 女士组获奖者</h3>
             ${femaleWinners.length > 0 ? femaleWinners.map((winner, index) => `
                 <div class="winner-item ${['first', 'second', 'third'][index] || ''}">
                     <span class="winner-rank">${winner.prize}</span>

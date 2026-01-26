@@ -1,5 +1,20 @@
 // 移动端统计页面 JavaScript
+
+// 本地缓存键名
+const STORAGE_KEYS = {
+    USER_ID: 'annual_party_user_id',
+    USER_NAME: 'annual_party_user_name',
+    USER_GENDER: 'annual_party_user_gender',
+    NUMERIC_ID: 'annual_party_numeric_id',
+    REGISTRATION_TIME: 'annual_party_registration_time'
+};
+
 document.addEventListener('DOMContentLoaded', function() {
+    // 首先检查用户注册状态
+    if (!checkUserRegistration()) {
+        return; // 如果未注册，不继续初始化功能
+    }
+    
     // 初始化页面
     initializePage();
     
@@ -13,6 +28,54 @@ document.addEventListener('DOMContentLoaded', function() {
     setAutoRefresh();
 });
 
+function checkUserRegistration() {
+    const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+    const userName = localStorage.getItem(STORAGE_KEYS.USER_NAME);
+    const registrationTime = localStorage.getItem(STORAGE_KEYS.REGISTRATION_TIME);
+    
+    if (!userId || !userName || !registrationTime) {
+        showUnregisteredMessage();
+        return false;
+    }
+    
+    // 检查注册时间是否在合理范围内（24小时内）
+    const regTime = new Date(registrationTime);
+    const now = new Date();
+    const hoursDiff = (now - regTime) / (1000 * 60 * 60);
+    
+    if (hoursDiff >= 24) {
+        // 清除过期的缓存
+        clearRegistrationCache();
+        showUnregisteredMessage();
+        return false;
+    }
+    
+    return true;
+}
+
+function clearRegistrationCache() {
+    Object.values(STORAGE_KEYS).forEach(key => {
+        localStorage.removeItem(key);
+    });
+}
+
+function showUnregisteredMessage() {
+    const main = document.querySelector('main');
+    main.innerHTML = `
+        <div class="unregistered-notice">
+            <div class="notice-content">
+                <h2>⚠️ 需要先注册</h2>
+                <p>您还没有注册参与年会最佳服装评选活动。</p>
+                <p>只有注册用户才能查看投票统计。</p>
+                <div class="notice-actions">
+                    <a href="/" class="btn-primary">立即注册</a>
+                    <a href="/" class="btn-secondary">返回首页</a>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 let refreshInterval;
 let isLoading = false;
 
@@ -21,7 +84,7 @@ function initializePage() {
     updateTimeDisplay();
     setInterval(updateTimeDisplay, 1000);
     
-    // 设置默认显示男性组
+    // 设置默认显示男士组
     showGenderRanking('male');
 }
 
@@ -184,11 +247,11 @@ function updateStatisticsDisplay(stats) {
 }
 
 function updateRankingDisplay(ranking) {
-    // 更新男性组排名
+    // 更新男士组排名
     updateGenderRankingList('maleRankingList', ranking.male || [], 'male');
     updateElementText('maleCount', `${(ranking.male || []).length}人参与`);
     
-    // 更新女性组排名
+    // 更新女士组排名
     updateGenderRankingList('femaleRankingList', ranking.female || [], 'female');
     updateElementText('femaleCount', `${(ranking.female || []).length}人参与`);
 }
@@ -267,11 +330,11 @@ function updateVotingProgressDisplay(progress) {
     const maleRate = activeVoters > 0 ? (maleVotesCast / activeVoters * 100) : 0;
     const femaleRate = activeVoters > 0 ? (femaleVotesCast / activeVoters * 100) : 0;
     
-    // 更新男性组进度
+    // 更新男士组进度
     updateElementText('maleVoteRate', `${Math.round(maleRate)}%`);
     updateProgressBar('maleProgressBar', maleRate);
     
-    // 更新女性组进度
+    // 更新女士组进度
     updateElementText('femaleVoteRate', `${Math.round(femaleRate)}%`);
     updateProgressBar('femaleProgressBar', femaleRate);
 }

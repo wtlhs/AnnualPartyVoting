@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移动端优化测试 - 年会最佳服装评选</title>
+    <link rel="stylesheet" href="public/static/css/style.css">
+    <style>
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .test-title {
+            color: #667eea;
+            margin-bottom: 16px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>移动端优化测试</h1>
+            <p>测试响应式设计和触摸优化</p>
+        </header>
+        
+        <main>
+            <!-- 性别选择测试 -->
+            <div class="test-section">
+                <h3 class="test-title">性别选择优化</h3>
+                <div class="gender-selection-warning">
+                    <strong>⚠️ 重要提醒：</strong>请正确选择您的性别，因为这将决定您参与哪个组别的评选（男士组/女士组），一旦注册成功后将无法修改！
+                </div>
+                <div class="form-group">
+                    <label>性别 <span style="color: #f44336; font-weight: bold;">*</span></label>
+                    <div class="gender-options">
+                        <label class="radio-label">
+                            <input type="radio" name="gender" value="male" required>
+                            <span>男士</span>
+                            <small style="color: #666; display: block; font-size: 12px;">参与男士组评选</small>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="gender" value="female" required>
+                            <span>女士</span>
+                            <small style="color: #666; display: block; font-size: 12px;">参与女士组评选</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 按钮测试 -->
+            <div class="test-section">
+                <h3 class="test-title">按钮触摸优化</h3>
+                <button class="btn-primary">主要按钮</button>
+                <button class="btn-secondary">次要按钮</button>
+                <button class="btn-danger">危险按钮</button>
+            </div>
+            
+            <!-- 加载状态测试 -->
+            <div class="test-section">
+                <h3 class="test-title">加载状态</h3>
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>加载中...</p>
+                </div>
+                <div class="loading">
+                    <div class="loading-dots">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
+                    <p>处理中...</p>
+                </div>
+            </div>
+            
+            <!-- 骨架屏测试 -->
+            <div class="test-section">
+                <h3 class="test-title">骨架屏效果</h3>
+                <div class="skeleton skeleton-text large"></div>
+                <div class="skeleton skeleton-text"></div>
+                <div class="skeleton skeleton-text small"></div>
+                <div class="skeleton skeleton-button"></div>
+            </div>
+            
+            <!-- 消息提示测试 -->
+            <div class="test-section">
+                <h3 class="test-title">消息提示</h3>
+                <div class="loading-message">
+                    这是一个加载消息提示
+                </div>
+                <div class="error-message">
+                    这是一个错误消息提示
+                </div>
+                <div class="success-message">
+                    这是一个成功消息提示
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // 添加渐入动画
+        document.addEventListener('DOMContentLoaded', function() {
+            const elements = document.querySelectorAll('.test-section');
+            elements.forEach((el, index) => {
+                el.classList.add('fade-in', `delay-${(index % 3) + 1}`);
+            });
+        });
+    </script>
+</body>
+</html>

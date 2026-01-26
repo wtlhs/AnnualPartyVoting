@@ -1,11 +1,161 @@
 // 主页面 JavaScript
+// 页面加载优化
+class PageLoadOptimizer {
+    constructor() {
+        this.loadingBar = null;
+        this.loadStartTime = Date.now();
+        this.init();
+    }
+    
+    init() {
+        this.createLoadingBar();
+        this.setupPerformanceMonitoring();
+        this.preloadCriticalResources();
+        this.optimizeImages();
+    }
+    
+    createLoadingBar() {
+        this.loadingBar = document.createElement('div');
+        this.loadingBar.className = 'page-loading-bar';
+        this.loadingBar.innerHTML = '<div></div>';
+        document.body.appendChild(this.loadingBar);
+    }
+    
+    showLoadingBar() {
+        if (this.loadingBar) {
+            this.loadingBar.classList.add('active');
+        }
+    }
+    
+    hideLoadingBar() {
+        if (this.loadingBar) {
+            setTimeout(() => {
+                this.loadingBar.classList.remove('active');
+            }, 300);
+        }
+    }
+    
+    setupPerformanceMonitoring() {
+        // 监控页面加载性能
+        window.addEventListener('load', () => {
+            const loadTime = Date.now() - this.loadStartTime;
+            console.log(`Page loaded in ${loadTime}ms`);
+            
+            // 如果加载时间超过3秒，显示提示
+            if (loadTime > 3000) {
+                this.showSlowLoadingTip();
+            }
+        });
+    }
+    
+    preloadCriticalResources() {
+        // 预加载关键资源
+        const criticalResources = [
+            '/static/css/style.css',
+            '/static/js/app.js'
+        ];
+        
+        criticalResources.forEach(resource => {
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.href = resource;
+            link.as = resource.endsWith('.css') ? 'style' : 'script';
+            document.head.appendChild(link);
+        });
+    }
+    
+    optimizeImages() {
+        // 图片懒加载和优化
+        const images = document.querySelectorAll('img[data-src]');
+        if ('IntersectionObserver' in window) {
+            const imageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.classList.remove('skeleton');
+                        imageObserver.unobserve(img);
+                    }
+                });
+            });
+            
+            images.forEach(img => imageObserver.observe(img));
+        } else {
+            // 降级处理
+            images.forEach(img => {
+                img.src = img.dataset.src;
+                img.classList.remove('skeleton');
+            });
+        }
+    }
+    
+    showSlowLoadingTip() {
+        const tip = document.createElement('div');
+        tip.className = 'loading-message';
+        tip.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="loading-spinner"></div>
+                <span>网络较慢，正在优化加载...</span>
+            </div>
+        `;
+        document.body.appendChild(tip);
+        
+        setTimeout(() => {
+            if (tip.parentNode) {
+                tip.remove();
+            }
+        }, 5000);
+    }
+    
+    // 显示骨架屏
+    showSkeleton(container) {
+        const skeleton = document.createElement('div');
+        skeleton.className = 'skeleton-container';
+        skeleton.innerHTML = `
+            <div class="skeleton skeleton-text large"></div>
+            <div class="skeleton skeleton-text"></div>
+            <div class="skeleton skeleton-text small"></div>
+            <div class="skeleton skeleton-button"></div>
+        `;
+        container.appendChild(skeleton);
+        return skeleton;
+    }
+    
+    // 隐藏骨架屏
+    hideSkeleton(skeleton) {
+        if (skeleton && skeleton.parentNode) {
+            skeleton.classList.add('fade-out');
+            setTimeout(() => {
+                skeleton.remove();
+            }, 300);
+        }
+    }
+}
+
+// 初始化页面加载优化器
+const pageOptimizer = new PageLoadOptimizer();
+
 document.addEventListener('DOMContentLoaded', function() {
+    // 添加渐入动画
+    const elements = document.querySelectorAll('header, main, .actions');
+    elements.forEach((el, index) => {
+        el.classList.add('fade-in', `delay-${index + 1}`);
+    });
+    
     const registerForm = document.getElementById('registerForm');
     
     if (registerForm) {
+        // 显示加载条
+        pageOptimizer.showLoadingBar();
+        
         // 检查是否已经注册过
         checkExistingRegistration();
         registerForm.addEventListener('submit', handleRegistration);
+        
+        // 隐藏加载条
+        setTimeout(() => {
+            pageOptimizer.hideLoadingBar();
+        }, 500);
     }
 });
 
@@ -47,6 +197,15 @@ function showExistingRegistrationMessage(userName, userId) {
     
     // 隐藏注册表单
     form.style.display = 'none';
+    
+    // 隐藏性别选择重要提醒
+    const genderWarning = document.querySelector('.gender-selection-warning');
+    if (genderWarning) {
+        genderWarning.style.display = 'none';
+    }
+    
+    // 显示投票按钮
+    showVotingActions();
     
     // 显示已注册信息
     const numericId = localStorage.getItem(STORAGE_KEYS.NUMERIC_ID);
@@ -137,6 +296,13 @@ function clearRegistrationCache() {
     Object.values(STORAGE_KEYS).forEach(key => {
         localStorage.removeItem(key);
     });
+}
+
+function showVotingActions() {
+    const actionsDiv = document.getElementById('mainActions');
+    if (actionsDiv) {
+        actionsDiv.style.display = 'flex';
+    }
 }
 
 async function handleRegistration(event) {
@@ -296,6 +462,10 @@ async function confirmGender() {
             }
             
             showMessage(`注册成功！您的数字ID是：${result.numericId}。正在跳转到个人页面...`, 'success');
+            
+            // 显示投票按钮
+            showVotingActions();
+            
             setTimeout(() => {
                 window.location.href = `/profile/${result.userId}`;
             }, 2000);

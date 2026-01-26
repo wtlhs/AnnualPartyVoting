@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>年会最佳服装评选</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=2.0">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.1">
+    <link rel="preload" href="/static/js/app.js" as="script">
+    <link rel="preload" href="/static/css/style.css" as="style">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body>
     <div class="container">
@@ -30,12 +35,12 @@
                         <div class="gender-options">
                             <label class="radio-label">
                                 <input type="radio" name="gender" value="male" required>
-                                <span>男性</span>
+                                <span>男士</span>
                                 <small style="color: #666; display: block; font-size: 12px;">参与男士组评选</small>
                             </label>
                             <label class="radio-label">
                                 <input type="radio" name="gender" value="female" required>
-                                <span>女性</span>
+                                <span>女士</span>
                                 <small style="color: #666; display: block; font-size: 12px;">参与女士组评选</small>
                             </label>
                         </div>
@@ -45,7 +50,7 @@
                 </form>
             </div>
             
-            <div class="actions">
+            <div class="actions" id="mainActions" style="display: none;">
                 <a href="/scan" class="btn-secondary">扫码投票</a>
                 <a href="/user-list" class="btn-secondary">按姓名投票</a>
                 <a href="/mobile-stats" class="btn-secondary">查看统计</a>
@@ -84,12 +89,12 @@
                             <div class="gender-options">
                                 <label class="radio-label">
                                     <input type="radio" name="modalGender" value="male">
-                                    <span>男性</span>
+                                    <span>男士</span>
                                     <small style="color: #666; display: block; font-size: 12px;">参与男士组评选</small>
                                 </label>
                                 <label class="radio-label">
                                     <input type="radio" name="modalGender" value="female">
-                                    <span>女性</span>
+                                    <span>女士</span>
                                     <small style="color: #666; display: block; font-size: 12px;">参与女士组评选</small>
                                 </label>
                             </div>
@@ -104,6 +109,6 @@
         </div>
     </div>
     
-    <script src="/static/js/app.js?v=2.0"></script>
+    <script src="/static/js/app.js?v=2.1" defer></script>
 </body>
 </html>
