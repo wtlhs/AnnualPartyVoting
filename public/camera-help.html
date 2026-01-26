@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摄像头问题解决 - 年会投票系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #d32f2f;
+            text-align: center;
+        }
+        .alert {
+            background: #ffebee;
+            border: 1px solid #f44336;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .solution {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #2196f3;
+        }
+        .step h3 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #2196f3;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #1976d2;
+        }
+        .btn-success {
+            background: #4caf50;
+        }
+        .btn-success:hover {
+            background: #388e3c;
+        }
+        .device-specific {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .device-header {
+            background: #f5f5f5;
+            padding: 10px 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .device-content {
+            padding: 15px;
+            display: none;
+        }
+        .device-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 摄像头问题解决指南</h1>
+        
+        <div class="alert">
+            <strong>问题：</strong>手机端启动摄像头失败，提示"未知错误"或"权限被拒绝"。
+        </div>
+
+        <div class="solution">
+            <strong>💡 推荐解决方案：</strong>使用手动输入功能，无需摄像头即可完成投票！
+        </div>
+
+        <div class="step">
+            <h3>🎯 最简单的解决方案</h3>
+            <p><strong>使用6位数字ID投票：</strong></p>
+            <ol>
+                <li>让被投票人打开个人资料页面，查看6位数字ID</li>
+                <li>在扫码页面点击"手动输入"</li>
+                <li>选择"6位数字ID"标签</li>
+                <li>输入6位数字，点击确认即可投票</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🔧 摄像头问题原因</h3>
+            <p>现代浏览器出于安全考虑，要求摄像头访问必须在HTTPS环境下。由于我们的系统使用HTTP协议，所以摄像头功能可能无法正常工作。</p>
+        </div>
+
+        <h2>📱 不同设备的解决方案</h2>
+
+        <div class="device-specific">
+            <div class="device-header" onclick="toggleDevice('android')">
+                🤖 Android 手机 (Chrome/其他浏览器)
+            </div>
+            <div class="device-content" id="android">
+                <h4>方法一：允许摄像头权限</h4>
+                <ol>
+                    <li>在地址栏左侧点击锁图标或摄像头图标</li>
+                    <li>选择"允许"摄像头访问</li>
+                    <li>刷新页面重试</li>
+                </ol>
+                
+                <h4>方法二：浏览器设置</h4>
+                <ol>
+                    <li>Chrome: 设置 → 网站设置 → 摄像头 → 允许</li>
+                    <li>添加当前网站到允许列表</li>
+                    <li>重新访问扫码页面</li>
+                </ol>
+                
+                <h4>方法三：使用手动输入（推荐）</h4>
+                <p>直接使用6位数字ID功能，无需摄像头。</p>
+            </div>
+        </div>
+
+        <div class="device-specific">
+            <div class="device-header" onclick="toggleDevice('ios')">
+                🍎 iPhone (Safari/Chrome)
+            </div>
+            <div class="device-content" id="ios">
+                <h4>Safari浏览器：</h4>
+                <ol>
+                    <li>设置 → Safari → 摄像头 → 询问</li>
+                    <li>访问扫码页面时选择"允许"</li>
+                    <li>如果没有弹出权限询问，使用手动输入</li>
+                </ol>
+                
+                <h4>Chrome浏览器：</h4>
+                <ol>
+                    <li>在地址栏点击"aA"图标</li>
+                    <li>选择"网站设置"</li>
+                    <li>允许摄像头访问</li>
+                </ol>
+                
+                <h4>推荐方案：</h4>
+                <p>iOS设备建议直接使用手动输入功能，更稳定可靠。</p>
+            </div>
+        </div>
+
+        <div class="device-specific">
+            <div class="device-header" onclick="toggleDevice('wechat')">
+                💬 微信内置浏览器
+            </div>
+            <div class="device-content" id="wechat">
+                <div class="alert">
+                    <strong>注意：</strong>微信内置浏览器对摄像头支持有限，建议使用以下方案：
+                </div>
+                
+                <h4>方法一：复制链接到外部浏览器</h4>
+                <ol>
+                    <li>点击右上角"..."菜单</li>
+                    <li>选择"在浏览器中打开"</li>
+                    <li>在系统浏览器中重新访问</li>
+                </ol>
+                
+                <h4>方法二：使用手动输入（推荐）</h4>
+                <p>直接在微信中使用6位数字ID功能，最简单可靠。</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🎯 手动输入详细步骤</h3>
+            <h4>使用6位数字ID（推荐）：</h4>
+            <ol>
+                <li><strong>获取ID</strong>：让被投票人访问个人资料页面，记下6位数字ID</li>
+                <li><strong>投票</strong>：在扫码页面点击"手动输入" → "6位数字ID"</li>
+                <li><strong>输入</strong>：输入6位数字，点击确认</li>
+                <li><strong>完成</strong>：系统自动跳转到投票确认页面</li>
+            </ol>
+            
+            <h4>使用二维码内容：</h4>
+            <ol>
+                <li><strong>截图</strong>：让被投票人截图个人二维码</li>
+                <li><strong>识别</strong>：使用微信"扫一扫"识别截图中的二维码</li>
+                <li><strong>复制</strong>：复制识别出的文本内容</li>
+                <li><strong>粘贴</strong>：在"二维码内容"输入框中粘贴</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/scan" class="btn btn-success">返回扫码页面</a>
+            <a href="/" class="btn">返回首页</a>
+        </div>
+
+        <div class="step" style="margin-top: 30px;">
+            <h3>💡 年会现场建议</h3>
+            <ul>
+                <li><strong>主要使用6位数字ID</strong>：最简单、最可靠的投票方式</li>
+                <li><strong>准备技术支持</strong>：安排人员协助解决摄像头问题</li>
+                <li><strong>提前测试</strong>：在不同设备上测试手动输入功能</li>
+                <li><strong>备用方案</strong>：准备纸质投票作为最后备选</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function toggleDevice(deviceId) {
+            const content = document.getElementById(deviceId);
+            const isActive = content.classList.contains('active');
+            
+            // 关闭所有其他设备说明
+            document.querySelectorAll('.device-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // 切换当前设备说明
+            if (!isActive) {
+                content.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

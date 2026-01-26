@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>年会最佳服装评选</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=2.0">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>年会最佳服装评选</h1>
+            <p>参与评选，展示你的最佳造型！</p>
+        </header>
+        
+        <main>
+            <div class="registration-form">
+                <h2>注册参与</h2>
+                <div class="gender-selection-warning">
+                    <strong>⚠️ 重要提醒：</strong>请正确选择您的性别，因为这将决定您参与哪个组别的评选（男士组/女士组），一旦注册成功后将无法修改！
+                </div>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="name">姓名</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>性别 <span style="color: #f44336; font-weight: bold;">*</span></label>
+                        <div class="gender-options">
+                            <label class="radio-label">
+                                <input type="radio" name="gender" value="male" required>
+                                <span>男性</span>
+                                <small style="color: #666; display: block; font-size: 12px;">参与男士组评选</small>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="gender" value="female" required>
+                                <span>女性</span>
+                                <small style="color: #666; display: block; font-size: 12px;">参与女士组评选</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">注册参与</button>
+                </form>
+            </div>
+            
+            <div class="actions">
+                <a href="/scan" class="btn-secondary">扫码投票</a>
+                <a href="/user-list" class="btn-secondary">按姓名投票</a>
+                <a href="/mobile-stats" class="btn-secondary">查看统计</a>
+            </div>
+        </main>
+    </div>
+    
+    <!-- 性别确认模态框 -->
+    <div id="genderConfirmationModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📋 请确认您的注册信息</h3>
+            </div>
+            <div class="modal-body">
+                <div class="gender-confirmation">
+                    <div class="info-summary">
+                        <div class="info-item">
+                            <span class="info-label">姓名：</span>
+                            <span class="info-value" id="confirmName">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">当前选择性别：</span>
+                            <span class="info-value" id="confirmGender">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="warning-box">
+                        <h4>⚠️ 重要提醒</h4>
+                        <p>性别选择将决定您参与哪个组别的评选（男士组/女士组）</p>
+                        <p><strong>一旦注册成功后将无法修改！</strong></p>
+                    </div>
+                    
+                    <div class="gender-selection-in-modal">
+                        <div class="form-group">
+                            <label>如需修改，请重新选择性别：</label>
+                            <div class="gender-options">
+                                <label class="radio-label">
+                                    <input type="radio" name="modalGender" value="male">
+                                    <span>男性</span>
+                                    <small style="color: #666; display: block; font-size: 12px;">参与男士组评选</small>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="modalGender" value="female">
+                                    <span>女性</span>
+                                    <small style="color: #666; display: block; font-size: 12px;">参与女士组评选</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeGenderModal()">返回修改</button>
+                <button type="button" class="btn-primary" onclick="confirmGender()">确认注册</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/app.js?v=2.0"></script>
+</body>
+</html>

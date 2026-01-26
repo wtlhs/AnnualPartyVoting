@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>协议修复 - 年会投票系统</title>
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #2196f3;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .error {
+            background: #ffebee;
+            border: 1px solid #f44336;
+            color: #c62828;
+        }
+        .success {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            color: #2e7d32;
+        }
+        .warning {
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+            color: #f57c00;
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #2196f3;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: #1976d2;
+        }
+        .btn-danger {
+            background: #f44336;
+        }
+        .btn-success {
+            background: #4caf50;
+        }
+        .code {
+            background: #263238;
+            color: #4fc3f7;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .step {
+            text-align: left;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #2196f3;
+        }
+        #countdown {
+            font-size: 24px;
+            color: #2196f3;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 协议修复工具</h1>
+        
+        <div id="status" class="status"></div>
+        
+        <div id="actions" style="display: none;">
+            <button onclick="forceHTTP()" class="btn btn-danger">强制使用HTTP</button>
+            <button onclick="clearCache()" class="btn">清除缓存</button>
+            <button onclick="testConnection()" class="btn">测试连接</button>
+        </div>
+        
+        <div id="countdown-container" style="display: none;">
+            <p>自动跳转倒计时：<span id="countdown">5</span> 秒</p>
+        </div>
+        
+        <div class="step">
+            <h3>🔍 问题诊断</h3>
+            <p id="protocol-info"></p>
+            <p id="host-info"></p>
+            <p id="user-agent-info"></p>
+        </div>
+        
+        <div class="step">
+            <h3>💡 解决方案</h3>
+            <div id="solutions"></div>
+        </div>
+    </div>
+
+    <script>
+        let countdownTimer;
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+        
+        function showActions() {
+            document.getElementById('actions').style.display = 'block';
+        }
+        
+        function startCountdown(seconds, callback) {
+            const countdownContainer = document.getElementById('countdown-container');
+            const countdownElement = document.getElementById('countdown');
+            
+            countdownContainer.style.display = 'block';
+            countdownElement.textContent = seconds;
+            
+            countdownTimer = setInterval(() => {
+                seconds--;
+                countdownElement.textContent = seconds;
+                
+                if (seconds <= 0) {
+                    clearInterval(countdownTimer);
+                    callback();
+                }
+            }, 1000);
+        }
+        
+        function forceHTTP() {
+            showStatus('正在强制切换到HTTP协议...', 'warning');
+            
+            // 清除所有缓存
+            clearCache();
+            
+            // 强制跳转到HTTP
+            setTimeout(() => {
+                window.location.href = 'http://' + window.location.hostname + ':3000';
+            }, 1000);
+        }
+        
+        function clearCache() {
+            showStatus('正在清除浏览器缓存...', 'warning');
+            
+            // 清除所有可能的缓存
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) {
+                        caches.delete(name);
+                    });
+                });
+            }
+            
+            // 清除存储
+            if (typeof(Storage) !== "undefined") {
+                localStorage.clear();
+                sessionStorage.clear();
+            }
+            
+            // 清除cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            showStatus('缓存已清除', 'success');
+        }
+        
+        function testConnection() {
+            showStatus('正在测试HTTP连接...', 'warning');
+            
+            const testUrl = 'http://' + window.location.hostname + ':3000/api/votes/statistics';
+            
+            fetch(testUrl)
+                .then(response => {
+                    if (response.ok) {
+                        showStatus('✅ HTTP连接成功！系统工作正常。', 'success');
+                        startCountdown(3, () => {
+                            window.location.href = 'http://' + window.location.hostname + ':3000';
+                        });
+                    } else {
+                        showStatus('❌ 连接失败，状态码：' + response.status, 'error');
+                        showActions();
+                    }
+                })
+                .catch(error => {
+                    showStatus('❌ 连接错误：' + error.message, 'error');
+                    showActions();
+                });
+        }
+        
+        function diagnoseProtocol() {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const userAgent = navigator.userAgent;
+            
+            // 显示诊断信息
+            document.getElementById('protocol-info').textContent = '当前协议: ' + protocol;
+            document.getElementById('host-info').textContent = '访问地址: ' + hostname + (port ? ':' + port : '');
+            document.getElementById('user-agent-info').textContent = '浏览器: ' + (userAgent.includes('Chrome') ? 'Chrome' : userAgent.includes('Firefox') ? 'Firefox' : userAgent.includes('Safari') ? 'Safari' : '其他');
+            
+            const solutions = document.getElementById('solutions');
+            
+            if (protocol === 'https:') {
+                showStatus('⚠️ 检测到HTTPS访问，这可能导致资源加载错误', 'error');
+                solutions.innerHTML = `
+                    <p><strong>Chrome浏览器：</strong></p>
+                    <p>1. 地址栏输入：<span class="code">chrome://net-internals/#hsts</span></p>
+                    <p>2. 删除域名：<span class="code">${hostname}</span></p>
+                    <p><strong>或使用隐身模式：</strong> Ctrl+Shift+N</p>
+                `;
+                showActions();
+            } else {
+                showStatus('✅ 检测到HTTP访问，正在测试连接...', 'success');
+                setTimeout(testConnection, 1000);
+            }
+        }
+        
+        // 页面加载时自动诊断
+        window.onload = function() {
+            diagnoseProtocol();
+        };
+    </script>
+</body>
+</html>

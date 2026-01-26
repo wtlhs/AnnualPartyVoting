@@ -1,0 +1,103 @@
+/* Font Awesome 简化版 - 本地版本 */
+/* 使用Unicode字符替代图标字体 */
+
+.fas, .fa {
+    font-family: Arial, sans-serif;
+    font-style: normal;
+    font-weight: normal;
+    display: inline-block;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 常用图标映射 */
+.fa-crown::before { content: "👑"; }
+.fa-tachometer-alt::before { content: "📊"; }
+.fa-users::before { content: "👥"; }
+.fa-vote-yea::before { content: "🗳️"; }
+.fa-trophy::before { content: "🏆"; }
+.fa-cog::before { content: "⚙️"; }
+.fa-sign-out-alt::before { content: "🚪"; }
+.fa-bars::before { content: "☰"; }
+.fa-sync-alt::before { content: "🔄"; }
+.fa-expand::before { content: "⛶"; }
+.fa-compress::before { content: "⛶"; }
+.fa-eye::before { content: "👁"; }
+.fa-edit::before { content: "✏️"; }
+.fa-trash::before { content: "🗑️"; }
+.fa-download::before { content: "⬇️"; }
+.fa-upload::before { content: "⬆️"; }
+.fa-search::before { content: "🔍"; }
+.fa-plus::before { content: "➕"; }
+.fa-minus::before { content: "➖"; }
+.fa-check::before { content: "✅"; }
+.fa-times::before { content: "❌"; }
+.fa-info::before { content: "ℹ️"; }
+.fa-warning::before { content: "⚠️"; }
+.fa-home::before { content: "🏠"; }
+.fa-user::before { content: "👤"; }
+.fa-calendar::before { content: "📅"; }
+.fa-clock::before { content: "🕐"; }
+.fa-star::before { content: "⭐"; }
+.fa-heart::before { content: "❤️"; }
+.fa-thumbs-up::before { content: "👍"; }
+.fa-thumbs-down::before { content: "👎"; }
+.fa-share::before { content: "📤"; }
+.fa-print::before { content: "🖨️"; }
+.fa-save::before { content: "💾"; }
+.fa-folder::before { content: "📁"; }
+.fa-file::before { content: "📄"; }
+.fa-image::before { content: "🖼️"; }
+.fa-video::before { content: "📹"; }
+.fa-music::before { content: "🎵"; }
+.fa-phone::before { content: "📞"; }
+.fa-envelope::before { content: "✉️"; }
+.fa-link::before { content: "🔗"; }
+.fa-lock::before { content: "🔒"; }
+.fa-unlock::before { content: "🔓"; }
+.fa-key::before { content: "🔑"; }
+.fa-shield::before { content: "🛡️"; }
+.fa-bell::before { content: "🔔"; }
+.fa-comment::before { content: "💬"; }
+.fa-comments::before { content: "💬"; }
+.fa-question::before { content: "❓"; }
+.fa-exclamation::before { content: "❗"; }
+.fa-lightbulb::before { content: "💡"; }
+.fa-rocket::before { content: "🚀"; }
+.fa-fire::before { content: "🔥"; }
+.fa-bolt::before { content: "⚡"; }
+.fa-magic::before { content: "✨"; }
+.fa-gift::before { content: "🎁"; }
+.fa-birthday-cake::before { content: "🎂"; }
+.fa-party-horn::before { content: "🎉"; }
+.fa-confetti::before { content: "🎊"; }
+
+/* 大小调整 */
+.fa-xs { font-size: 0.75em; }
+.fa-sm { font-size: 0.875em; }
+.fa-lg { font-size: 1.33em; }
+.fa-2x { font-size: 2em; }
+.fa-3x { font-size: 3em; }
+.fa-4x { font-size: 4em; }
+.fa-5x { font-size: 5em; }
+
+/* 旋转动画 */
+.fa-spin {
+    animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 脉冲动画 */
+.fa-pulse {
+    animation: fa-pulse 1s infinite steps(8);
+}
+
+@keyframes fa-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时排名展示 - 年会最佳服装评选</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/ranking-display.css">
+</head>
+<body>
+    <div class="display-container">
+        <header class="display-header">
+            <h1>年会最佳服装评选 - 实时排名</h1>
+            <div class="last-update">
+                最后更新: <span id="lastUpdateTime">--:--:--</span>
+            </div>
+        </header>
+        
+        <main class="display-main">
+            <div class="rankings-display">
+                <div class="ranking-column">
+                    <h2 class="category-title male">男性组排名</h2>
+                    <div id="maleRankingDisplay" class="ranking-list-display">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+                
+                <div class="ranking-column">
+                    <h2 class="category-title female">女性组排名</h2>
+                    <div id="femaleRankingDisplay" class="ranking-list-display">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-display">
+                <div class="stat-item">
+                    <span class="stat-label">总参与人数</span>
+                    <span id="displayTotalParticipants" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">总投票数</span>
+                    <span id="displayTotalVotes" class="stat-value">0</span>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="display-footer">
+            <p>数据每30秒自动刷新 | 年会最佳服装评选系统</p>
+        </footer>
+    </div>
+    
+    <script src="/static/js/ranking-display.js"></script>
+</body>
+</html>

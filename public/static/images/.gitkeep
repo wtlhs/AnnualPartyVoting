@@ -1,0 +1,4 @@
+# This file ensures the images directory is created
+# Default avatar images should be placed here:
+# - default-male.png
+# - default-female.png

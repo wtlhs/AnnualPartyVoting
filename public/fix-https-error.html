@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>年会投票 - 安全访问指引</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #e74c3c;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+            transition: background-color 0.3s;
+            box-shadow: 0 4px 6px rgba(231, 76, 60, 0.3);
+        }
+        .btn:hover {
+            background-color: #c0392b;
+        }
+        .notice {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 14px;
+        }
+        .wechat-guide {
+            display: none;
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .step {
+            margin: 10px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .step:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #e74c3c;
+        }
+        .icon-warning {
+            font-size: 48px;
+            margin-bottom: 10px;
+            color: #f39c12;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon-warning">⚠️</div>
+        <h1>即将进入安全连接</h1>
+        
+        <div id="wechat-guide" class="wechat-guide">
+            <strong>微信用户请注意：</strong>
+            <div class="step">微信可能会拦截自签名证书访问</div>
+            <div class="step">请点击右上角 <span style="font-weight:bold;font-size:20px;">...</span></div>
+            <div class="step">选择 <strong>"在浏览器打开"</strong></div>
+            <div class="step">推荐使用 Chrome 或 Safari 浏览器</div>
+        </div>
+
+        <p>为了使用扫码和投票功能，系统需要建立安全连接 (HTTPS)。</p>
+        
+        <a id="https-link" href="#" class="btn">继续访问投票系统</a>
+
+        <div class="notice">
+            <strong>遇到"连接不安全"提示怎么办？</strong>
+            <div class="step">这是因为使用内部网络证书，属于正常现象</div>
+            <div class="step">点击 <strong>"高级"</strong> 或 <strong>"详细信息"</strong></div>
+            <div class="step">选择 <strong>"继续前往"</strong> 或 <strong>"接受风险"</strong></div>
+        </div>
+    </div>
+
+    <script>
+        // 获取当前主机名，替换端口为 HTTPS 端口
+        var currentHost = window.location.hostname;
+        var httpsPort = '3443'; // 这里需要和服务端配置一致
+        var httpsUrl = 'https://' + currentHost + ':' + httpsPort + window.location.pathname + window.location.search;
+        
+        document.getElementById('https-link').href = httpsUrl;
+
+        // 微信环境检测
+        var ua = navigator.userAgent.toLowerCase();
+        if (ua.match(/MicroMessenger/i) == "micromessenger") {
+            document.getElementById('wechat-guide').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

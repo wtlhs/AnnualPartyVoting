@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清除缓存 - 年会投票系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        .step h3 {
+            margin: 0 0 10px 0;
+            color: #007bff;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 清除浏览器缓存</h1>
+        
+        <div class="warning">
+            <strong>注意：</strong>如果你看到HTTPS相关错误，请按照以下步骤清除浏览器缓存。
+        </div>
+
+        <div class="step">
+            <h3>方法一：快捷键清除（推荐）</h3>
+            <p>1. 按 <strong>Ctrl + Shift + Delete</strong> (Windows) 或 <strong>Cmd + Shift + Delete</strong> (Mac)</p>
+            <p>2. 选择"全部时间"</p>
+            <p>3. 勾选"缓存的图片和文件"和"Cookie及其他网站数据"</p>
+            <p>4. 点击"清除数据"</p>
+        </div>
+
+        <div class="step">
+            <h3>方法二：使用隐身模式</h3>
+            <p>1. 按 <strong>Ctrl + Shift + N</strong> (Chrome) 或 <strong>Ctrl + Shift + P</strong> (Firefox)</p>
+            <p>2. 在隐身窗口中访问系统</p>
+        </div>
+
+        <div class="step">
+            <h3>方法三：强制刷新</h3>
+            <p>1. 按 <strong>Ctrl + F5</strong> 或 <strong>Shift + F5</strong></p>
+            <p>2. 或者按住 <strong>Shift</strong> 键点击刷新按钮</p>
+        </div>
+
+        <div class="step">
+            <h3>方法四：清除特定域名缓存</h3>
+            <p>Chrome浏览器：</p>
+            <p>1. 地址栏输入：<code>chrome://settings/content/all</code></p>
+            <p>2. 搜索你的IP地址（如：172.18.0.250）</p>
+            <p>3. 点击删除按钮</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="javascript:location.reload(true)" class="btn">强制刷新当前页面</a>
+            <a href="/" class="btn">返回首页</a>
+        </div>
+
+        <script>
+            // 强制清除当前页面缓存
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) {
+                        caches.delete(name);
+                    });
+                });
+            }
+            
+            // 清除localStorage
+            if (typeof(Storage) !== "undefined") {
+                localStorage.clear();
+                sessionStorage.clear();
+            }
+            
+            console.log('缓存清除完成');
+        </script>
+    </div>
+</body>
+</html>

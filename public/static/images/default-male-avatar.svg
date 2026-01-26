@@ -1,0 +1,6 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="64" cy="64" r="64" fill="#4A90E2"/>
+  <circle cx="64" cy="48" r="20" fill="#FFFFFF"/>
+  <path d="M32 96 C32 80, 46 68, 64 68 C82 68, 96 80, 96 96 L96 128 L32 128 Z" fill="#FFFFFF"/>
+  <text x="64" y="110" text-anchor="middle" fill="#4A90E2" font-family="Arial, sans-serif" font-size="12" font-weight="bold">男</text>
+</svg>

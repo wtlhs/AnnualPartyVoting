@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 年会最佳服装评选</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="stylesheet" href="/static/libs/fontawesome.min.css">
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- 侧边栏导航 -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-crown"></i> 管理后台</h2>
+                <p>年会最佳服装评选</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>仪表盘</span>
+                </a>
+                <a href="#participants" class="nav-item" data-section="participants">
+                    <i class="fas fa-users"></i>
+                    <span>参与者管理</span>
+                </a>
+                <a href="#voting" class="nav-item" data-section="voting">
+                    <i class="fas fa-vote-yea"></i>
+                    <span>投票统计</span>
+                </a>
+                <a href="#winners" class="nav-item" data-section="winners">
+                    <i class="fas fa-trophy"></i>
+                    <span>获奖名单</span>
+                </a>
+                <a href="#settings" class="nav-item" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>系统设置</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>退出登录</span>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- 主内容区域 -->
+        <main class="admin-main">
+            <header class="admin-header">
+                <div class="header-left">
+                    <button class="sidebar-toggle" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="pageTitle">仪表盘</h1>
+                </div>
+                
+                <div class="header-right">
+                    <div class="header-stats">
+                        <div class="header-stat">
+                            <i class="fas fa-users"></i>
+                            <span id="headerTotalUsers">0</span>
+                            <small>参与者</small>
+                        </div>
+                        <div class="header-stat">
+                            <i class="fas fa-vote-yea"></i>
+                            <span id="headerTotalVotes">0</span>
+                            <small>投票数</small>
+                        </div>
+                    </div>
+                    
+                    <div class="header-actions">
+                        <button id="refreshAllBtn" class="header-btn" title="刷新数据">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>刷新数据</span>
+                        </button>
+                        <button id="fullscreenBtn" class="header-btn" title="全屏显示">
+                            <i class="fas fa-expand"></i>
+                            <span>全屏显示</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="admin-content" id="adminContent">
+                <!-- 内容将通过JavaScript动态加载 -->
+            </div>
+        </main>
+    </div>
+    
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>

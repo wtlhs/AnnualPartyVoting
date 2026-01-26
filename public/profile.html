@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人信息 - 年会最佳服装评选</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>个人信息</h1>
+        </header>
+        
+        <main>
+            <div class="profile-info">
+                <div class="avatar-section">
+                    <img id="userAvatar" src="" alt="用户头像" class="avatar">
+                    <button id="uploadAvatarBtn" class="btn-secondary">更换头像</button>
+                    <input type="file" id="avatarInput" accept="image/jpeg,image/png" style="display: none;">
+                </div>
+                
+                <div class="user-details">
+                    <h2 id="userName">加载中...</h2>
+                    <p id="userGender">性别: 加载中...</p>
+                    <p id="numericId">数字ID: 加载中...</p>
+                    <p id="voteCount">获得票数: 加载中...</p>
+                </div>
+                
+                <div class="qr-code-section">
+                    <h3>我的投票二维码</h3>
+                    <div id="qrCodeContainer">
+                        <canvas id="qrCode"></canvas>
+                    </div>
+                    <p class="qr-hint">让其他人扫描此二维码为你投票</p>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <a href="/" class="btn-secondary">返回首页</a>
+                <a href="/scan" class="btn-secondary">扫码投票</a>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/static/libs/qrcode.min.js"></script>
+    <script src="/static/js/profile.js"></script>
+</body>
+</html>

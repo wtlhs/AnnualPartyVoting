@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票确认 - 年会最佳服装评选</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>投票确认</h1>
+        </header>
+        
+        <main>
+            <div class="vote-confirmation">
+                <div class="candidate-info">
+                    <img id="candidateAvatar" src="" alt="候选人头像" class="avatar large">
+                    <h2 id="candidateName">加载中...</h2>
+                    <p id="candidateGender">性别: 加载中...</p>
+                    <p id="candidateVotes">当前票数: 加载中...</p>
+                </div>
+                
+                <div class="vote-action">
+                    <p class="vote-question">确认要为此参与者投票吗？</p>
+                    <div class="vote-buttons">
+                        <button id="confirmVoteBtn" class="btn-primary">确认投票</button>
+                        <button id="cancelVoteBtn" class="btn-secondary">取消</button>
+                    </div>
+                </div>
+                
+                <div id="voteResult" class="vote-result" style="display: none;">
+                    <div class="result-message">
+                        <h3 id="resultTitle">投票结果</h3>
+                        <p id="resultMessage">处理中...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <a href="/scan" class="btn-secondary">继续扫码</a>
+                <a href="/" class="btn-secondary">返回首页</a>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/static/js/vote.js"></script>
+</body>
+</html>

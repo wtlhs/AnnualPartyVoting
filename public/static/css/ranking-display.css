@@ -1,0 +1,425 @@
+/* 电脑端排名展示专用样式 */
+
+body {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+.display-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 头部样式 */
+.display-header {
+    text-align: center;
+    margin-bottom: 40px;
+    color: white;
+}
+
+.display-header h1 {
+    font-size: 42px;
+    margin-bottom: 16px;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    letter-spacing: 1px;
+}
+
+.last-update {
+    font-size: 18px;
+    opacity: 0.9;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 12px 24px;
+    border-radius: 25px;
+    display: inline-block;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 主要内容区域 */
+.display-main {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px);
+}
+
+/* 排名展示区域 */
+.rankings-display {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 50px;
+    margin-bottom: 50px;
+}
+
+.ranking-column {
+    background: rgba(248, 249, 250, 0.8);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.category-title {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 30px;
+    padding: 16px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.category-title::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: inherit;
+    opacity: 0.9;
+    z-index: -1;
+}
+
+.category-title.male {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.category-title.female {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+/* 排名列表 */
+.ranking-list-display {
+    min-height: 400px;
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.ranking-list-display::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ranking-list-display::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.ranking-list-display::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.ranking-list-display::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.display-ranking-item {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    margin-bottom: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.display-ranking-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
+    pointer-events: none;
+}
+
+.display-ranking-item:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.display-ranking-item.first {
+    background: linear-gradient(135deg, #fff9c4 0%, #fff3a0 100%);
+    border: 3px solid #ffd700;
+    box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3);
+}
+
+.display-ranking-item.second {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    border: 3px solid #c0c0c0;
+    box-shadow: 0 8px 32px rgba(192, 192, 192, 0.3);
+}
+
+.display-ranking-item.third {
+    background: linear-gradient(135deg, #f4e4bc 0%, #e6d3a3 100%);
+    border: 3px solid #cd7f32;
+    box-shadow: 0 8px 32px rgba(205, 127, 50, 0.3);
+}
+
+.display-ranking-number {
+    font-size: 36px;
+    font-weight: 900;
+    margin-right: 24px;
+    min-width: 60px;
+    text-align: center;
+    color: #333;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.display-ranking-number.first {
+    color: #ffd700;
+    text-shadow: 0 3px 6px rgba(255, 215, 0, 0.4);
+    font-size: 42px;
+}
+
+.display-ranking-number.second {
+    color: #c0c0c0;
+    text-shadow: 0 3px 6px rgba(192, 192, 192, 0.4);
+    font-size: 40px;
+}
+
+.display-ranking-number.third {
+    color: #cd7f32;
+    text-shadow: 0 3px 6px rgba(205, 127, 50, 0.4);
+    font-size: 38px;
+}
+
+.display-ranking-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    margin-right: 24px;
+    object-fit: cover;
+    border: 4px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.display-ranking-item:hover .display-ranking-avatar {
+    transform: scale(1.1);
+}
+
+.display-ranking-info {
+    flex: 1;
+}
+
+.display-ranking-name {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #333;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.display-ranking-votes {
+    font-size: 18px;
+    color: #666;
+    font-weight: 600;
+}
+
+/* 统计信息展示 */
+.stats-display {
+    display: flex;
+    justify-content: center;
+    gap: 80px;
+    padding: 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    color: white;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-display::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.stat-item {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.stat-label {
+    display: block;
+    font-size: 18px;
+    margin-bottom: 12px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.stat-value {
+    display: block;
+    font-size: 42px;
+    font-weight: 900;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* 底部样式 */
+.display-footer {
+    text-align: center;
+    margin-top: 30px;
+    color: white;
+    opacity: 0.8;
+    font-size: 16px;
+}
+
+/* 加载状态 */
+.loading {
+    text-align: center;
+    padding: 60px;
+    color: #666;
+    font-size: 20px;
+    font-weight: 500;
+}
+
+/* 空状态 */
+.empty-state {
+    text-align: center;
+    padding: 60px;
+    color: #999;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* 全屏模式优化 */
+@media (min-width: 1200px) {
+    .display-container {
+        max-width: 1600px;
+        padding: 30px;
+    }
+    
+    .display-header h1 {
+        font-size: 48px;
+    }
+    
+    .rankings-display {
+        gap: 60px;
+    }
+    
+    .ranking-column {
+        padding: 40px;
+    }
+    
+    .category-title {
+        font-size: 32px;
+        padding: 20px;
+    }
+}
+
+/* 超大屏幕优化 */
+@media (min-width: 1600px) {
+    .display-container {
+        max-width: 1800px;
+    }
+    
+    .display-header h1 {
+        font-size: 56px;
+    }
+    
+    .display-ranking-name {
+        font-size: 24px;
+    }
+    
+    .display-ranking-votes {
+        font-size: 20px;
+    }
+    
+    .stat-value {
+        font-size: 48px;
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+    .display-container {
+        padding: 16px;
+    }
+    
+    .display-header h1 {
+        font-size: 32px;
+    }
+    
+    .rankings-display {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    
+    .stats-display {
+        flex-direction: column;
+        gap: 30px;
+    }
+    
+    .display-ranking-number {
+        font-size: 28px;
+        min-width: 50px;
+    }
+    
+    .display-ranking-avatar {
+        width: 60px;
+        height: 60px;
+    }
+}
+
+@media (max-width: 768px) {
+    .display-main {
+        padding: 24px;
+    }
+    
+    .category-title {
+        font-size: 24px;
+        padding: 12px;
+    }
+    
+    .display-ranking-number {
+        font-size: 24px;
+        min-width: 40px;
+    }
+    
+    .display-ranking-name {
+        font-size: 18px;
+    }
+    
+    .display-ranking-avatar {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .stat-value {
+        font-size: 32px;
+    }
+}
