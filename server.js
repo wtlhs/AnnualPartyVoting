@@ -76,16 +76,14 @@ app.use((req, res, next) => {
   res.setHeader('X-Forwarded-SSL', 'off');
   res.setHeader('X-Forwarded-Port', '3000');
   
-  // 添加内容安全策略，强制使用HTTP
+  // 添加内容安全策略，确保使用HTTP
   res.setHeader('Content-Security-Policy', 
     "default-src 'self' http:; " +
     "script-src 'self' 'unsafe-inline' http:; " +
     "style-src 'self' 'unsafe-inline' http:; " +
     "img-src 'self' data: blob: http:; " +
     "connect-src 'self' http:; " +
-    "font-src 'self' http:; " +
-    "upgrade-insecure-requests; " +
-    "block-all-mixed-content"
+    "font-src 'self' http:"
   );
   
   next();

@@ -110,8 +110,8 @@ async function checkCameraPermissions() {
             errorMessage = '未检测到摄像头设备，请使用手动输入功能';
         } else if (error.name === 'NotSupportedError') {
             errorMessage = '当前浏览器不支持摄像头功能，请使用手动输入';
-        } else if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-            errorMessage = '摄像头功能需要HTTPS安全连接，请使用HTTPS访问或使用手动输入功能';
+        } else if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && !location.hostname.startsWith('192.168.') && !location.hostname.startsWith('10.') && !location.hostname.startsWith('172.')) {
+            errorMessage = '摄像头功能需要安全连接或局域网环境，请使用手动输入功能';
         }
         
         showMessage(errorMessage, 'error');
@@ -324,8 +324,8 @@ async function startScanning() {
             errorMessage = '摄像头被其他应用占用，请关闭其他使用摄像头的应用后重试，或使用手动输入';
         } else if (error.name === 'OverconstrainedError') {
             errorMessage = '摄像头不支持所需的配置，请使用手动输入功能';
-        } else if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-            errorMessage = '摄像头功能需要HTTPS安全连接，请使用HTTPS访问或使用手动输入功能';
+        } else if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && !location.hostname.startsWith('192.168.') && !location.hostname.startsWith('10.') && !location.hostname.startsWith('172.')) {
+            errorMessage = '摄像头功能需要安全连接或局域网环境，请使用手动输入功能';
         } else if (error.message) {
             errorMessage = `摄像头启动失败：${error.message}，请使用手动输入功能`;
         }
