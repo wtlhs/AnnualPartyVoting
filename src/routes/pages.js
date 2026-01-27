@@ -45,4 +45,9 @@ router.get('/mobile-stats', (req, res) => {
   res.sendFile(path.join(publicPath, 'mobile-stats.html'));
 });
 
+// HTTPS protocol test page
+router.get('/test-https-protocol', (req, res) => {
+  res.sendFile(path.join(publicPath, 'test-https-protocol.html'));
+});
+
 module.exports = router;

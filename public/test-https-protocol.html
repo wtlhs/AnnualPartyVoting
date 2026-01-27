@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTPS协议测试 - 年会投票系统</title>
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .code {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid #e9ecef;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .resource-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            background: #f8f9fa;
+        }
+        .resource-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .resource-item:last-child {
+            border-bottom: none;
+        }
+        .https { color: #28a745; }
+        .http { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="test-card">
+        <h1>🔒 HTTPS协议测试</h1>
+        <p>此页面用于测试系统是否正确使用HTTPS协议，确保所有资源都通过安全连接加载。</p>
+    </div>
+
+    <div class="test-card">
+        <h2>📊 当前协议信息</h2>
+        <div class="code">
+            <strong>当前协议:</strong> <span id="current-protocol"></span><br>
+            <strong>当前主机:</strong> <span id="current-host"></span><br>
+            <strong>完整URL:</strong> <span id="current-url"></span><br>
+            <strong>安全上下文:</strong> <span id="secure-context"></span><br>
+            <strong>用户代理:</strong> <span id="user-agent"></span>
+        </div>
+    </div>
+
+    <div class="test-card">
+        <h2>🧪 资源加载测试</h2>
+        <button class="test-button" onclick="testResourceLoading()">测试所有资源加载</button>
+        <button class="test-button" onclick="testAPICall()">测试API调用</button>
+        <button class="test-button" onclick="clearResults()">清除结果</button>
+        <div id="resource-test-results"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>🔍 协议检查结果</h2>
+        <div id="protocol-check-results"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>📋 已加载资源列表</h2>
+        <div id="loaded-resources" class="resource-list"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>📝 HTTPS测试说明</h2>
+        <ul>
+            <li><strong>协议检查:</strong> 确认当前页面使用HTTPS协议</li>
+            <li><strong>资源加载:</strong> 测试CSS、JS文件是否通过HTTPS正确加载</li>
+            <li><strong>API调用:</strong> 验证API请求是否使用HTTPS协议</li>
+            <li><strong>安全上下文:</strong> 检查是否在安全上下文中运行</li>
+            <li><strong>混合内容:</strong> 确保没有HTTP资源在HTTPS页面中加载</li>
+        </ul>
+    </div>
+
+    <script>
+        // 显示当前协议信息
+        function displayProtocolInfo() {
+            document.getElementById('current-protocol').textContent = window.location.protocol;
+            document.getElementById('current-host').textContent = window.location.host;
+            document.getElementById('current-url').textContent = window.location.href;
+            document.getElementById('secure-context').textContent = window.isSecureContext ? '是' : '否';
+            document.getElementById('user-agent').textContent = navigator.userAgent;
+        }
+
+        // 检查协议状态
+        function checkProtocolStatus() {
+            const resultsDiv = document.getElementById('protocol-check-results');
+            let html = '';
+
+            // 检查当前协议
+            if (window.location.protocol === 'https:') {
+                html += '<div class="status success">✅ 当前使用HTTPS协议 - 正确</div>';
+            } else {
+                html += '<div class="status error">❌ 当前使用HTTP协议 - 需要使用HTTPS</div>';
+            }
+
+            // 检查是否在安全上下文中
+            if (window.isSecureContext) {
+                html += '<div class="status success">✅ 当前处于安全上下文中</div>';
+            } else {
+                html += '<div class="status error">❌ 当前不在安全上下文中</div>';
+            }
+
+            // 检查CSP设置
+            const metaTags = document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]');
+            if (metaTags.length > 0) {
+                html += '<div class="status success">✅ 检测到CSP设置，支持HTTPS升级</div>';
+            } else {
+                html += '<div class="status warning">⚠️ 未检测到CSP设置</div>';
+            }
+
+            // 检查HSTS头
+            if (document.location.protocol === 'https:') {
+                html += '<div class="status info">ℹ️ HTTPS连接已建立，HSTS策略生效</div>';
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // 测试资源加载
+        function testResourceLoading() {
+            const resultsDiv = document.getElementById('resource-test-results');
+            resultsDiv.innerHTML = '<div class="status info">🔄 正在测试资源加载...</div>';
+            
+            const resources = [
+                { type: 'css', url: '/static/css/style.css', name: '主样式文件' },
+                { type: 'css', url: '/static/css/admin.css', name: '管理后台样式' },
+                { type: 'js', url: '/static/js/app.js', name: '主应用脚本' },
+                { type: 'js', url: '/static/js/admin.js', name: '管理后台脚本' },
+                { type: 'js', url: '/static/libs/qrcode.min.js', name: '二维码库' }
+            ];
+
+            let completedTests = 0;
+            const totalTests = resources.length;
+
+            resources.forEach(resource => {
+                if (resource.type === 'css') {
+                    testCSSResource(resource, () => {
+                        completedTests++;
+                        if (completedTests === totalTests) {
+                            updateResourceList();
+                        }
+                    });
+                } else if (resource.type === 'js') {
+                    testJSResource(resource, () => {
+                        completedTests++;
+                        if (completedTests === totalTests) {
+                            updateResourceList();
+                        }
+                    });
+                }
+            });
+        }
+
+        // 测试CSS资源
+        function testCSSResource(resource, callback) {
+            const resultsDiv = document.getElementById('resource-test-results');
+            const testLink = document.createElement('link');
+            testLink.rel = 'stylesheet';
+            testLink.href = resource.url;
+            
+            testLink.onload = function() {
+                const protocol = new URL(testLink.href, window.location.href).protocol;
+                const protocolClass = protocol === 'https:' ? 'https' : 'http';
+                resultsDiv.innerHTML += `<div class="status success">✅ ${resource.name} 加载成功 (<span class="${protocolClass}">${protocol}</span>)</div>`;
+                callback();
+            };
+            
+            testLink.onerror = function() {
+                resultsDiv.innerHTML += `<div class="status error">❌ ${resource.name} 加载失败</div>`;
+                callback();
+            };
+            
+            document.head.appendChild(testLink);
+        }
+
+        // 测试JS资源
+        function testJSResource(resource, callback) {
+            const resultsDiv = document.getElementById('resource-test-results');
+            const testScript = document.createElement('script');
+            testScript.src = resource.url;
+            
+            testScript.onload = function() {
+                const protocol = new URL(testScript.src, window.location.href).protocol;
+                const protocolClass = protocol === 'https:' ? 'https' : 'http';
+                resultsDiv.innerHTML += `<div class="status success">✅ ${resource.name} 加载成功 (<span class="${protocolClass}">${protocol}</span>)</div>`;
+                callback();
+            };
+            
+            testScript.onerror = function() {
+                resultsDiv.innerHTML += `<div class="status error">❌ ${resource.name} 加载失败</div>`;
+                callback();
+            };
+            
+            document.head.appendChild(testScript);
+        }
+
+        // 测试API调用
+        async function testAPICall() {
+            const resultsDiv = document.getElementById('resource-test-results');
+            
+            try {
+                const response = await fetch('/api/votes/statistics');
+                const protocol = new URL(response.url).protocol;
+                const protocolClass = protocol === 'https:' ? 'https' : 'http';
+                
+                if (response.ok) {
+                    resultsDiv.innerHTML += `<div class="status success">✅ API调用成功 (<span class="${protocolClass}">${protocol}</span>)</div>`;
+                } else {
+                    resultsDiv.innerHTML += `<div class="status warning">⚠️ API调用返回错误状态: ${response.status} (<span class="${protocolClass}">${protocol}</span>)</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="status error">❌ API调用失败: ${error.message}</div>`;
+            }
+        }
+
+        // 更新资源列表
+        function updateResourceList() {
+            const resourcesDiv = document.getElementById('loaded-resources');
+            let html = '';
+
+            // 获取所有已加载的样式表
+            const stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
+            stylesheets.forEach(link => {
+                const protocol = new URL(link.href, window.location.href).protocol;
+                const protocolClass = protocol === 'https:' ? 'https' : 'http';
+                html += `<div class="resource-item"><span class="${protocolClass}">[${protocol}]</span> CSS: ${link.href}</div>`;
+            });
+
+            // 获取所有已加载的脚本
+            const scripts = document.querySelectorAll('script[src]');
+            scripts.forEach(script => {
+                const protocol = new URL(script.src, window.location.href).protocol;
+                const protocolClass = protocol === 'https:' ? 'https' : 'http';
+                html += `<div class="resource-item"><span class="${protocolClass}">[${protocol}]</span> JS: ${script.src}</div>`;
+            });
+
+            resourcesDiv.innerHTML = html || '<div class="resource-item">暂无已加载的外部资源</div>';
+        }
+
+        // 清除测试结果
+        function clearResults() {
+            document.getElementById('resource-test-results').innerHTML = '';
+        }
+
+        // 页面加载时执行
+        document.addEventListener('DOMContentLoaded', function() {
+            displayProtocolInfo();
+            checkProtocolStatus();
+            updateResourceList();
+        });
+    </script>
+</body>
+</html>

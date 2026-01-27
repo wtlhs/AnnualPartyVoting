@@ -472,7 +472,7 @@ async function confirmGender() {
         } else {
             // 处理特定错误
             if (result.errorCode === 'NAME_ALREADY_EXISTS') {
-                showMessage('该姓名已被其他人注册，请使用不同的姓名', 'error');
+                showNameConflictDialog(currentRegistrationData.name, currentRegistrationData.gender);
             } else {
                 showMessage(result.message || '注册失败，请重试', 'error');
             }
