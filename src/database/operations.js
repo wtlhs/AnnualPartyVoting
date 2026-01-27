@@ -1162,6 +1162,251 @@ async function clearAllData() {
   });
 }
 
+/**
+ * Create a complete data backup with all voting information
+ * @returns {Promise<Object>} Complete backup data object
+ */
+async function createDataBackup() {
+  try {
+    // Get all data from the database
+    const statistics = await getVoteStatistics();
+    const ranking = await getRanking();
+    const allUsers = await getAllUsers();
+    const recentVotes = await getRecentVotes(10000); // Get all votes
+    const allRestrictions = await getAllVoteRestrictions();
+    
+    // Create comprehensive backup object
+    const backupData = {
+      backupInfo: {
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        description: '年会最佳服装评选完整数据备份'
+      },
+      statistics,
+      ranking,
+      users: allUsers.map(user => ({
+        id: user.id,
+        numericId: user.numericId,
+        name: user.name,
+        gender: user.gender,
+        avatarUrl: user.avatarUrl,
+        qrCode: user.qrCode,
+        voteCount: user.voteCount,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      })),
+      votes: recentVotes.map(vote => ({
+        id: vote.id,
+        voterId: vote.voterId,
+        voterName: vote.voterName,
+        targetUserId: vote.targetUserId,
+        targetName: vote.targetName,
+        targetGender: vote.targetGender,
+        voteTime: vote.voteTime,
+        ipAddress: vote.ipAddress
+      })),
+      voteRestrictions: allRestrictions,
+      winners: {
+        male: ranking.male.slice(0, 3).map((user, index) => ({
+          rank: index + 1,
+          name: user.name,
+          voteCount: user.voteCount,
+          avatarUrl: user.avatarUrl,
+          prize: ['一等奖', '二等奖', '三等奖'][index]
+        })),
+        female: ranking.female.slice(0, 3).map((user, index) => ({
+          rank: index + 1,
+          name: user.name,
+          voteCount: user.voteCount,
+          avatarUrl: user.avatarUrl,
+          prize: ['一等奖', '二等奖', '三等奖'][index]
+        }))
+      },
+      summary: {
+        totalParticipants: statistics.totalParticipants,
+        totalVotes: statistics.totalVotes,
+        maleParticipants: statistics.maleParticipants,
+        femaleParticipants: statistics.femaleParticipants,
+        maleVotes: statistics.maleVotes,
+        femaleVotes: statistics.femaleVotes,
+        backupCreatedAt: new Date().toLocaleString('zh-CN')
+      }
+    };
+    
+    return backupData;
+  } catch (error) {
+    throw new Error(`创建数据备份失败: ${error.message}`);
+  }
+}
+
+/**
+ * Get all vote restrictions for backup purposes
+ * @returns {Promise<Array>} Array of all vote restriction records
+ */
+async function getAllVoteRestrictions() {
+  return new Promise((resolve, reject) => {
+    const db = getDatabase();
+    
+    const sql = `
+      SELECT vr.*,
+             male_user.name as male_voted_name,
+             female_user.name as female_voted_name,
+             voter_user.name as voter_name
+      FROM vote_restrictions vr
+      LEFT JOIN users male_user ON vr.male_voted_user_id = male_user.id
+      LEFT JOIN users female_user ON vr.female_voted_user_id = female_user.id
+      LEFT JOIN users voter_user ON vr.voter_id = voter_user.id
+      ORDER BY vr.created_at DESC
+    `;
+    
+    db.all(sql, [], (err, rows) => {
+      db.close();
+      
+      if (err) {
+        return reject(err);
+      }
+      
+      const restrictions = rows.map(row => ({
+        id: row.id,
+        voterId: row.voter_id,
+        voterName: row.voter_name,
+        maleVotedUserId: row.male_voted_user_id,
+        maleVotedName: row.male_voted_name,
+        femaleVotedUserId: row.female_voted_user_id,
+        femaleVotedName: row.female_voted_name,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+      
+      resolve(restrictions);
+    });
+  });
+}
+
+/**
+ * Archive current data and clear database (safe data management)
+ * This function creates a backup before clearing data
+ * @param {boolean} includeFiles - Whether to backup avatar files
+ * @returns {Promise<Object>} Archive result with backup data
+ */
+async function archiveAndClearData(includeFiles = true) {
+  try {
+    // First create a complete backup
+    const backupData = await createDataBackup();
+    
+    let fileBackupResult = null;
+    
+    // Backup avatar files if requested
+    if (includeFiles) {
+      const { backupAvatarFiles } = require('../utils/fileManager');
+      const avatarUrls = backupData.users
+        .filter(user => user.avatarUrl && user.avatarUrl.startsWith('/uploads/'))
+        .map(user => user.avatarUrl);
+      
+      if (avatarUrls.length > 0) {
+        try {
+          fileBackupResult = await backupAvatarFiles(avatarUrls);
+        } catch (error) {
+          console.warn('Avatar backup failed:', error.message);
+          fileBackupResult = { success: false, error: error.message };
+        }
+      }
+    }
+    
+    // Then clear all data
+    await clearAllData();
+    
+    // Clean up avatar files after data is cleared
+    if (includeFiles) {
+      const { cleanupAvatarFiles } = require('../utils/fileManager');
+      try {
+        await cleanupAvatarFiles(); // Clean all files since data is cleared
+      } catch (error) {
+        console.warn('Avatar cleanup failed:', error.message);
+      }
+    }
+    
+    return {
+      success: true,
+      message: '数据已成功归档并清空',
+      backup: backupData,
+      fileBackup: fileBackupResult,
+      clearedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    throw new Error(`数据归档和清空失败: ${error.message}`);
+  }
+}
+
+/**
+ * Get database file size and basic statistics for management
+ * @returns {Promise<Object>} Database management information
+ */
+async function getDatabaseInfo() {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const { getUploadsInfo } = require('../utils/fileManager');
+    
+    // Get database file path (assuming it's in the project root or data directory)
+    const dbPath = path.join(process.cwd(), 'voting.db');
+    
+    let fileSize = 0;
+    let fileExists = false;
+    
+    try {
+      const stats = fs.statSync(dbPath);
+      fileSize = stats.size;
+      fileExists = true;
+    } catch (error) {
+      // Database file might not exist or be in a different location
+      fileExists = false;
+    }
+    
+    // Get current data counts
+    const statistics = await getVoteStatistics();
+    const allUsers = await getAllUsers();
+    
+    // Get uploads directory information
+    const uploadsInfo = await getUploadsInfo();
+    
+    return {
+      database: {
+        fileExists,
+        filePath: dbPath,
+        fileSize: fileSize,
+        fileSizeFormatted: formatFileSize(fileSize)
+      },
+      uploads: uploadsInfo,
+      dataInfo: {
+        totalUsers: allUsers.length,
+        totalVotes: statistics.totalVotes,
+        totalParticipants: statistics.totalParticipants,
+        maleParticipants: statistics.maleParticipants,
+        femaleParticipants: statistics.femaleParticipants
+      },
+      lastUpdated: new Date().toISOString()
+    };
+  } catch (error) {
+    throw new Error(`获取数据库信息失败: ${error.message}`);
+  }
+}
+
+/**
+ * Format file size in human readable format
+ * @param {number} bytes - File size in bytes
+ * @returns {string} Formatted file size
+ */
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 module.exports = {
   // User operations
   createUser,
@@ -1186,5 +1431,11 @@ module.exports = {
   updateVoteRestrictions,
   canVoteForGender,
   clearAllVoteRestrictions,
-  clearAllData
+  getAllVoteRestrictions,
+  
+  // Data management operations
+  clearAllData,
+  createDataBackup,
+  archiveAndClearData,
+  getDatabaseInfo
 };

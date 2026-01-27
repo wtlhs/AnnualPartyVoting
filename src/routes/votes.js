@@ -418,9 +418,20 @@ router.get('/recent-activity', async (req, res) => {
     // Get recent votes with user information
     const recentVotes = await getRecentVotes(parseInt(limit));
     
+    // Filter out voter information for privacy protection
+    const filteredActivity = recentVotes.map(vote => ({
+      id: vote.id,
+      targetUserId: vote.targetUserId,
+      targetName: vote.targetName,
+      targetGender: vote.targetGender,
+      targetAvatar: vote.targetAvatar,
+      voteTime: vote.voteTime
+      // Removed: voterId, voterName, ipAddress for privacy
+    }));
+    
     res.json({
       success: true,
-      recentActivity: recentVotes,
+      recentActivity: filteredActivity,
       timestamp: new Date().toISOString()
     });
     

@@ -355,6 +355,14 @@ async function loadDashboard() {
                 <i class="fas fa-download"></i>
                 导出结果
             </button>
+            <button id="createBackupBtn" class="btn-info">
+                <i class="fas fa-save"></i>
+                创建备份
+            </button>
+            <button id="archiveAndClearBtn" class="btn-warning">
+                <i class="fas fa-archive"></i>
+                归档并清空
+            </button>
             <button id="generateWinnersBtn" class="btn-success">
                 <i class="fas fa-trophy"></i>
                 生成获奖名单
@@ -362,6 +370,10 @@ async function loadDashboard() {
             <button id="clearDataBtn" class="btn-danger">
                 <i class="fas fa-trash-alt"></i>
                 清空数据
+            </button>
+            <button id="databaseInfoBtn" class="btn-secondary">
+                <i class="fas fa-info-circle"></i>
+                数据库信息
             </button>
         </div>
     `;
@@ -376,20 +388,88 @@ async function loadDashboard() {
 async function loadParticipants() {
     const adminContent = document.getElementById('adminContent');
     adminContent.innerHTML = `
-        <div class="participants-table">
-            <div class="table-header">
-                <h3 class="table-title"><i class="fas fa-users"></i> 参与者列表</h3>
-                <div class="table-search">
-                    <input type="text" id="searchInput" class="search-input" placeholder="搜索参与者...">
+        <div class="participants-management">
+            <div class="management-header">
+                <div class="header-left">
+                    <h3 class="section-title"><i class="fas fa-users"></i> 参与者管理</h3>
+                    <p class="section-subtitle">管理所有参与者信息，支持编辑和删除操作</p>
+                </div>
+                <div class="header-actions">
+                    <button id="addParticipantBtn" class="btn-primary">
+                        <i class="fas fa-plus"></i>
+                        添加参与者
+                    </button>
+                    <button id="refreshParticipantsBtn" class="btn-secondary">
+                        <i class="fas fa-sync-alt"></i>
+                        刷新数据
+                    </button>
+                </div>
+            </div>
+            
+            <div class="management-filters">
+                <div class="filter-group">
+                    <label for="searchInput">搜索参与者：</label>
+                    <input type="text" id="searchInput" class="search-input" placeholder="输入姓名或数字ID搜索...">
+                </div>
+                <div class="filter-group">
+                    <label for="genderFilter">性别筛选：</label>
                     <select id="genderFilter" class="filter-select">
                         <option value="">所有性别</option>
                         <option value="male">男士</option>
                         <option value="female">女士</option>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <label for="sortBy">排序方式：</label>
+                    <select id="sortBy" class="filter-select">
+                        <option value="voteCount">按得票数</option>
+                        <option value="name">按姓名</option>
+                        <option value="createdAt">按注册时间</option>
+                    </select>
+                </div>
             </div>
-            <div style="overflow-x: auto;">
-                <table class="data-table">
+            
+            <div class="participants-stats">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>总参与者</h4>
+                        <span id="totalParticipantsCount">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-mars"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>男性参与者</h4>
+                        <span id="maleParticipantsCount">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon pink">
+                        <i class="fas fa-venus"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>女性参与者</h4>
+                        <span id="femaleParticipantsCount">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-vote-yea"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>总投票数</h4>
+                        <span id="totalVotesCount">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="participants-table-container">
+                <table class="participants-table">
                     <thead>
                         <tr>
                             <th>头像</th>
@@ -398,11 +478,12 @@ async function loadParticipants() {
                             <th>数字ID</th>
                             <th>得票数</th>
                             <th>注册时间</th>
+                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="participantsTableBody">
                         <tr>
-                            <td colspan="6" class="loading">
+                            <td colspan="7" class="loading">
                                 <i class="fas fa-spinner fa-spin"></i>
                                 加载中...
                             </td>
@@ -410,11 +491,15 @@ async function loadParticipants() {
                     </tbody>
                 </table>
             </div>
+            
+            <div class="table-pagination" id="tablePagination">
+                <!-- 分页控件将通过JavaScript生成 -->
+            </div>
         </div>
     `;
     
     await loadParticipantsData();
-    setupParticipantsSearch();
+    setupParticipantsManagement();
 }
 
 async function loadVotingStats() {
@@ -544,12 +629,18 @@ async function loadSettings() {
 
 function setupDashboardActions() {
     const exportBtn = document.getElementById('exportResultsBtn');
+    const createBackupBtn = document.getElementById('createBackupBtn');
+    const archiveAndClearBtn = document.getElementById('archiveAndClearBtn');
     const winnersBtn = document.getElementById('generateWinnersBtn');
     const clearBtn = document.getElementById('clearDataBtn');
+    const databaseInfoBtn = document.getElementById('databaseInfoBtn');
     
     if (exportBtn) exportBtn.addEventListener('click', exportResults);
+    if (createBackupBtn) createBackupBtn.addEventListener('click', createDataBackup);
+    if (archiveAndClearBtn) archiveAndClearBtn.addEventListener('click', confirmArchiveAndClear);
     if (winnersBtn) winnersBtn.addEventListener('click', generateWinnersList);
     if (clearBtn) clearBtn.addEventListener('click', confirmClearData);
+    if (databaseInfoBtn) databaseInfoBtn.addEventListener('click', showDatabaseInfo);
 }
 
 function setupSettingsActions() {
@@ -593,23 +684,51 @@ async function loadDashboardData() {
 
 async function loadParticipantsData() {
     try {
-        const response = await fetch('/api/admin/dashboard', {
+        const response = await fetch('/api/admin/users?limit=1000', {
             headers: {
                 'Authorization': `Bearer ${adminToken}`
             }
         });
         
-        if (!response.ok) throw new Error('Failed to load participants data');
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                showLoginForm();
+                return;
+            }
+            throw new Error('Failed to load participants data');
+        }
         
         const result = await response.json();
         if (result.success) {
-            updateParticipantsTable(result.dashboard.participants || []);
+            updateParticipantsTable(result.users || []);
+            updateParticipantsStats(result.users || []);
         }
         
     } catch (error) {
         console.error('Load participants data error:', error);
         showError('加载参与者数据失败');
     }
+}
+
+function updateParticipantsStats(participants) {
+    const totalCount = participants.length;
+    const maleCount = participants.filter(p => p.gender === 'male').length;
+    const femaleCount = participants.filter(p => p.gender === 'female').length;
+    const totalVotes = participants.reduce((sum, p) => sum + (p.voteCount || 0), 0);
+    
+    const elements = {
+        totalParticipantsCount: totalCount,
+        maleParticipantsCount: maleCount,
+        femaleParticipantsCount: femaleCount,
+        totalVotesCount: totalVotes
+    };
+    
+    Object.entries(elements).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    });
 }
 
 async function loadVotingStatsData() {
@@ -777,9 +896,9 @@ function updateParticipantsTable(participants) {
     if (participants.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="empty-state">
+                <td colspan="7" class="empty-state">
                     <i class="fas fa-users"></i>
-                    <p>暂无参与者</p>
+                    <p>暂无参与者数据</p>
                 </td>
             </tr>
         `;
@@ -787,33 +906,63 @@ function updateParticipantsTable(participants) {
     }
     
     tbody.innerHTML = participants.map(participant => `
-        <tr>
+        <tr data-user-id="${participant.id}">
             <td>
-                <img src="${participant.avatarUrl || getDefaultAvatar(participant.gender)}" 
-                     alt="${participant.name}" class="user-avatar"
-                     onerror="this.src='${getDefaultAvatar(participant.gender)}'">
+                <div class="participant-avatar">
+                    <img src="${participant.avatarUrl || (participant.gender === 'male' ? '/static/images/default-male-avatar.svg' : '/static/images/default-female-avatar.svg')}" 
+                         alt="${participant.name}" 
+                         onerror="this.src='${participant.gender === 'male' ? '/static/images/default-male-avatar.svg' : '/static/images/default-female-avatar.svg'}'">
+                </div>
             </td>
             <td>
-                <div class="user-info">
-                    <div class="user-name">${participant.name}</div>
-                    <div class="user-id">${participant.id}</div>
+                <div class="participant-name">
+                    <strong>${participant.name}</strong>
+                    ${participant.numericId ? `<small>ID: ${participant.numericId}</small>` : ''}
                 </div>
             </td>
             <td>
                 <span class="gender-badge ${participant.gender}">
+                    <i class="fas fa-${participant.gender === 'male' ? 'mars' : 'venus'}"></i>
                     ${participant.gender === 'male' ? '男士' : '女士'}
                 </span>
             </td>
-            <td>${participant.numericId || '-'}</td>
-            <td><span class="vote-count">${participant.voteCount || 0}</span></td>
-            <td>${new Date(participant.createdAt).toLocaleDateString('zh-CN')}</td>
+            <td>
+                <code class="numeric-id">${participant.numericId || 'N/A'}</code>
+            </td>
+            <td>
+                <div class="vote-count">
+                    <span class="count">${participant.voteCount || 0}</span>
+                    <small>票</small>
+                </div>
+            </td>
+            <td>
+                <div class="created-time">
+                    ${new Date(participant.createdAt).toLocaleString('zh-CN')}
+                </div>
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-edit" onclick="editParticipant('${participant.id}')" title="编辑">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-view" onclick="viewParticipantDetails('${participant.id}')" title="查看详情">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-delete" onclick="deleteParticipant('${participant.id}', '${participant.name}')" title="删除">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
         </tr>
     `).join('');
 }
 
-function setupParticipantsSearch() {
+function setupParticipantsManagement() {
     const searchInput = document.getElementById('searchInput');
     const genderFilter = document.getElementById('genderFilter');
+    const sortBy = document.getElementById('sortBy');
+    const addBtn = document.getElementById('addParticipantBtn');
+    const refreshBtn = document.getElementById('refreshParticipantsBtn');
     
     if (searchInput) {
         searchInput.addEventListener('input', filterParticipants);
@@ -821,6 +970,18 @@ function setupParticipantsSearch() {
     
     if (genderFilter) {
         genderFilter.addEventListener('change', filterParticipants);
+    }
+    
+    if (sortBy) {
+        sortBy.addEventListener('change', sortParticipants);
+    }
+    
+    if (addBtn) {
+        addBtn.addEventListener('click', showAddParticipantModal);
+    }
+    
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadParticipantsData);
     }
 }
 
@@ -1211,3 +1372,663 @@ function showMessage(message, type) {
         }
     }, 3000);
 }
+
+// ==================== 数据管理功能 ====================
+
+async function createDataBackup() {
+    const btn = document.getElementById('createBackupBtn');
+    if (!btn) return;
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 创建中...';
+    
+    try {
+        const response = await fetch('/api/admin/backup', {
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+        
+        if (response.ok) {
+            // 触发文件下载
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `voting-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess('数据备份已创建并下载');
+        } else {
+            const result = await response.json();
+            showError(result.message || '创建备份失败');
+        }
+    } catch (error) {
+        console.error('Create backup error:', error);
+        showError('操作失败，请重试');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+function confirmArchiveAndClear() {
+    if (confirm('📦 数据归档和清空确认\n\n此操作将：\n• 创建完整的数据备份\n• 备份所有头像文件\n• 清空数据库中的所有数据\n• 清理上传的头像文件\n\n备份文件将自动下载到您的电脑。\n\n确定要继续吗？')) {
+        if (confirm('⚠️ 最后确认\n\n数据清空后无法恢复，只能通过备份文件还原。\n\n确定要执行归档和清空操作吗？')) {
+            archiveAndClearData();
+        }
+    }
+}
+
+async function archiveAndClearData() {
+    const btn = document.getElementById('archiveAndClearBtn');
+    if (!btn) return;
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 归档中...';
+    
+    try {
+        const response = await fetch('/api/admin/archive-and-clear', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ includeFiles: true })
+        });
+        
+        if (response.ok) {
+            // 触发文件下载
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `voting-archive-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess('数据已成功归档并清空，归档文件已下载');
+            
+            // 刷新页面数据
+            setTimeout(() => {
+                loadCurrentSectionData();
+            }, 2000);
+        } else {
+            const result = await response.json();
+            showError(result.message || '归档和清空失败');
+        }
+    } catch (error) {
+        console.error('Archive and clear error:', error);
+        showError('操作失败，请重试');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function showDatabaseInfo() {
+    const btn = document.getElementById('databaseInfoBtn');
+    if (!btn) return;
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 获取中...';
+    
+    try {
+        const response = await fetch('/api/admin/database-info', {
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const info = result.databaseInfo;
+            
+            const infoHtml = `
+                <div class="database-info-modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-database"></i> 数据库信息</h3>
+                            <button class="close-btn" onclick="closeDatabaseInfoModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="info-section">
+                                <h4><i class="fas fa-server"></i> 数据库文件</h4>
+                                <p><strong>文件路径:</strong> ${info.database.filePath}</p>
+                                <p><strong>文件存在:</strong> ${info.database.fileExists ? '是' : '否'}</p>
+                                <p><strong>文件大小:</strong> ${info.database.fileSizeFormatted}</p>
+                            </div>
+                            
+                            <div class="info-section">
+                                <h4><i class="fas fa-folder"></i> 上传目录</h4>
+                                <p><strong>目录路径:</strong> ${info.uploads.path}</p>
+                                <p><strong>目录存在:</strong> ${info.uploads.exists ? '是' : '否'}</p>
+                                <p><strong>图片文件数:</strong> ${info.uploads.totalFiles}</p>
+                                <p><strong>总大小:</strong> ${info.uploads.totalSizeFormatted}</p>
+                            </div>
+                            
+                            <div class="info-section">
+                                <h4><i class="fas fa-chart-bar"></i> 数据统计</h4>
+                                <p><strong>总用户数:</strong> ${info.dataInfo.totalUsers}</p>
+                                <p><strong>总投票数:</strong> ${info.dataInfo.totalVotes}</p>
+                                <p><strong>参与者总数:</strong> ${info.dataInfo.totalParticipants}</p>
+                                <p><strong>男性参与者:</strong> ${info.dataInfo.maleParticipants}</p>
+                                <p><strong>女性参与者:</strong> ${info.dataInfo.femaleParticipants}</p>
+                            </div>
+                            
+                            <div class="info-section">
+                                <h4><i class="fas fa-clock"></i> 更新时间</h4>
+                                <p>${new Date(info.lastUpdated).toLocaleString('zh-CN')}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 添加模态框到页面
+            const modalDiv = document.createElement('div');
+            modalDiv.innerHTML = infoHtml;
+            document.body.appendChild(modalDiv);
+            
+        } else {
+            showError(result.message || '获取数据库信息失败');
+        }
+    } catch (error) {
+        console.error('Get database info error:', error);
+        showError('操作失败，请重试');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+function closeDatabaseInfoModal() {
+    const modal = document.querySelector('.database-info-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 点击模态框外部关闭
+document.addEventListener('click', function(event) {
+    const modal = document.querySelector('.database-info-modal');
+    if (modal && event.target === modal) {
+        closeDatabaseInfoModal();
+    }
+});
+// ==================== 参与者管理功能 ====================
+
+function sortParticipants() {
+    const sortBy = document.getElementById('sortBy').value;
+    const rows = Array.from(document.querySelectorAll('#participantsTableBody tr[data-user-id]'));
+    
+    rows.sort((a, b) => {
+        const aData = getRowData(a);
+        const bData = getRowData(b);
+        
+        switch (sortBy) {
+            case 'voteCount':
+                return (bData.voteCount || 0) - (aData.voteCount || 0);
+            case 'name':
+                return aData.name.localeCompare(bData.name);
+            case 'createdAt':
+                return new Date(bData.createdAt) - new Date(aData.createdAt);
+            default:
+                return 0;
+        }
+    });
+    
+    const tbody = document.getElementById('participantsTableBody');
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function getRowData(row) {
+    const nameElement = row.querySelector('.participant-name strong');
+    const voteElement = row.querySelector('.vote-count .count');
+    const timeElement = row.querySelector('.created-time');
+    
+    return {
+        name: nameElement ? nameElement.textContent : '',
+        voteCount: voteElement ? parseInt(voteElement.textContent) : 0,
+        createdAt: timeElement ? timeElement.textContent : ''
+    };
+}
+
+function showAddParticipantModal() {
+    const modalHtml = `
+        <div class="participant-modal" id="participantModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-plus"></i> 添加参与者</h3>
+                    <button class="close-btn" onclick="closeParticipantModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="participantForm">
+                        <div class="form-group">
+                            <label for="participantName">姓名 *</label>
+                            <input type="text" id="participantName" name="name" required 
+                                   placeholder="请输入参与者姓名" maxlength="20">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="participantGender">性别 *</label>
+                            <select id="participantGender" name="gender" required>
+                                <option value="">请选择性别</option>
+                                <option value="male">男士</option>
+                                <option value="female">女士</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="participantAvatar">头像</label>
+                            <input type="file" id="participantAvatar" name="avatar" 
+                                   accept="image/jpeg,image/png" class="file-input">
+                            <small class="form-help">支持JPG、PNG格式，最大2MB</small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" onclick="closeParticipantModal()">
+                                取消
+                            </button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save"></i>
+                                保存
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // 设置表单提交事件
+    const form = document.getElementById('participantForm');
+    form.addEventListener('submit', handleAddParticipant);
+}
+
+function editParticipant(userId) {
+    // 获取用户数据
+    fetch(`/api/users/${userId}`, {
+        headers: {
+            'Authorization': `Bearer ${adminToken}`
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showEditParticipantModal(result.user);
+        } else {
+            showError('获取用户信息失败');
+        }
+    })
+    .catch(error => {
+        console.error('Get user error:', error);
+        showError('获取用户信息失败');
+    });
+}
+
+function showEditParticipantModal(user) {
+    const modalHtml = `
+        <div class="participant-modal" id="participantModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-edit"></i> 编辑参与者</h3>
+                    <button class="close-btn" onclick="closeParticipantModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="participantForm">
+                        <input type="hidden" id="participantId" value="${user.id}">
+                        
+                        <div class="form-group">
+                            <label for="participantName">姓名 *</label>
+                            <input type="text" id="participantName" name="name" required 
+                                   value="${user.name}" placeholder="请输入参与者姓名" maxlength="20">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="participantGender">性别 *</label>
+                            <select id="participantGender" name="gender" required disabled>
+                                <option value="male" ${user.gender === 'male' ? 'selected' : ''}>男士</option>
+                                <option value="female" ${user.gender === 'female' ? 'selected' : ''}>女士</option>
+                            </select>
+                            <small class="form-help">性别不可修改</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>当前头像</label>
+                            <div class="current-avatar">
+                                <img src="${user.avatarUrl || (user.gender === 'male' ? '/static/images/default-male-avatar.svg' : '/static/images/default-female-avatar.svg')}" 
+                                     alt="${user.name}" class="avatar-preview">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="participantAvatar">更换头像</label>
+                            <input type="file" id="participantAvatar" name="avatar" 
+                                   accept="image/jpeg,image/png" class="file-input">
+                            <small class="form-help">支持JPG、PNG格式，最大2MB</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>统计信息</label>
+                            <div class="user-stats">
+                                <div class="stat-item">
+                                    <span class="label">数字ID:</span>
+                                    <span class="value">${user.numericId || 'N/A'}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">得票数:</span>
+                                    <span class="value">${user.voteCount || 0} 票</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">注册时间:</span>
+                                    <span class="value">${new Date(user.createdAt).toLocaleString('zh-CN')}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" onclick="closeParticipantModal()">
+                                取消
+                            </button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save"></i>
+                                保存修改
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // 设置表单提交事件
+    const form = document.getElementById('participantForm');
+    form.addEventListener('submit', handleEditParticipant);
+}
+
+function viewParticipantDetails(userId) {
+    // 获取用户详细信息
+    fetch(`/api/users/${userId}`, {
+        headers: {
+            'Authorization': `Bearer ${adminToken}`
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showParticipantDetailsModal(result.user);
+        } else {
+            showError('获取用户信息失败');
+        }
+    })
+    .catch(error => {
+        console.error('Get user error:', error);
+        showError('获取用户信息失败');
+    });
+}
+
+function showParticipantDetailsModal(user) {
+    const modalHtml = `
+        <div class="participant-modal" id="participantModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user"></i> 参与者详情</h3>
+                    <button class="close-btn" onclick="closeParticipantModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="participant-details">
+                        <div class="detail-section">
+                            <div class="user-profile">
+                                <div class="profile-avatar">
+                                    <img src="${user.avatarUrl || (user.gender === 'male' ? '/static/images/default-male-avatar.svg' : '/static/images/default-female-avatar.svg')}" 
+                                         alt="${user.name}">
+                                </div>
+                                <div class="profile-info">
+                                    <h4>${user.name}</h4>
+                                    <p class="gender-info">
+                                        <i class="fas fa-${user.gender === 'male' ? 'mars' : 'venus'}"></i>
+                                        ${user.gender === 'male' ? '男士' : '女士'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h5><i class="fas fa-info-circle"></i> 基本信息</h5>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="label">用户ID:</span>
+                                    <span class="value">${user.id}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">数字ID:</span>
+                                    <span class="value">${user.numericId || 'N/A'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">注册时间:</span>
+                                    <span class="value">${new Date(user.createdAt).toLocaleString('zh-CN')}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">最后更新:</span>
+                                    <span class="value">${new Date(user.updatedAt).toLocaleString('zh-CN')}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h5><i class="fas fa-chart-bar"></i> 投票统计</h5>
+                            <div class="vote-stats">
+                                <div class="stat-card">
+                                    <div class="stat-number">${user.voteCount || 0}</div>
+                                    <div class="stat-label">获得票数</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h5><i class="fas fa-qrcode"></i> 二维码</h5>
+                            <div class="qr-code-section">
+                                ${user.qrCode ? `
+                                    <div class="qr-code-display">
+                                        <img src="${user.qrCode}" alt="二维码" class="qr-code-image">
+                                        <p>扫描此二维码为该参与者投票</p>
+                                    </div>
+                                ` : '<p class="no-qr">暂无二维码</p>'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn-primary" onclick="editParticipant('${user.id}')">
+                            <i class="fas fa-edit"></i>
+                            编辑信息
+                        </button>
+                        <button class="btn-secondary" onclick="closeParticipantModal()">
+                            关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function deleteParticipant(userId, userName) {
+    if (confirm(`⚠️ 删除参与者确认\n\n确定要删除参与者 "${userName}" 吗？\n\n此操作将：\n• 删除该参与者的所有信息\n• 删除相关的投票记录\n• 删除相关的投票限制\n\n此操作不可恢复！`)) {
+        const btn = event.target.closest('.btn-delete');
+        const originalHtml = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        fetch(`/api/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showSuccess(`参与者 "${userName}" 已删除`);
+                loadParticipantsData(); // 重新加载数据
+            } else {
+                showError(result.message || '删除失败');
+            }
+        })
+        .catch(error => {
+            console.error('Delete participant error:', error);
+            showError('删除失败，请重试');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
+    }
+}
+
+async function handleAddParticipant(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+    
+    try {
+        // 先创建用户
+        const userData = {
+            name: formData.get('name'),
+            gender: formData.get('gender')
+        };
+        
+        const response = await fetch('/api/users/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(userData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // 如果有头像文件，上传头像
+            const avatarFile = formData.get('avatar');
+            if (avatarFile && avatarFile.size > 0) {
+                const avatarFormData = new FormData();
+                avatarFormData.append('avatar', avatarFile);
+                avatarFormData.append('userId', result.user.id);
+                
+                await fetch('/api/users/upload-avatar', {
+                    method: 'POST',
+                    body: avatarFormData
+                });
+            }
+            
+            showSuccess('参与者添加成功');
+            closeParticipantModal();
+            loadParticipantsData();
+        } else {
+            showError(result.message || '添加失败');
+        }
+    } catch (error) {
+        console.error('Add participant error:', error);
+        showError('添加失败，请重试');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+}
+
+async function handleEditParticipant(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const userId = document.getElementById('participantId').value;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+    
+    try {
+        // 更新用户基本信息
+        const userData = {
+            name: formData.get('name')
+        };
+        
+        const response = await fetch(`/api/users/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken}`
+            },
+            body: JSON.stringify(userData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // 如果有新头像文件，上传头像
+            const avatarFile = formData.get('avatar');
+            if (avatarFile && avatarFile.size > 0) {
+                const avatarFormData = new FormData();
+                avatarFormData.append('avatar', avatarFile);
+                avatarFormData.append('userId', userId);
+                
+                await fetch('/api/users/upload-avatar', {
+                    method: 'POST',
+                    body: avatarFormData
+                });
+            }
+            
+            showSuccess('参与者信息更新成功');
+            closeParticipantModal();
+            loadParticipantsData();
+        } else {
+            showError(result.message || '更新失败');
+        }
+    } catch (error) {
+        console.error('Edit participant error:', error);
+        showError('更新失败，请重试');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+}
+
+function closeParticipantModal() {
+    const modal = document.getElementById('participantModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 点击模态框外部关闭
+document.addEventListener('click', function(event) {
+    const modal = document.querySelector('.participant-modal');
+    if (modal && event.target === modal) {
+        closeParticipantModal();
+    }
+});

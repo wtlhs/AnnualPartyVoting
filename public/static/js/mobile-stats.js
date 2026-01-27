@@ -306,7 +306,6 @@ function updateRecentActivityDisplay(activities) {
                 <div class="activity-info">
                     <div class="activity-text">
                         ${activity.targetName} 获得一票
-                        ${activity.voterName ? `(来自 ${activity.voterName})` : ''}
                     </div>
                     <div class="activity-time">${timeAgo}</div>
                 </div>
