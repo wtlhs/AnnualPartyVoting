@@ -2,9 +2,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const userId = getUserIdFromUrl();
     if (userId) {
-        // 添加调试信息
-        addDebugInfo(userId);
-        
         loadCandidateInfo(userId);
         setupVoteButtons(userId);
         checkVoteEligibility(userId);
@@ -12,53 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showError('无效的用户ID');
     }
 });
-
-function addDebugInfo(targetUserId) {
-    // 在开发环境中显示调试信息
-    const currentUserId = localStorage.getItem('annual_party_user_id');
-    const currentUserName = localStorage.getItem('annual_party_user_name');
-    
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        const debugDiv = document.createElement('div');
-        debugDiv.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            z-index: 1000;
-            max-width: 200px;
-        `;
-        
-        const isSelfVote = currentUserId === targetUserId;
-        debugDiv.innerHTML = `
-            <strong>调试信息</strong><br>
-            当前用户: ${currentUserName || '未登录'}<br>
-            当前用户ID: ${currentUserId || '无'}<br>
-            目标用户ID: ${targetUserId}<br>
-            <span style="color: ${isSelfVote ? '#ff6b6b' : '#51cf66'}">
-                ${isSelfVote ? '⚠️ 自投票' : '✅ 正常投票'}
-            </span>
-        `;
-        
-        document.body.appendChild(debugDiv);
-        
-        // 5秒后自动隐藏
-        setTimeout(() => {
-            if (debugDiv.parentNode) {
-                debugDiv.style.opacity = '0.3';
-            }
-        }, 5000);
-        
-        // 点击隐藏
-        debugDiv.addEventListener('click', () => {
-            debugDiv.remove();
-        });
-    }
-}
 
 function getUserIdFromUrl() {
     const pathParts = window.location.pathname.split('/');
@@ -179,7 +129,7 @@ function showVoteRestriction(reason, voterStatus) {
     if (reason.includes('不能为自己投票')) {
         // 自投票情况
         buttonsDiv.innerHTML = `
-            <button id="scan-others-btn" class="btn-primary">为其他人投票</button>
+            <button id="scan-others-btn" class="btn-primary">扫码为其他人投票</button>
             <button id="view-results-btn" class="btn-secondary">查看统计</button>
         `;
         

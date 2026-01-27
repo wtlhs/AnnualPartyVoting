@@ -535,6 +535,327 @@ main {
     color: #666;
 }
 
+/* 手动输入样式 */
+.manual-input {
+    margin-top: 24px;
+    padding: 20px;
+    background: #f8f9ff;
+    border: 2px solid #e1e5e9;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+}
+
+.manual-input h3 {
+    margin-bottom: 12px;
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.manual-input h3::before {
+    content: "🔢";
+    font-size: 20px;
+}
+
+.manual-input p {
+    margin-bottom: 16px;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.manual-input .id-input-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.manual-input .id-input-box input[type="text"] {
+    width: 100%;
+    padding: 16px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.manual-input .id-input-box input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.manual-input .id-input-box input[type="text"]:valid {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #f8fff9 0%, #e8f5e9 100%);
+}
+
+.manual-input .id-input-box input[type="text"]:invalid:not(:placeholder-shown) {
+    border-color: #dc3545;
+    background: linear-gradient(135deg, #fff8f8 0%, #fdf2f2 100%);
+}
+
+.manual-input .id-input-box button {
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.manual-input .input-hints {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: left;
+}
+
+.manual-input .input-hints p {
+    color: #856404;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.manual-input .input-hints ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.manual-input .input-hints li {
+    color: #856404;
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 6px;
+    padding-left: 16px;
+    position: relative;
+}
+
+.manual-input .input-hints li::before {
+    content: "•";
+    color: #f39c12;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+    font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 767px) {
+    .manual-input {
+        padding: 16px;
+    }
+    
+    .manual-input h3 {
+        font-size: 16px;
+    }
+    
+    .manual-input .id-input-box input[type="text"] {
+        padding: 14px;
+        font-size: 18px;
+        letter-spacing: 2px;
+    }
+    
+    .manual-input .id-input-box button {
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+    
+    .manual-input .input-hints {
+        padding: 12px;
+    }
+}
+
+/* ID输入容器样式 - 保留用于其他页面 */
+.id-input-container {
+    margin-bottom: 32px;
+}
+
+.id-input-container .input-section {
+    background: #f8f9ff;
+    border: 2px solid #e1e5e9;
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+}
+
+.id-input-container h3 {
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.id-input-container h3::before {
+    content: "🔢";
+    font-size: 28px;
+}
+
+.id-input-container p {
+    color: #666;
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 24px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.id-input-box {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 300px;
+    margin: 0 auto 24px;
+}
+
+.id-input-box input[type="text"] {
+    width: 100%;
+    padding: 20px 16px;
+    border: 3px solid #e1e5e9;
+    border-radius: 12px;
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.id-input-box input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+}
+
+.id-input-box input[type="text"]:valid {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #f8fff9 0%, #e8f5e9 100%);
+}
+
+.id-input-box input[type="text"]:invalid:not(:placeholder-shown) {
+    border-color: #dc3545;
+    background: linear-gradient(135deg, #fff8f8 0%, #fdf2f2 100%);
+}
+
+.id-input-box .btn-primary {
+    padding: 16px 32px;
+    font-size: 18px;
+    font-weight: 600;
+    border-radius: 12px;
+    margin: 0;
+    transition: all 0.3s ease;
+}
+
+.id-input-box .btn-primary:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.input-hints {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: left;
+    margin-top: 24px;
+}
+
+.input-hints p {
+    color: #856404;
+    font-weight: 600;
+    margin-bottom: 12px;
+    font-size: 16px;
+}
+
+.input-hints ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.input-hints li {
+    color: #856404;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    padding-left: 20px;
+    position: relative;
+}
+
+.input-hints li::before {
+    content: "•";
+    color: #f39c12;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+    font-size: 16px;
+}
+
+/* 响应式设计 */
+@media (max-width: 767px) {
+    .id-input-container .input-section {
+        padding: 24px 20px;
+    }
+    
+    .id-input-container h3 {
+        font-size: 20px;
+    }
+    
+    .id-input-container h3::before {
+        font-size: 24px;
+    }
+    
+    .id-input-container p {
+        font-size: 15px;
+    }
+    
+    .id-input-box {
+        max-width: 280px;
+    }
+    
+    .id-input-box input[type="text"] {
+        padding: 18px 14px;
+        font-size: 20px;
+        letter-spacing: 3px;
+    }
+    
+    .id-input-box .btn-primary {
+        padding: 14px 28px;
+        font-size: 16px;
+    }
+    
+    .input-hints {
+        padding: 16px;
+    }
+    
+    .input-hints p {
+        font-size: 15px;
+    }
+    
+    .input-hints li {
+        font-size: 13px;
+    }
+}
+
 /* 扫描器样式 */
 .scanner-container {
     margin-bottom: 24px;

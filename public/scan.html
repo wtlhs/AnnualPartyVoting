@@ -10,7 +10,7 @@
     <div class="container">
         <header>
             <h1>扫码投票</h1>
-            <p>扫描参与者的二维码进行投票</p>
+            <p>扫描参与者的二维码或输入6位数字ID进行投票</p>
         </header>
         
         <main>
@@ -18,7 +18,7 @@
             <div class="https-notice" style="background: #e8f5e8; border: 1px solid #4caf50; color: #2e7d32; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
                 <strong>📱 摄像头功能已启用：</strong><br>
                 系统现在支持HTTPS，可以正常使用摄像头扫码功能。<br>
-                如果摄像头仍无法启动，请使用下方的<strong>手动输入功能</strong>。
+                如果摄像头无法启动，请使用下方的<strong>手动输入6位数字ID功能</strong>。
             </div>
             
             <div class="scanner-container">
@@ -32,37 +32,33 @@
                 <button id="stopScanBtn" class="btn-secondary" style="display: none;">停止扫描</button>
             </div>
             
+            <!-- 手动输入6位数字ID -->
             <div class="manual-input" style="display: none;">
-                <h3>手动输入</h3>
-                <div class="input-tabs">
-                    <button id="qrInputTab" class="tab-btn active">二维码内容</button>
-                    <button id="idInputTab" class="tab-btn">6位数字ID</button>
+                <h3>手动输入6位数字ID</h3>
+                <p>如果无法扫描二维码，请输入参与者的6位数字ID：</p>
+                <div class="id-input-box">
+                    <input type="text" id="numericIdInput" placeholder="例如：123456" maxlength="6" pattern="\d{6}" autocomplete="off">
+                    <button id="submitIdBtn" class="btn-secondary">确认投票</button>
                 </div>
-                
-                <div id="qrInputSection" class="input-section">
-                    <p>如果无法扫描，请手动输入二维码内容：</p>
-                    <textarea id="manualQrInput" placeholder="粘贴二维码内容" rows="4"></textarea>
-                    <small style="color: #666; font-size: 12px;">提示：可以让对方截图二维码，通过微信等工具识别并复制内容</small>
-                    <button id="submitManualBtn" class="btn-secondary">确认</button>
-                </div>
-                
-                <div id="idInputSection" class="input-section" style="display: none;">
-                    <p>输入参与者的6位数字ID：</p>
-                    <input type="text" id="numericIdInput" placeholder="例如：123456" maxlength="6" pattern="\d{6}">
-                    <small style="color: #666; font-size: 12px;">提示：每个参与者都有一个6位数字ID，可在个人资料页面查看</small>
-                    <button id="submitIdBtn" class="btn-secondary">确认</button>
+                <div class="input-hints">
+                    <p><strong>💡 提示：</strong></p>
+                    <ul>
+                        <li>ID必须是6位数字</li>
+                        <li>可在参与者的个人资料页面查看其ID</li>
+                        <li>输入完成后点击"确认投票"或按回车键</li>
+                    </ul>
                 </div>
             </div>
             
             <div class="actions">
                 <a href="/user-list" class="btn-primary" style="background: linear-gradient(135deg, #20bf55 0%, #01baef 100%);">👥 按姓名/头像投票</a>
                 <a href="/" class="btn-secondary">返回首页</a>
-                <button id="toggleManualBtn" class="btn-secondary">手动输入</button>
+                <button id="toggleManualBtn" class="btn-secondary">手动输入ID</button>
             </div>
         </main>
     </div>
     
     <script src="/static/libs/html5-qrcode.min.js"></script>
-    <script src="/static/js/scan.js?v=1.2"></script>
+    <script src="/static/js/scan.js?v=2.1"></script>
 </body>
 </html>
