@@ -4,7 +4,10 @@ const {
   getRanking, 
   clearAllData,
   getAllUsers,
-  getRecentVotes
+  getRecentVotes,
+  createDataBackup,
+  archiveAndClearData,
+  getDatabaseInfo
 } = require('../database/operations');
 
 const router = express.Router();
@@ -232,6 +235,70 @@ router.post('/clear-data', requireAdmin, async (req, res) => {
       success: false,
       errorCode: 'CLEAR_DATA_FAILED',
       message: '清空数据失败'
+    });
+  }
+});
+
+// Create data backup
+router.get('/backup', requireAdmin, async (req, res) => {
+  try {
+    const backupData = await createDataBackup();
+    
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=voting-backup-${new Date().toISOString().split('T')[0]}.json`);
+    
+    res.json(backupData);
+    
+  } catch (error) {
+    console.error('Create backup error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'BACKUP_FAILED',
+      message: '创建数据备份失败'
+    });
+  }
+});
+
+// Archive data and clear (safe data management)
+router.post('/archive-and-clear', requireAdmin, async (req, res) => {
+  try {
+    const { includeFiles = true } = req.body;
+    const result = await archiveAndClearData(includeFiles);
+    
+    // Set headers for backup file download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=voting-archive-${new Date().toISOString().split('T')[0]}.json`);
+    
+    res.json(result);
+    
+  } catch (error) {
+    console.error('Archive and clear error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'ARCHIVE_CLEAR_FAILED',
+      message: '数据归档和清空失败'
+    });
+  }
+});
+
+// Get database management information
+router.get('/database-info', requireAdmin, async (req, res) => {
+  try {
+    const dbInfo = await getDatabaseInfo();
+    
+    res.json({
+      success: true,
+      databaseInfo: dbInfo,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Get database info error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'DATABASE_INFO_FAILED',
+      message: '获取数据库信息失败'
     });
   }
 });

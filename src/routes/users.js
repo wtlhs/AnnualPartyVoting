@@ -504,4 +504,98 @@ router.delete('/:userId', async (req, res) => {
   }
 });
 
+// Update user information (admin only)
+router.put('/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { name } = req.body;
+    
+    // Validate input
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'INVALID_NAME',
+        message: '姓名不能为空'
+      });
+    }
+    
+    if (name.trim().length > 20) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'NAME_TOO_LONG',
+        message: '姓名长度不能超过20个字符'
+      });
+    }
+    
+    // Check if user exists
+    const existingUser = await getUserById(userId);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        errorCode: 'USER_NOT_FOUND',
+        message: '用户不存在'
+      });
+    }
+    
+    // Update user
+    const updatedUser = await updateUser(userId, { name: name.trim() });
+    
+    res.json({
+      success: true,
+      message: '用户信息更新成功',
+      user: {
+        id: updatedUser.id,
+        numericId: updatedUser.numericId,
+        name: updatedUser.name,
+        gender: updatedUser.gender,
+        avatarUrl: sanitizeAvatarUrl(updatedUser.avatarUrl),
+        voteCount: updatedUser.voteCount || 0,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      }
+    });
+    
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'UPDATE_FAILED',
+      message: '更新用户信息失败'
+    });
+  }
+});
+
+// Delete user (admin only)
+router.delete('/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Check if user exists
+    const existingUser = await getUserById(userId);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        errorCode: 'USER_NOT_FOUND',
+        message: '用户不存在'
+      });
+    }
+    
+    // Delete user
+    await deleteUser(userId);
+    
+    res.json({
+      success: true,
+      message: '用户删除成功'
+    });
+    
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'DELETE_FAILED',
+      message: '删除用户失败'
+    });
+  }
+});
+
 module.exports = router;
