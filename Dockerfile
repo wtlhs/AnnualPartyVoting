@@ -16,7 +16,7 @@ COPY . .
 RUN mkdir -p data uploads
 
 # 暴露端口
-EXPOSE 3000
+EXPOSE 3000 3443
 
 # 启动应用
-CMD ["npm", "start"]
+CMD ["node", "server-https-optimized.js"]

@@ -121,41 +121,10 @@ async function checkCameraPermissions() {
 }
 
 function setupManualInput() {
-    const submitBtn = document.getElementById('submitManualBtn');
     const submitIdBtn = document.getElementById('submitIdBtn');
-    const manualInput = document.getElementById('manualQrInput');
     const numericIdInput = document.getElementById('numericIdInput');
-    const qrInputTab = document.getElementById('qrInputTab');
-    const idInputTab = document.getElementById('idInputTab');
-    const qrInputSection = document.getElementById('qrInputSection');
-    const idInputSection = document.getElementById('idInputSection');
     
-    // Tab switching
-    qrInputTab.addEventListener('click', () => {
-        qrInputTab.classList.add('active');
-        idInputTab.classList.remove('active');
-        qrInputSection.style.display = 'block';
-        idInputSection.style.display = 'none';
-    });
-    
-    idInputTab.addEventListener('click', () => {
-        idInputTab.classList.remove('active');
-        qrInputTab.classList.add('active');
-        qrInputSection.style.display = 'none';
-        idInputSection.style.display = 'block';
-    });
-    
-    // QR code input submission
-    submitBtn.addEventListener('click', () => {
-        const qrData = manualInput.value.trim();
-        if (qrData) {
-            processQRCode(qrData);
-        } else {
-            showError('请输入二维码内容');
-        }
-    });
-    
-    // Numeric ID input submission
+    // 数字ID输入提交
     submitIdBtn.addEventListener('click', () => {
         const numericId = numericIdInput.value.trim();
         if (numericId) {
@@ -165,29 +134,52 @@ function setupManualInput() {
         }
     });
     
-    // Numeric ID input validation
+    // 数字ID输入验证
     numericIdInput.addEventListener('input', (e) => {
-        // Only allow digits
+        // 只允许数字
         e.target.value = e.target.value.replace(/\D/g, '');
         
-        // Limit to 6 digits
+        // 限制为6位数字
         if (e.target.value.length > 6) {
             e.target.value = e.target.value.slice(0, 6);
         }
+        
+        // 实时验证并更新按钮状态
+        updateSubmitButtonState();
     });
     
-    // Enter key support
-    manualInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            submitBtn.click();
-        }
-    });
-    
+    // 回车键支持
     numericIdInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
+            e.preventDefault();
             submitIdBtn.click();
         }
     });
+    
+    // 初始化按钮状态
+    updateSubmitButtonState();
+}
+
+function updateSubmitButtonState() {
+    const submitIdBtn = document.getElementById('submitIdBtn');
+    const numericIdInput = document.getElementById('numericIdInput');
+    const value = numericIdInput.value.trim();
+    
+    if (value.length === 6 && /^\d{6}$/.test(value)) {
+        submitIdBtn.disabled = false;
+        submitIdBtn.textContent = '确认投票';
+        submitIdBtn.style.opacity = '1';
+    } else {
+        submitIdBtn.disabled = true;
+        if (value.length === 0) {
+            submitIdBtn.textContent = '请输入ID';
+        } else if (value.length < 6) {
+            submitIdBtn.textContent = `还需${6 - value.length}位数字`;
+        } else {
+            submitIdBtn.textContent = '确认投票';
+        }
+        submitIdBtn.style.opacity = '0.6';
+    }
 }
 
 async function startScanning() {
@@ -412,7 +404,6 @@ async function switchCamera() {
 }
 
 function onScanSuccess(decodedText) {
-    console.log('QR Code scanned:', decodedText);
     showMessage('二维码扫描成功，正在验证...', 'info');
     processQRCode(decodedText);
     stopScanning();
@@ -422,7 +413,7 @@ function onScanFailure(error) {
     // 扫描失败是正常的，不需要显示错误
     // 只在控制台记录详细错误信息用于调试
     if (error && !error.includes('No MultiFormat Readers')) {
-        console.debug('Scan failure:', error);
+        // 静默处理扫描失败
     }
 }
 
@@ -496,11 +487,17 @@ async function validateQRCodeWithBackend(qrData) {
 
 async function processNumericId(numericId) {
     try {
-        // Validate numeric ID format
+        // 验证数字ID格式
         if (!/^\d{6}$/.test(numericId)) {
             showError('ID必须是6位数字');
             return;
         }
+        
+        // 禁用按钮防止重复提交
+        const submitIdBtn = document.getElementById('submitIdBtn');
+        const originalText = submitIdBtn.textContent;
+        submitIdBtn.disabled = true;
+        submitIdBtn.textContent = '验证中...';
         
         showMessage('验证数字ID中...', 'info');
         
@@ -515,15 +512,15 @@ async function processNumericId(numericId) {
         const result = await response.json();
         
         if (result.success) {
-            // ID is valid, show success message and redirect to vote page
+            // ID验证成功，显示成功消息并跳转到投票页面
             showMessage(`验证成功！即将跳转到 ${result.name} 的投票页面...`, 'success');
             
-            // Delay redirect to show success message
+            // 延迟跳转以显示成功消息
             setTimeout(() => {
                 window.location.href = `/vote/${result.userId}`;
             }, 1500);
         } else {
-            // Handle specific error cases
+            // 处理特定错误情况
             if (result.errorCode === 'USER_NOT_FOUND') {
                 showError('未找到该ID对应的用户，请检查ID是否正确');
             } else if (result.errorCode === 'INVALID_NUMERIC_ID_FORMAT') {
@@ -531,15 +528,31 @@ async function processNumericId(numericId) {
             } else {
                 showError(result.message || 'ID验证失败，请重试');
             }
+            
+            // 恢复按钮状态
+            submitIdBtn.disabled = false;
+            submitIdBtn.textContent = originalText;
+            
+            // 清空输入框并重新聚焦
+            document.getElementById('numericIdInput').value = '';
+            document.getElementById('numericIdInput').focus();
+            updateSubmitButtonState();
         }
     } catch (error) {
         console.error('Numeric ID validation error:', error);
         
+        let errorMessage = '验证过程中发生错误，请重试';
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            showError('网络连接失败，请检查网络后重试');
-        } else {
-            showError('验证过程中发生错误，请重试');
+            errorMessage = '网络连接失败，请检查网络后重试';
         }
+        
+        showError(errorMessage);
+        
+        // 恢复按钮状态
+        const submitIdBtn = document.getElementById('submitIdBtn');
+        submitIdBtn.disabled = false;
+        submitIdBtn.textContent = '确认投票';
+        updateSubmitButtonState();
     }
 }
 
@@ -550,9 +563,15 @@ function toggleManualInput() {
     if (manualDiv.style.display === 'none' || !manualDiv.style.display) {
         manualDiv.style.display = 'block';
         toggleBtn.textContent = '隐藏手动输入';
+        
+        // 聚焦到输入框
+        const numericIdInput = document.getElementById('numericIdInput');
+        if (numericIdInput) {
+            setTimeout(() => numericIdInput.focus(), 100);
+        }
     } else {
         manualDiv.style.display = 'none';
-        toggleBtn.textContent = '手动输入';
+        toggleBtn.textContent = '手动输入ID';
     }
 }
 
@@ -584,7 +603,7 @@ function showMessage(message, type) {
     const main = document.querySelector('main');
     main.insertBefore(messageDiv, main.firstChild);
     
-    // 3秒后自动移除（除非是info类型的加载消息）
+    // 对于非info类型的消息，3秒后自动移除
     if (type !== 'info') {
         setTimeout(() => {
             if (messageDiv.parentNode) {
