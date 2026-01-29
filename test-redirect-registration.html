@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试 redirectToRegistration 方法</title>
+    <script src="/static/js/urlUtils.js"></script>
+</head>
+<body>
+    <h1>测试 redirectToRegistration 方法</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        // 模拟 VotePageRouter 类的 redirectToRegistration 方法
+        class TestVotePageRouter {
+            constructor() {
+                this.params = {
+                    candidateId: '123',
+                    candidateName: '张三',
+                    source: 'qrcode',
+                    category: '技术部',
+                    timestamp: Date.now().toString()
+                };
+            }
+
+            /**
+             * 保存投票意图并重定向到注册页面
+             */
+            redirectToRegistration() {
+                try {
+                    // 构建包含投票信息的返回URL
+                    const returnUrl = this.buildReturnUrl();
+                    
+                    // 保存投票意图到本地存储
+                    this.saveVoteIntent(returnUrl);
+                    
+                    // 构建注册页面URL，包含return参数
+                    const registrationUrl = `/?return=${encodeURIComponent(returnUrl)}`;
+                    
+                    console.log('Redirecting to registration with return URL:', returnUrl);
+                    console.log('Registration URL:', registrationUrl);
+                    
+                    return {
+                        success: true,
+                        returnUrl: returnUrl,
+                        registrationUrl: registrationUrl
+                    };
+                } catch (error) {
+                    console.error('Error during registration redirect:', error);
+                    return {
+                        success: false,
+                        error: error.message,
+                        fallbackUrl: '/'
+                    };
+                }
+            }
+
+            /**
+             * 构建包含投票信息的返回URL
+             * @returns {string} 完整的返回URL
+             */
+            buildReturnUrl() {
+                try {
+                    // 使用URLUtils工具类构建投票返回URL
+                    if (typeof URLUtils !== 'undefined') {
+                        return URLUtils.buildVoteReturnUrl({
+                            candidate_id: this.params.candidateId,
+                            candidate_name: this.params.candidateName,
+                            source: this.params.source,
+                            category: this.params.category,
+                            timestamp: this.params.timestamp
+                        });
+                    } else {
+                        // 备用方案：手动构建URL
+                        const baseUrl = '/vote';
+                        const params = new URLSearchParams();
+                        
+                        if (this.params.candidateId) params.set('candidate_id', this.params.candidateId);
+                        if (this.params.candidateName) params.set('candidate_name', this.params.candidateName);
+                        if (this.params.source) params.set('source', this.params.source);
+                        if (this.params.category) params.set('category', this.params.category);
+                        if (this.params.timestamp) params.set('timestamp', this.params.timestamp);
+                        
+                        // 添加重定向标识
+                        params.set('source', 'registration_redirect');
+                        params.set('timestamp', Date.now().toString());
+                        
+                        return `${baseUrl}?${params.toString()}`;
+                    }
+                } catch (error) {
+                    console.error('Error building return URL:', error);
+                    return window.location.href;
+                }
+            }
+
+            /**
+             * 保存投票意图到本地存储
+             * @param {string} returnUrl - 返回URL
+             */
+            saveVoteIntent(returnUrl) {
+                try {
+                    const voteIntent = {
+                        returnUrl: returnUrl,
+                        timestamp: new Date().toISOString(),
+                        userAgent: navigator.userAgent,
+                        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24小时后过期
+                        voteParams: {
+                            candidateId: this.params.candidateId,
+                            candidateName: this.params.candidateName,
+                            source: this.params.source,
+                            category: this.params.category
+                        }
+                    };
+                    
+                    localStorage.setItem('pending_return_url', returnUrl);
+                    localStorage.setItem('vote_intent_data', JSON.stringify(voteIntent));
+                    localStorage.setItem('vote_intent_timestamp', voteIntent.timestamp);
+                    
+                    console.log('Vote intent saved:', voteIntent);
+                    return true;
+                } catch (error) {
+                    console.error('Error saving vote intent:', error);
+                    // 至少保存基本的返回URL
+                    try {
+                        localStorage.setItem('pending_return_url', returnUrl);
+                        return true;
+                    } catch (fallbackError) {
+                        console.error('Failed to save even basic return URL:', fallbackError);
+                        return false;
+                    }
+                }
+            }
+        }
+
+        // 运行测试
+        function runTests() {
+            const results = [];
+            const testRouter = new TestVotePageRouter();
+
+            // 测试1: 基本重定向功能
+            console.log('=== 测试1: 基本重定向功能 ===');
+            const result1 = testRouter.redirectToRegistration();
+            results.push({
+                test: '基本重定向功能',
+                passed: result1.success,
+                details: result1
+            });
+
+            // 测试2: URL构建功能
+            console.log('=== 测试2: URL构建功能 ===');
+            const returnUrl = testRouter.buildReturnUrl();
+            const urlValid = returnUrl && returnUrl.includes('/vote') && returnUrl.includes('candidate_id=123');
+            results.push({
+                test: 'URL构建功能',
+                passed: urlValid,
+                details: { returnUrl: returnUrl }
+            });
+
+            // 测试3: 本地存储保存功能
+            console.log('=== 测试3: 本地存储保存功能 ===');
+            const saveResult = testRouter.saveVoteIntent(returnUrl);
+            const storedUrl = localStorage.getItem('pending_return_url');
+            const storedData = localStorage.getItem('vote_intent_data');
+            results.push({
+                test: '本地存储保存功能',
+                passed: saveResult && storedUrl === returnUrl && storedData !== null,
+                details: { 
+                    saveResult: saveResult,
+                    storedUrl: storedUrl,
+                    hasStoredData: storedData !== null
+                }
+            });
+
+            // 测试4: URL参数编码
+            console.log('=== 测试4: URL参数编码 ===');
+            const encodedUrl = encodeURIComponent(returnUrl);
+            const registrationUrl = `/?return=${encodedUrl}`;
+            const encodingValid = registrationUrl.includes('/?return=') && !registrationUrl.includes(' ');
+            results.push({
+                test: 'URL参数编码',
+                passed: encodingValid,
+                details: { 
+                    originalUrl: returnUrl,
+                    encodedUrl: encodedUrl,
+                    registrationUrl: registrationUrl
+                }
+            });
+
+            // 测试5: 错误处理
+            console.log('=== 测试5: 错误处理 ===');
+            const errorRouter = new TestVotePageRouter();
+            errorRouter.params = null; // 模拟错误情况
+            const errorResult = errorRouter.redirectToRegistration();
+            results.push({
+                test: '错误处理',
+                passed: errorResult.success === false && errorResult.fallbackUrl === '/',
+                details: errorResult
+            });
+
+            return results;
+        }
+
+        // 显示测试结果
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('test-results');
+            let html = '<h2>测试结果</h2>';
+            
+            results.forEach((result, index) => {
+                const status = result.passed ? '✅ 通过' : '❌ 失败';
+                const color = result.passed ? 'green' : 'red';
+                
+                html += `
+                    <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                        <h3 style="color: ${color};">${result.test}: ${status}</h3>
+                        <pre style="background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto;">
+${JSON.stringify(result.details, null, 2)}
+                        </pre>
+                    </div>
+                `;
+            });
+
+            const passedCount = results.filter(r => r.passed).length;
+            const totalCount = results.length;
+            
+            html += `
+                <div style="margin: 20px 0; padding: 15px; background: ${passedCount === totalCount ? '#d4edda' : '#f8d7da'}; border-radius: 5px;">
+                    <h3>总结: ${passedCount}/${totalCount} 测试通过</h3>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // 页面加载完成后运行测试
+        document.addEventListener('DOMContentLoaded', function() {
+            const results = runTests();
+            displayResults(results);
+        });
+    </script>
+</body>
+</html>

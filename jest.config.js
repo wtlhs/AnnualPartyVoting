@@ -1,5 +1,4 @@
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: [
@@ -10,6 +9,7 @@ module.exports = {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: 'tsconfig.json'
     }],
+    '^.+\\.js$': 'babel-jest',
   },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

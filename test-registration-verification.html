@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册验证测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .clear-button {
+            background: #dc3545;
+        }
+        .clear-button:hover {
+            background: #c82333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.registered {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.unregistered {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 投票注册验证测试</h1>
+    
+    <div class="test-section">
+        <h2>当前注册状态</h2>
+        <div id="registrationStatus" class="status">检查中...</div>
+        <button class="test-button clear-button" onclick="clearRegistration()">清除注册信息</button>
+        <button class="test-button" onclick="checkStatus()">刷新状态</button>
+    </div>
+
+    <div class="test-section">
+        <h2>测试场景</h2>
+        <p>以下测试将验证未注册用户是否能够正常被重定向到注册页面：</p>
+        
+        <h3>1. 旧版投票链接测试</h3>
+        <p>测试从旧版 <code>/vote/:userId</code> 格式的链接重定向：</p>
+        <a href="/vote/user123" class="test-button" target="_blank">测试旧版投票链接</a>
+        
+        <h3>2. 新版投票链接测试</h3>
+        <p>测试新版 <code>/vote?candidate_id=xxx</code> 格式的链接：</p>
+        <a href="/vote?candidate_id=user123&candidate_name=测试用户&source=qrcode" class="test-button" target="_blank">测试新版投票链接</a>
+        
+        <h3>3. 缺少候选人姓名的链接测试</h3>
+        <p>测试只有candidate_id没有candidate_name的情况：</p>
+        <a href="/vote?candidate_id=user123&source=legacy_redirect" class="test-button" target="_blank">测试缺少姓名的链接</a>
+    </div>
+
+    <div class="test-section">
+        <h2>预期行为</h2>
+        <ul>
+            <li><strong>未注册状态</strong>：点击任何投票链接都应该被重定向到首页注册页面，并显示投票提示</li>
+            <li><strong>已注册状态</strong>：点击投票链接应该直接显示投票确认页面</li>
+            <li><strong>旧版链接</strong>：应该自动重定向到新版投票页面格式</li>
+            <li><strong>缺少姓名</strong>：系统应该自动从API获取候选人姓名</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>快速注册</h2>
+        <p>如果需要测试已注册状态，可以快速注册：</p>
+        <a href="/" class="test-button">前往注册页面</a>
+    </div>
+
+    <script>
+        // 检查注册状态
+        function checkStatus() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            const userName = localStorage.getItem('annual_party_user_name');
+            const registrationTime = localStorage.getItem('annual_party_registration_time');
+            
+            const statusDiv = document.getElementById('registrationStatus');
+            
+            if (userId && userName && registrationTime) {
+                const regTime = new Date(registrationTime);
+                const now = new Date();
+                const hoursDiff = (now - regTime) / (1000 * 60 * 60);
+                
+                if (hoursDiff < 24) {
+                    statusDiv.className = 'status registered';
+                    statusDiv.innerHTML = `
+                        <strong>✅ 已注册</strong><br>
+                        用户ID: ${userId}<br>
+                        用户名: ${userName}<br>
+                        注册时间: ${regTime.toLocaleString('zh-CN')}<br>
+                        有效期: ${Math.round(24 - hoursDiff)} 小时后过期
+                    `;
+                } else {
+                    statusDiv.className = 'status unregistered';
+                    statusDiv.innerHTML = `
+                        <strong>❌ 注册已过期</strong><br>
+                        注册时间: ${regTime.toLocaleString('zh-CN')}<br>
+                        过期时间: ${Math.round(hoursDiff - 24)} 小时前
+                    `;
+                }
+            } else {
+                statusDiv.className = 'status unregistered';
+                statusDiv.innerHTML = '<strong>❌ 未注册</strong><br>没有找到有效的注册信息';
+            }
+        }
+        
+        // 清除注册信息
+        function clearRegistration() {
+            const keys = [
+                'annual_party_user_id',
+                'annual_party_user_name',
+                'annual_party_user_gender',
+                'annual_party_numeric_id',
+                'annual_party_registration_time',
+                'pending_return_url',
+                'vote_intent_timestamp'
+            ];
+            
+            keys.forEach(key => {
+                localStorage.removeItem(key);
+            });
+            
+            alert('注册信息已清除');
+            checkStatus();
+        }
+        
+        // 页面加载时检查状态
+        document.addEventListener('DOMContentLoaded', checkStatus);
+    </script>
+</body>
+</html>

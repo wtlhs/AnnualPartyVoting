@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试增强错误显示 - 年会投票系统</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>测试增强错误显示功能</h1>
+    
+    <div class="test-section">
+        <h2>测试场景</h2>
+        <p>这个页面用于测试投票页面的增强错误显示功能。</p>
+        
+        <h3>测试步骤：</h3>
+        <ol>
+            <li><strong>自投票测试：</strong>
+                <ul>
+                    <li>先在首页注册一个用户（记住用户ID）</li>
+                    <li>然后访问 <code>/vote/[你的用户ID]</code></li>
+                    <li>应该看到"无法投票 - 系统不允许为自己投票"的详细错误信息</li>
+                </ul>
+            </li>
+            
+            <li><strong>重复投票测试：</strong>
+                <ul>
+                    <li>先为某个男性候选人投票成功</li>
+                    <li>再次尝试为另一个男性候选人投票</li>
+                    <li>应该看到"重复投票"错误，显示已投票用户和建议操作</li>
+                </ul>
+            </li>
+            
+            <li><strong>候选人不存在测试：</strong>
+                <ul>
+                    <li>访问 <code>/vote/nonexistent-user</code></li>
+                    <li>应该看到"候选人不存在"的错误信息</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>快速测试链接</h2>
+        <p>点击下面的按钮进行快速测试：</p>
+        
+        <button class="test-button" onclick="testSelfVote()">测试自投票错误</button>
+        <button class="test-button" onclick="testNonexistentUser()">测试不存在用户</button>
+        <button class="test-button" onclick="openVotePage()">打开正常投票页面</button>
+        <button class="test-button" onclick="checkRegistration()">检查注册状态</button>
+        
+        <div id="testStatus" class="status info" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>预期的错误显示改进</h2>
+        <ul>
+            <li>✅ 更清晰的错误标题分类（无法投票、重复投票、系统错误等）</li>
+            <li>✅ 显示已投票的用户名称（重复投票时）</li>
+            <li>✅ 提供具体的操作建议（可以做什么）</li>
+            <li>✅ 更好的视觉层次和信息组织</li>
+            <li>✅ 根据不同错误类型提供相应的解决方案</li>
+        </ul>
+    </div>
+
+    <script>
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('testStatus');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function testSelfVote() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            if (!userId) {
+                showStatus('请先在首页注册一个用户', 'error');
+                return;
+            }
+            
+            showStatus(`正在测试自投票错误，用户ID: ${userId}`, 'info');
+            setTimeout(() => {
+                window.open(`/vote/${userId}`, '_blank');
+            }, 1000);
+        }
+
+        function testNonexistentUser() {
+            showStatus('正在测试不存在用户错误...', 'info');
+            setTimeout(() => {
+                window.open('/vote/nonexistent-user-12345', '_blank');
+            }, 1000);
+        }
+
+        function openVotePage() {
+            showStatus('正在打开正常投票页面...', 'info');
+            setTimeout(() => {
+                window.open('/user-list', '_blank');
+            }, 1000);
+        }
+
+        function checkRegistration() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            const userName = localStorage.getItem('annual_party_user_name');
+            const userGender = localStorage.getItem('annual_party_user_gender');
+            
+            if (userId && userName) {
+                showStatus(`已注册用户: ${userName} (ID: ${userId}, 性别: ${userGender || '未知'})`, 'success');
+            } else {
+                showStatus('未找到注册信息，请先在首页注册', 'error');
+            }
+        }
+
+        // 页面加载时自动检查注册状态
+        window.addEventListener('load', checkRegistration);
+    </script>
+</body>
+</html>

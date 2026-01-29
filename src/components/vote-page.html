@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>投票页面</title>
+    <script src="/static/js/urlUtils.js"></script>
+    <script src="/static/js/errorHandler.js"></script>
     <style>
         * {
             margin: 0;
@@ -418,6 +420,18 @@
                     // Use sanitized parameters
                     this.params = validation.sanitizedParams || this.params;
 
+                    // If candidate name is missing (legacy redirect), fetch it from API
+                    if (!this.params.candidateName && this.params.candidateId) {
+                        const candidateInfo = await this.fetchCandidateInfo(this.params.candidateId);
+                        if (candidateInfo) {
+                            this.params.candidateName = candidateInfo.name;
+                            this.params.category = candidateInfo.category || this.params.category;
+                        } else {
+                            this.showError('候选人信息获取失败', '无法找到指定的候选人');
+                            return;
+                        }
+                    }
+
                     // Check authentication status
                     const authStatus = await this.checkAuthStatus();
                     
@@ -441,7 +455,7 @@
                     
                 } catch (error) {
                     console.error('Vote page initialization error:', error);
-                    this.showError('系统错误', '页面加载失败，请稍后重试');
+                    ErrorHandler.handleCriticalError(error, 'Vote page initialization failed');
                 }
             }
 
@@ -471,6 +485,10 @@
                     };
                 } catch (error) {
                     console.warn('Failed to parse URL parameters:', error);
+                    ErrorHandler.handleUrlError(error, window.location.href, { 
+                        context: 'URL parameter parsing',
+                        currentUrl: window.location.href 
+                    });
                     return {
                         candidateId: '',
                         candidateName: '',
@@ -497,22 +515,21 @@
                     errors.push('缺少候选人ID');
                 }
                 
-                if (!params.candidateName) {
-                    errors.push('缺少候选人姓名');
-                }
+                // If we only have candidate_id (from legacy redirect), we'll fetch the name later
+                // So candidate_name is not strictly required anymore
                 
                 // Validate candidate ID format
                 if (params.candidateId && !/^[a-zA-Z0-9\-_]+$/.test(params.candidateId)) {
                     errors.push('候选人ID格式无效');
                 }
                 
-                // Validate candidate name
+                // Validate candidate name if provided
                 if (params.candidateName && (params.candidateName.length < 1 || params.candidateName.length > 50)) {
                     errors.push('候选人姓名长度无效');
                 }
                 
                 // Validate source
-                if (params.source && !['qrcode', 'direct'].includes(params.source)) {
+                if (params.source && !['qrcode', 'direct', 'legacy_redirect'].includes(params.source)) {
                     errors.push('来源参数无效');
                 }
                 
@@ -535,7 +552,7 @@
                     errors: errors,
                     sanitizedParams: errors.length === 0 ? {
                         candidateId: params.candidateId.trim(),
-                        candidateName: params.candidateName.trim(),
+                        candidateName: params.candidateName ? params.candidateName.trim() : '',
                         source: params.source,
                         category: params.category ? params.category.trim() : undefined,
                         timestamp: params.timestamp ? params.timestamp.trim() : undefined
@@ -544,26 +561,239 @@
             }
 
             async checkAuthStatus() {
-                // Simulate authentication check
-                // In a real application, this would make an API call
-                const userId = localStorage.getItem('annual_party_user_id');
-                const userName = localStorage.getItem('annual_party_user_name');
-                
-                if (userId && userName) {
-                    return {
-                        isLoggedIn: true,
-                        user: {
-                            id: userId,
-                            username: userName,
-                            email: `${userName}@example.com`,
-                            hasVotingRights: true
+                try {
+                    // 检查本地存储中的注册信息
+                    const userId = localStorage.getItem('annual_party_user_id');
+                    const userName = localStorage.getItem('annual_party_user_name');
+                    const registrationTime = localStorage.getItem('annual_party_registration_time');
+                    
+                    // 验证注册信息的完整性
+                    if (userId && userName && registrationTime) {
+                        // 验证注册信息的有效性（24小时时间窗口）
+                        if (this.isRegistrationValid(registrationTime)) {
+                            return {
+                                isLoggedIn: true,
+                                user: {
+                                    id: userId,
+                                    username: userName,
+                                    email: `${userName}@example.com`,
+                                    hasVotingRights: true,
+                                    registrationTime: registrationTime
+                                }
+                            };
+                        } else {
+                            // 注册信息已过期，清理本地存储
+                            this.clearExpiredRegistration();
+                            console.warn('Registration expired, cleared local storage');
                         }
+                    }
+                    
+                    return {
+                        isLoggedIn: false
+                    };
+                } catch (error) {
+                    console.error('Error checking auth status:', error);
+                    ErrorHandler.handleStorageError(error, () => {
+                        // Fallback: assume user is not logged in
+                        return { isLoggedIn: false };
+                    }, { context: 'Authentication status check' });
+                    return {
+                        isLoggedIn: false,
+                        error: error.message
                     };
                 }
-                
-                return {
-                    isLoggedIn: false
-                };
+            }
+
+            /**
+             * 验证注册信息的有效性（24小时时间窗口）
+             * @param {string} registrationTime - 注册时间字符串
+             * @returns {boolean} 注册是否有效
+             */
+            isRegistrationValid(registrationTime) {
+                try {
+                    if (!registrationTime) return false;
+                    
+                    const regTime = new Date(registrationTime);
+                    const now = new Date();
+                    
+                    // 检查时间格式是否有效
+                    if (isNaN(regTime.getTime())) {
+                        console.warn('Invalid registration time format:', registrationTime);
+                        return false;
+                    }
+                    
+                    // 计算时间差（小时）
+                    const hoursDiff = (now - regTime) / (1000 * 60 * 60);
+                    
+                    // 24小时内的注册被认为是有效的
+                    return hoursDiff < 24 && hoursDiff >= 0;
+                } catch (error) {
+                    console.error('Error validating registration time:', error);
+                    ErrorHandler.handleValidationError(error, { 
+                        field: 'registration_time',
+                        value: registrationTime 
+                    });
+                    return false;
+                }
+            }
+
+            /**
+             * 清理过期的注册信息
+             */
+            clearExpiredRegistration() {
+                try {
+                    const keysToRemove = [
+                        'annual_party_user_id',
+                        'annual_party_user_name',
+                        'annual_party_user_gender',
+                        'annual_party_numeric_id',
+                        'annual_party_registration_time'
+                    ];
+                    
+                    keysToRemove.forEach(key => {
+                        localStorage.removeItem(key);
+                    });
+                    
+                    console.log('Expired registration data cleared');
+                } catch (error) {
+                    console.error('Error clearing expired registration:', error);
+                    ErrorHandler.handleStorageError(error, null, { 
+                        context: 'Clearing expired registration data' 
+                    });
+                }
+            }
+
+            /**
+             * 保存投票意图并重定向到注册页面
+             */
+            redirectToRegistration() {
+                try {
+                    // 构建包含投票信息的返回URL
+                    const returnUrl = this.buildReturnUrl();
+                    
+                    // 保存投票意图到本地存储
+                    this.saveVoteIntent(returnUrl);
+                    
+                    // 构建注册页面URL，包含return参数
+                    const registrationUrl = `/?return=${encodeURIComponent(returnUrl)}`;
+                    
+                    console.log('Redirecting to registration with return URL:', returnUrl);
+                    
+                    // 执行重定向
+                    window.location.href = registrationUrl;
+                } catch (error) {
+                    console.error('Error during registration redirect:', error);
+                    ErrorHandler.handleRedirectError(error, '/', { 
+                        context: 'Registration redirect',
+                        originalUrl: window.location.href 
+                    });
+                }
+            }
+
+            /**
+             * 构建包含投票信息的返回URL
+             * @returns {string} 完整的返回URL
+             */
+            buildReturnUrl() {
+                try {
+                    // 使用URLUtils工具类构建投票返回URL
+                    if (typeof URLUtils !== 'undefined') {
+                        return URLUtils.buildVoteReturnUrl({
+                            candidate_id: this.params.candidateId,
+                            candidate_name: this.params.candidateName,
+                            source: this.params.source,
+                            category: this.params.category,
+                            timestamp: this.params.timestamp
+                        });
+                    } else {
+                        // 备用方案：手动构建URL
+                        const baseUrl = '/vote';
+                        const params = new URLSearchParams();
+                        
+                        if (this.params.candidateId) params.set('candidate_id', this.params.candidateId);
+                        if (this.params.candidateName) params.set('candidate_name', this.params.candidateName);
+                        if (this.params.source) params.set('source', this.params.source);
+                        if (this.params.category) params.set('category', this.params.category);
+                        if (this.params.timestamp) params.set('timestamp', this.params.timestamp);
+                        
+                        // 添加重定向标识
+                        params.set('source', 'registration_redirect');
+                        params.set('timestamp', Date.now().toString());
+                        
+                        return `${baseUrl}?${params.toString()}`;
+                    }
+                } catch (error) {
+                    console.error('Error building return URL:', error);
+                    return ErrorHandler.handleUrlError(error, window.location.href, { 
+                        context: 'Building return URL',
+                        params: this.params 
+                    });
+                }
+            }
+
+            /**
+             * 保存投票意图到本地存储
+             * @param {string} returnUrl - 返回URL
+             */
+            saveVoteIntent(returnUrl) {
+                try {
+                    const voteIntent = {
+                        returnUrl: returnUrl,
+                        timestamp: new Date().toISOString(),
+                        userAgent: navigator.userAgent,
+                        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24小时后过期
+                        voteParams: {
+                            candidateId: this.params.candidateId,
+                            candidateName: this.params.candidateName,
+                            source: this.params.source,
+                            category: this.params.category
+                        }
+                    };
+                    
+                    localStorage.setItem('pending_return_url', returnUrl);
+                    localStorage.setItem('vote_intent_data', JSON.stringify(voteIntent));
+                    localStorage.setItem('vote_intent_timestamp', voteIntent.timestamp);
+                    
+                    console.log('Vote intent saved:', voteIntent);
+                } catch (error) {
+                    console.error('Error saving vote intent:', error);
+                    // 至少保存基本的返回URL
+                    try {
+                        localStorage.setItem('pending_return_url', returnUrl);
+                    } catch (fallbackError) {
+                        console.error('Failed to save even basic return URL:', fallbackError);
+                    }
+                }
+            }
+
+            /**
+             * 根据候选人ID获取候选人信息
+             * @param {string} candidateId - 候选人ID
+             * @returns {Object|null} 候选人信息或null
+             */
+            async fetchCandidateInfo(candidateId) {
+                try {
+                    const response = await fetch(`/api/users/${candidateId}`);
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        return {
+                            name: result.name,
+                            gender: result.gender,
+                            category: result.gender === 'male' ? '最佳男士' : '最佳女士'
+                        };
+                    } else {
+                        console.error('Failed to fetch candidate info:', result.message);
+                        return null;
+                    }
+                } catch (error) {
+                    console.error('Error fetching candidate info:', error);
+                    ErrorHandler.handleNetworkError(error, {
+                        context: 'Fetching candidate information',
+                        candidateId: candidateId
+                    });
+                    return null;
+                }
             }
 
             async checkVotingEligibility() {
@@ -600,8 +830,14 @@
                 this.hideAllStates();
                 document.getElementById('authPrompt').style.display = 'block';
                 
-                // Preserve voting context in login URL
+                // 使用新的重定向逻辑保存投票意图
                 const loginBtn = document.getElementById('loginBtn');
+                loginBtn.onclick = (e) => {
+                    e.preventDefault();
+                    this.redirectToRegistration();
+                };
+                
+                // 保持原有的href作为备用
                 const returnUrl = encodeURIComponent(window.location.href);
                 loginBtn.href = `/?return=${returnUrl}`;
                 
@@ -681,7 +917,12 @@
                     
                 } catch (error) {
                     console.error('Vote submission error:', error);
-                    this.showError('投票失败', '投票提交失败，请稍后重试');
+                    ErrorHandler.handleNetworkError(error, { 
+                        context: 'Vote submission',
+                        retryAction: () => this.submitVote(),
+                        candidateId: this.params.candidateId,
+                        candidateName: this.params.candidateName
+                    });
                     
                     voteBtn.textContent = originalText;
                     voteBtn.disabled = false;

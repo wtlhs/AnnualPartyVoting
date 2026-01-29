@@ -70,7 +70,6 @@ Thumbs.db
 # IDE files
 .vscode/
 .idea/
-.kiro/
 *.swp
 *.swo
 *~

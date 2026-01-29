@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试隐藏直接访问标识 - 年会投票系统</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button.scan {
+            background: #28a745;
+        }
+        .test-button.search {
+            background: #17a2b8;
+        }
+        .test-button.direct {
+            background: #ffc107;
+            color: #212529;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>测试隐藏直接访问标识功能</h1>
+    
+    <div class="test-section">
+        <h2>功能说明</h2>
+        <p>投票确认页面现在会根据访问来源显示不同的标识：</p>
+        <ul>
+            <li>📱 <strong>扫码投票</strong>：从扫码页面(/scan)访问时显示</li>
+            <li>👥 <strong>按姓名投票</strong>：从用户列表页面(/user-list)访问时显示</li>
+            <li>🔗 <strong>直接访问</strong>：直接访问时<span style="color: red; font-weight: bold;">隐藏</span></li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试不同访问方式</h2>
+        <p>点击下面的按钮测试不同的访问方式和标识显示：</p>
+        
+        <button class="test-button scan" onclick="testFromScan()">从扫码页面访问</button>
+        <button class="test-button search" onclick="testFromUserList()">从用户列表访问</button>
+        <button class="test-button direct" onclick="testDirectAccess()">直接访问（应隐藏标识）</button>
+        
+        <div id="testStatus" class="status info" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>预期行为</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="border: 1px solid #dee2e6; padding: 8px;">访问方式</th>
+                    <th style="border: 1px solid #dee2e6; padding: 8px;">来源页面</th>
+                    <th style="border: 1px solid #dee2e6; padding: 8px;">显示标识</th>
+                    <th style="border: 1px solid #dee2e6; padding: 8px;">是否显示</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="border: 1px solid #dee2e6; padding: 8px;">扫码投票</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px;">/scan</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px;">📱 扫码投票</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px; color: green;">✓ 显示</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #dee2e6; padding: 8px;">按姓名投票</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px;">/user-list</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px;">👥 按姓名投票</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px; color: green;">✓ 显示</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #dee2e6; padding: 8px;">直接访问</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px;">其他/直接输入URL</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px;">🔗 直接访问</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px; color: red;">✗ 隐藏</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="test-section">
+        <h2>技术实现</h2>
+        <p>通过检查 <code>document.referrer</code> 来判断访问来源：</p>
+        <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto;"><code>if (referrer.includes('/scan')) {
+    // 显示扫码投票标识
+} else if (referrer.includes('/user-list')) {
+    // 显示按姓名投票标识
+} else {
+    // 隐藏直接访问标识
+    voteSource.style.display = 'none';
+}</code></pre>
+    </div>
+
+    <script>
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('testStatus');
+            status.innerHTML = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function testFromScan() {
+            showStatus('正在模拟从扫码页面访问...', 'info');
+            
+            // 先打开扫码页面，然后从那里访问投票页面
+            const userId = localStorage.getItem('annual_party_user_id');
+            if (!userId) {
+                showStatus('请先注册用户', 'error');
+                return;
+            }
+            
+            setTimeout(() => {
+                // 打开扫码页面
+                const scanWindow = window.open('/scan', '_blank');
+                showStatus('已打开扫码页面，请在扫码页面中点击用户头像进行投票', 'success');
+            }, 1000);
+        }
+
+        function testFromUserList() {
+            showStatus('正在模拟从用户列表页面访问...', 'info');
+            
+            setTimeout(() => {
+                // 打开用户列表页面
+                const userListWindow = window.open('/user-list', '_blank');
+                showStatus('已打开用户列表页面，请在用户列表中点击用户头像进行投票', 'success');
+            }, 1000);
+        }
+
+        function testDirectAccess() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            if (!userId) {
+                showStatus('请先注册用户', 'error');
+                return;
+            }
+            
+            showStatus('正在直接访问投票页面（应该隐藏来源标识）...', 'info');
+            
+            setTimeout(() => {
+                // 直接打开投票页面
+                const voteWindow = window.open(`/vote/${userId}`, '_blank');
+                showStatus('已直接打开投票页面，来源标识应该被隐藏', 'success');
+            }, 1000);
+        }
+
+        // 检查当前用户状态
+        window.addEventListener('load', function() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            const userName = localStorage.getItem('annual_party_user_name');
+            
+            if (!userId || !userName) {
+                showStatus('未找到用户信息，请先在首页注册用户才能进行测试', 'error');
+            } else {
+                showStatus(`当前用户: ${userName} (ID: ${userId})，可以开始测试`, 'success');
+            }
+        });
+    </script>
+</body>
+</html>

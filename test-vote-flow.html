@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票流程测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .clear-button {
+            background: #dc3545;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .registered {
+            background: #d4edda;
+            color: #155724;
+        }
+        .unregistered {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗳️ 投票流程测试</h1>
+    
+    <div id="status" class="status">检查注册状态中...</div>
+    
+    <div class="test-section">
+        <h2>控制面板</h2>
+        <button class="test-button clear-button" onclick="clearRegistration()">清除注册信息</button>
+        <button class="test-button" onclick="checkStatus()">刷新状态</button>
+        <a href="/" class="test-button">前往注册</a>
+    </div>
+    
+    <div class="test-section">
+        <h2>投票链接测试</h2>
+        <p>点击以下链接测试不同的投票场景：</p>
+        
+        <h3>场景1：旧版投票链接</h3>
+        <a href="/vote/user_1737477387612_test1" class="test-button" target="_blank">测试用户1 (旧格式)</a>
+        <a href="/vote/user_1737477387612_test2" class="test-button" target="_blank">测试用户2 (旧格式)</a>
+        
+        <h3>场景2：新版投票链接</h3>
+        <a href="/vote?candidate_id=user_1737477387612_test1&candidate_name=测试用户1&source=qrcode" class="test-button" target="_blank">测试用户1 (新格式)</a>
+        <a href="/vote?candidate_id=user_1737477387612_test2&candidate_name=测试用户2&source=qrcode" class="test-button" target="_blank">测试用户2 (新格式)</a>
+        
+        <h3>场景3：缺少候选人姓名</h3>
+        <a href="/vote?candidate_id=user_1737477387612_test1&source=legacy_redirect" class="test-button" target="_blank">只有ID的链接</a>
+    </div>
+    
+    <div class="test-section">
+        <h2>预期结果</h2>
+        <div style="background: white; padding: 15px; border-left: 4px solid #007bff;">
+            <h4>未注册状态：</h4>
+            <ul>
+                <li>点击任何投票链接都应该显示"需要登录"提示</li>
+                <li>点击"登录"按钮应该跳转到首页并显示投票注册提示</li>
+                <li>URL应该包含return参数</li>
+            </ul>
+            
+            <h4>已注册状态：</h4>
+            <ul>
+                <li>点击投票链接应该直接显示投票确认页面</li>
+                <li>显示候选人信息和投票按钮</li>
+                <li>可以正常进行投票</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function checkStatus() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            const userName = localStorage.getItem('annual_party_user_name');
+            const registrationTime = localStorage.getItem('annual_party_registration_time');
+            
+            const statusDiv = document.getElementById('status');
+            
+            if (userId && userName && registrationTime) {
+                const regTime = new Date(registrationTime);
+                const now = new Date();
+                const hoursDiff = (now - regTime) / (1000 * 60 * 60);
+                
+                if (hoursDiff < 24) {
+                    statusDiv.className = 'status registered';
+                    statusDiv.innerHTML = `✅ 已注册 - ${userName} (ID: ${userId})`;
+                } else {
+                    statusDiv.className = 'status unregistered';
+                    statusDiv.innerHTML = '❌ 注册已过期';
+                }
+            } else {
+                statusDiv.className = 'status unregistered';
+                statusDiv.innerHTML = '❌ 未注册 - 点击投票链接将触发注册验证';
+            }
+        }
+        
+        function clearRegistration() {
+            const keys = [
+                'annual_party_user_id',
+                'annual_party_user_name', 
+                'annual_party_user_gender',
+                'annual_party_numeric_id',
+                'annual_party_registration_time',
+                'pending_return_url',
+                'vote_intent_timestamp'
+            ];
+            
+            keys.forEach(key => localStorage.removeItem(key));
+            alert('✅ 注册信息已清除，现在可以测试未注册状态');
+            checkStatus();
+        }
+        
+        // 页面加载时检查状态
+        document.addEventListener('DOMContentLoaded', checkStatus);
+        
+        // 每5秒自动刷新状态
+        setInterval(checkStatus, 5000);
+    </script>
+</body>
+</html>

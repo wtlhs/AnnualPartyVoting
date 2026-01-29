@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { createUser, getUserById, getUserByName, getUserByNumericId, updateUser, deleteUser, getAllUsers } = require('../database/operations');
-const { generateCompleteQRCode, validateQRData, generateQRCodeImage } = require('../utils/qrcode');
+const { generateCompleteQRCode, validateQRData, generateQRCodeImage, getServerBaseURL } = require('../utils/qrcode');
 
 const router = express.Router();
 
@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
 // User registration endpoint
 router.post('/register', async (req, res) => {
   try {
-    const { name, gender } = req.body;
+    const { name, gender, baseURL } = req.body;
     
     // Validate input
     if (!name || !name.trim()) {
@@ -89,6 +89,20 @@ router.post('/register', async (req, res) => {
         errorCode: 'INVALID_GENDER',
         message: '请选择有效的性别'
       });
+    }
+    
+    // Validate baseURL if provided
+    let validatedBaseURL = null;
+    if (baseURL) {
+      try {
+        const url = new URL(baseURL);
+        // Only allow http and https protocols
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+          validatedBaseURL = `${url.protocol}//${url.host}`;
+        }
+      } catch (error) {
+        console.warn('Invalid baseURL provided:', baseURL);
+      }
     }
     
     // Check if name already exists (case-insensitive)
@@ -117,31 +131,47 @@ router.post('/register', async (req, res) => {
       .filter(u => u.qrCode && u.id !== user.id)
       .map(u => u.qrCode);
     
-    // Generate unique QR code
-    const { qrData, qrCodeImage } = await generateCompleteQRCode(
-      {
-        userId: user.id,
-        name: user.name,
-        gender: user.gender
-      },
-      existingQRCodes
-    );
+    // Temporarily set the base URL if provided by the client
+    const originalBaseURL = process.env.SERVER_BASE_URL;
+    if (validatedBaseURL) {
+      process.env.SERVER_BASE_URL = validatedBaseURL;
+    }
     
-    // Update user with QR code data
-    const updatedUser = await updateUser(user.id, {
-      qrCode: qrData
-    });
-    
-    res.json({
-      success: true,
-      userId: updatedUser.id,
-      numericId: updatedUser.numericId,
-      name: updatedUser.name,
-      gender: updatedUser.gender,
-      avatarUrl: sanitizeAvatarUrl(updatedUser.avatarUrl),
-      qrCode: qrCodeImage,
-      qrData: qrData
-    });
+    try {
+      // Generate unique QR code
+      const { qrData, qrCodeImage } = await generateCompleteQRCode(
+        {
+          userId: user.id,
+          name: user.name,
+          gender: user.gender
+        },
+        existingQRCodes
+      );
+      
+      // Update user with QR code data
+      const updatedUser = await updateUser(user.id, {
+        qrCode: qrData
+      });
+      
+      res.json({
+        success: true,
+        userId: updatedUser.id,
+        numericId: updatedUser.numericId,
+        name: updatedUser.name,
+        gender: updatedUser.gender,
+        avatarUrl: sanitizeAvatarUrl(updatedUser.avatarUrl),
+        qrCode: qrCodeImage,
+        qrData: qrData,
+        baseURL: validatedBaseURL || getServerBaseURL() // Return the base URL used
+      });
+    } finally {
+      // Restore original base URL
+      if (originalBaseURL) {
+        process.env.SERVER_BASE_URL = originalBaseURL;
+      } else if (validatedBaseURL) {
+        delete process.env.SERVER_BASE_URL;
+      }
+    }
     
   } catch (error) {
     console.error('Registration error:', error);
@@ -601,6 +631,125 @@ router.delete('/:userId', async (req, res) => {
       success: false,
       errorCode: 'DELETE_FAILED',
       message: '删除用户失败'
+    });
+  }
+});
+
+// Batch update QR codes with new base URL
+router.post('/batch-update-qr', async (req, res) => {
+  try {
+    const { baseURL } = req.body;
+    
+    // Validate baseURL
+    let validatedBaseURL = null;
+    if (baseURL) {
+      try {
+        const url = new URL(baseURL);
+        // Only allow http and https protocols
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+          validatedBaseURL = `${url.protocol}//${url.host}`;
+        } else {
+          return res.status(400).json({
+            success: false,
+            errorCode: 'INVALID_BASE_URL',
+            message: '无效的URL协议，只支持http和https'
+          });
+        }
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          errorCode: 'INVALID_BASE_URL',
+          message: '无效的URL格式'
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'MISSING_BASE_URL',
+        message: '请提供baseURL参数'
+      });
+    }
+    
+    // Get all users
+    const users = await getAllUsers();
+    
+    let updatedCount = 0;
+    let skippedCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    // Temporarily set the base URL
+    const originalBaseURL = process.env.SERVER_BASE_URL;
+    process.env.SERVER_BASE_URL = validatedBaseURL;
+    
+    try {
+      for (const user of users) {
+        try {
+          // Skip users without QR codes
+          if (!user.qrCode) {
+            skippedCount++;
+            continue;
+          }
+          
+          // Get existing QR codes to ensure uniqueness
+          const otherUsers = users.filter(u => u.id !== user.id && u.qrCode);
+          const existingQRCodes = otherUsers.map(u => u.qrCode);
+          
+          // Generate new QR code with updated base URL
+          const { qrData, qrCodeImage } = await generateCompleteQRCode(
+            {
+              userId: user.id,
+              name: user.name,
+              gender: user.gender
+            },
+            existingQRCodes
+          );
+          
+          // Update user with new QR code
+          await updateUser(user.id, {
+            qrCode: qrData
+          });
+          
+          updatedCount++;
+          
+        } catch (error) {
+          console.error(`Failed to update QR code for user ${user.name}:`, error);
+          errorCount++;
+          errors.push({
+            userId: user.id,
+            userName: user.name,
+            error: error.message
+          });
+        }
+      }
+    } finally {
+      // Restore original base URL
+      if (originalBaseURL) {
+        process.env.SERVER_BASE_URL = originalBaseURL;
+      } else {
+        delete process.env.SERVER_BASE_URL;
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'QR码批量更新完成',
+      statistics: {
+        total: users.length,
+        updated: updatedCount,
+        skipped: skippedCount,
+        errors: errorCount
+      },
+      baseURL: validatedBaseURL,
+      errors: errors.length > 0 ? errors : undefined
+    });
+    
+  } catch (error) {
+    console.error('Batch QR update error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'BATCH_UPDATE_FAILED',
+      message: 'QR码批量更新失败'
     });
   }
 });

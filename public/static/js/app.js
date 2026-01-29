@@ -148,6 +148,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // 显示加载条
         pageOptimizer.showLoadingBar();
         
+        // 新增：检查return参数
+        checkReturnParameter();
+        
         // 检查是否已经注册过
         checkExistingRegistration();
         registerForm.addEventListener('submit', handleRegistration);
@@ -165,7 +168,10 @@ const STORAGE_KEYS = {
     USER_NAME: 'annual_party_user_name',
     USER_GENDER: 'annual_party_user_gender',
     NUMERIC_ID: 'annual_party_numeric_id',
-    REGISTRATION_TIME: 'annual_party_registration_time'
+    REGISTRATION_TIME: 'annual_party_registration_time',
+    // 新增：投票意图相关的存储键
+    PENDING_RETURN_URL: 'pending_return_url',
+    VOTE_INTENT_TIMESTAMP: 'vote_intent_timestamp'
 };
 
 function checkExistingRegistration() {
@@ -174,12 +180,8 @@ function checkExistingRegistration() {
     const registrationTime = localStorage.getItem(STORAGE_KEYS.REGISTRATION_TIME);
     
     if (userId && userName && registrationTime) {
-        // 检查注册时间是否在合理范围内（24小时内）
-        const regTime = new Date(registrationTime);
-        const now = new Date();
-        const hoursDiff = (now - regTime) / (1000 * 60 * 60);
-        
-        if (hoursDiff < 24) {
+        // 使用统一的注册验证函数
+        if (isRegistrationValid(registrationTime)) {
             showExistingRegistrationMessage(userName, userId);
             return true;
         } else {
@@ -283,6 +285,12 @@ async function deleteUserAccount(userId) {
     } catch (error) {
         console.error('Delete user account error:', error);
         
+        ErrorHandler.handleNetworkError(error, {
+            context: 'User account deletion',
+            retryAction: () => deleteUserAccount(userId),
+            userId: userId
+        });
+        
         // 网络错误时，本地缓存已清除，直接跳转到首页
         showMessage('本地数据已清除，正在返回首页...', 'success');
         
@@ -293,9 +301,204 @@ async function deleteUserAccount(userId) {
 }
 
 function clearRegistrationCache() {
-    Object.values(STORAGE_KEYS).forEach(key => {
-        localStorage.removeItem(key);
-    });
+    try {
+        Object.values(STORAGE_KEYS).forEach(key => {
+            localStorage.removeItem(key);
+        });
+    } catch (error) {
+        console.error('Error clearing registration cache:', error);
+        ErrorHandler.handleStorageError(error, null, { 
+            context: 'Clearing registration cache',
+            keys: Object.values(STORAGE_KEYS)
+        });
+    }
+}
+
+// 新增：检查并处理return参数
+function checkReturnParameter() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrl = urlParams.get('return');
+    
+    if (returnUrl) {
+        // 保存return URL到本地存储
+        localStorage.setItem(STORAGE_KEYS.PENDING_RETURN_URL, returnUrl);
+        localStorage.setItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP, new Date().toISOString());
+        
+        // 显示投票相关的注册提示
+        showVoteRegistrationPrompt(returnUrl);
+    }
+}
+
+// 新增：显示投票注册提示
+function showVoteRegistrationPrompt(returnUrl) {
+    const promptDiv = document.createElement('div');
+    promptDiv.className = 'vote-registration-prompt';
+    promptDiv.innerHTML = `
+        <div class="prompt-content">
+            <div class="prompt-icon">🗳️</div>
+            <h3>投票前需要注册</h3>
+            <p>您需要先注册才能参与投票，注册完成后将自动返回投票页面。</p>
+            <div class="prompt-actions">
+                <button class="btn-primary" onclick="scrollToRegistrationForm()">立即注册</button>
+                <button class="btn-secondary" onclick="dismissVotePrompt()">稍后再说</button>
+            </div>
+        </div>
+    `;
+    
+    // 插入到注册表单前
+    const form = document.getElementById('registerForm');
+    if (form) {
+        form.parentNode.insertBefore(promptDiv, form);
+        
+        // 添加样式
+        const style = document.createElement('style');
+        style.textContent = `
+            .vote-registration-prompt {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 20px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+                animation: slideInDown 0.5s ease-out;
+            }
+            
+            .prompt-content {
+                text-align: center;
+            }
+            
+            .prompt-icon {
+                font-size: 2.5em;
+                margin-bottom: 10px;
+            }
+            
+            .vote-registration-prompt h3 {
+                margin: 0 0 10px 0;
+                font-size: 1.4em;
+                font-weight: 600;
+            }
+            
+            .vote-registration-prompt p {
+                margin: 0 0 20px 0;
+                opacity: 0.9;
+                line-height: 1.5;
+            }
+            
+            .prompt-actions {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .prompt-actions .btn-primary,
+            .prompt-actions .btn-secondary {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+            
+            .prompt-actions .btn-primary {
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+            }
+            
+            .prompt-actions .btn-primary:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: translateY(-1px);
+            }
+            
+            .prompt-actions .btn-secondary {
+                background: transparent;
+                color: rgba(255, 255, 255, 0.8);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+            }
+            
+            .prompt-actions .btn-secondary:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+            }
+            
+            @keyframes slideInDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            @keyframes slideOutUp {
+                from {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// 新增：滚动到注册表单
+function scrollToRegistrationForm() {
+    const form = document.getElementById('registerForm');
+    if (form) {
+        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 聚焦到姓名输入框
+        const nameInput = form.querySelector('input[name="name"]');
+        if (nameInput) {
+            setTimeout(() => nameInput.focus(), 500);
+        }
+    }
+}
+
+// 新增：关闭投票提示
+function dismissVotePrompt() {
+    const prompt = document.querySelector('.vote-registration-prompt');
+    if (prompt) {
+        prompt.style.animation = 'slideOutUp 0.3s ease-in';
+        setTimeout(() => {
+            prompt.remove();
+        }, 300);
+    }
+    
+    // 清除待处理的返回URL
+    localStorage.removeItem(STORAGE_KEYS.PENDING_RETURN_URL);
+    localStorage.removeItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP);
+}
+
+// 新增：验证投票意图的有效性
+function isVoteIntentValid(timestamp) {
+    if (!timestamp) return false;
+    
+    const intentTime = new Date(timestamp);
+    const now = new Date();
+    const hoursDiff = (now - intentTime) / (1000 * 60 * 60);
+    
+    // 24小时内的投票意图被认为是有效的
+    return hoursDiff < 24;
+}
+
+// 新增：验证注册信息的有效性
+function isRegistrationValid(registrationTime) {
+    if (!registrationTime) return false;
+    
+    const regTime = new Date(registrationTime);
+    const now = new Date();
+    const hoursDiff = (now - regTime) / (1000 * 60 * 60);
+    
+    // 24小时内的注册被认为是有效的
+    return hoursDiff < 24;
 }
 
 function showVotingActions() {
@@ -439,12 +642,19 @@ async function confirmGender() {
     try {
         const { name, gender } = currentRegistrationData;
         
+        // Get current base URL from browser
+        const currentBaseURL = `${window.location.protocol}//${window.location.host}`;
+        
         const response = await fetch('/api/users/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ name, gender })
+            body: JSON.stringify({ 
+                name, 
+                gender,
+                baseURL: currentBaseURL
+            })
         });
         
         const result = await response.json();
@@ -461,6 +671,27 @@ async function confirmGender() {
                 localStorage.setItem(STORAGE_KEYS.NUMERIC_ID, result.numericId);
             }
             
+            // 新增：检查是否有待处理的返回URL
+            const pendingReturnUrl = localStorage.getItem(STORAGE_KEYS.PENDING_RETURN_URL);
+            const voteIntentTimestamp = localStorage.getItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP);
+            
+            if (pendingReturnUrl && isVoteIntentValid(voteIntentTimestamp)) {
+                // 清除待处理的返回URL
+                localStorage.removeItem(STORAGE_KEYS.PENDING_RETURN_URL);
+                localStorage.removeItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP);
+                
+                showMessage(`注册成功！您的数字ID是：${result.numericId}。正在返回投票页面...`, 'success');
+                
+                // 显示投票按钮
+                showVotingActions();
+                
+                setTimeout(() => {
+                    window.location.href = pendingReturnUrl;
+                }, 1500);
+                return;
+            }
+            
+            // 默认行为：跳转到个人页面
             showMessage(`注册成功！您的数字ID是：${result.numericId}。正在跳转到个人页面...`, 'success');
             
             // 显示投票按钮
@@ -479,7 +710,11 @@ async function confirmGender() {
         }
     } catch (error) {
         console.error('Registration error:', error);
-        showMessage('网络错误，请检查连接后重试', 'error');
+        ErrorHandler.handleNetworkError(error, {
+            context: 'User registration',
+            retryAction: () => confirmGender(),
+            registrationData: currentRegistrationData
+        });
     } finally {
         // 恢复提交按钮
         if (currentSubmitBtn) {
