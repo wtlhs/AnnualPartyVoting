@@ -26,9 +26,16 @@ router.get('/user-list', (req, res) => {
   res.sendFile(path.join(publicPath, 'user-list.html'));
 });
 
-// Vote confirmation page
+// Vote confirmation page (legacy)
 router.get('/vote/:userId', (req, res) => {
   res.sendFile(path.join(publicPath, 'vote.html'));
+});
+
+// QR Code voting page - new URL-based voting system
+router.get('/vote', (req, res) => {
+  // Serve the new vote page component for QR code voting
+  const componentPath = path.join(__dirname, '../components/vote-page.html');
+  res.sendFile(componentPath);
 });
 
 // Admin page

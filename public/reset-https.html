@@ -83,7 +83,7 @@
             <p>1. 在地址栏输入以下地址：</p>
             <div class="code">chrome://net-internals/#hsts</div>
             <p>2. 在 "Delete domain security policies" 部分输入：</p>
-            <div class="code">172.18.0.250</div>
+            <div class="code">192.168.0.97</div>
             <p>3. 点击 "Delete" 按钮</p>
             <p>4. 重新访问网站</p>
         </div>
@@ -95,7 +95,7 @@
             <p>2. 搜索：</p>
             <div class="code">security.tls.insecure_fallback_hosts</div>
             <p>3. 添加值：</p>
-            <div class="code">172.18.0.250</div>
+            <div class="code">192.168.0.97</div>
         </div>
 
         <div class="step">
@@ -118,14 +118,14 @@
             <p>   - Firefox: Ctrl+Shift+P</p>
             
             <p>3. <strong>手动输入完整URL</strong></p>
-            <div class="code">http://172.18.0.250:3000</div>
+            <div class="code">http://192.168.0.97:3000</div>
             <p>   注意：必须包含 http:// 前缀</p>
         </div>
 
         <div style="text-align: center; margin-top: 30px;">
             <button onclick="clearAllCache()" class="btn btn-danger">清除所有缓存</button>
             <button onclick="testConnection()" class="btn">测试连接</button>
-            <a href="http://172.18.0.250:3000" class="btn">返回首页</a>
+            <a href="http://192.168.0.97:3000" class="btn">返回首页</a>
         </div>
 
         <div id="result" style="margin-top: 20px; padding: 15px; border-radius: 5px; display: none;"></div>
@@ -164,7 +164,7 @@
         function testConnection() {
             showResult('正在测试连接...', 'info');
             
-            fetch('http://172.18.0.250:3000/api/votes/statistics')
+            fetch('http://192.168.0.97:3000/api/votes/statistics')
                 .then(response => {
                     if (response.ok) {
                         showResult('✅ 连接成功！HTTP协议工作正常。', 'success');

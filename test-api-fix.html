@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API修复测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #276749;
+        }
+        .error {
+            background: #fed7d7;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+        }
+        .qr-display {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .qr-display img {
+            max-width: 256px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 API修复测试</h1>
+        
+        <div class="test-section">
+            <h3>测试现有用户API</h3>
+            <p>测试已迁移用户的二维码是否能正常通过API获取</p>
+            <button onclick="testExistingUser()">测试王天龙用户</button>
+            <button onclick="testAnotherUser()">测试Jane Smith用户</button>
+            <div id="existingUserResult" class="result" style="display: none;"></div>
+            <div id="existingUserQR" class="qr-display" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>测试新用户注册</h3>
+            <p>测试新用户注册时是否能正确生成URL格式二维码</p>
+            <button onclick="testNewUser()">注册新测试用户</button>
+            <div id="newUserResult" class="result" style="display: none;"></div>
+            <div id="newUserQR" class="qr-display" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 测试现有用户
+        async function testExistingUser() {
+            const userId = '652fd327-5fd5-4f71-9bd4-e24caa5e2499'; // 王天龙
+            await testUserAPI(userId, 'existingUserResult', 'existingUserQR');
+        }
+
+        // 测试另一个用户
+        async function testAnotherUser() {
+            const userId = 'a2e97d4a-c428-4041-95cc-2680e17905e7'; // Jane Smith
+            await testUserAPI(userId, 'existingUserResult', 'existingUserQR');
+        }
+
+        // 通用用户API测试函数
+        async function testUserAPI(userId, resultId, qrId) {
+            const resultDiv = document.getElementById(resultId);
+            const qrDiv = document.getElementById(qrId);
+            
+            try {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result';
+                resultDiv.textContent = '正在测试...';
+                
+                const response = await fetch(`/api/users/${userId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ API调用成功！
+
+用户信息:
+- 姓名: ${result.name}
+- ID: ${result.userId}
+- 数字ID: ${result.numericId}
+- 性别: ${result.gender}
+- 投票数: ${result.voteCount}
+
+二维码信息:
+- 格式: ${result.qrData.startsWith('http') ? 'URL格式（新）' : 'JSON格式（旧）'}
+- 数据: ${result.qrData}
+- 图片: ${result.qrCode ? '已生成' : '未生成'}`;
+
+                    // 显示二维码
+                    if (result.qrCode) {
+                        qrDiv.style.display = 'block';
+                        qrDiv.innerHTML = `
+                            <h4>用户二维码:</h4>
+                            <img src="${result.qrCode}" alt="QR Code" />
+                            <p>扫描此二维码可直接为 ${result.name} 投票</p>
+                        `;
+                    }
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ API调用失败: ${result.message}`;
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = `❌ 请求失败: ${error.message}`;
+            }
+        }
+
+        // 测试新用户注册
+        async function testNewUser() {
+            const resultDiv = document.getElementById('newUserResult');
+            const qrDiv = document.getElementById('newUserQR');
+            
+            try {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result';
+                resultDiv.textContent = '正在注册新用户...';
+                
+                const randomName = '测试用户' + Math.floor(Math.random() * 1000);
+                
+                const response = await fetch('/api/users/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: randomName,
+                        gender: 'male'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ 新用户注册成功！
+
+用户信息:
+- 姓名: ${result.name}
+- ID: ${result.userId}
+- 数字ID: ${result.numericId}
+- 性别: ${result.gender}
+
+二维码信息:
+- 格式: ${result.qrData.startsWith('http') ? 'URL格式（新）✅' : 'JSON格式（旧）❌'}
+- 投票URL: ${result.qrData}`;
+
+                    // 显示二维码
+                    if (result.qrCode) {
+                        qrDiv.style.display = 'block';
+                        qrDiv.innerHTML = `
+                            <h4>新用户二维码:</h4>
+                            <img src="${result.qrCode}" alt="QR Code" />
+                            <p>扫描此二维码可直接为 ${result.name} 投票</p>
+                        `;
+                    }
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ 注册失败: ${result.message}`;
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = `❌ 请求失败: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

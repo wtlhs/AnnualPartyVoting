@@ -22,13 +22,14 @@ async function loadUserProfile(userId) {
         if (result.success) {
             displayUserInfo(result);
             if (result.qrCode) {
+                // Use the QR code image returned by the API
                 displayQRCode(result.qrCode);
+            } else if (result.qrData) {
+                // If we have QR data but no image, generate the image from the data
+                generateQRCode(result.qrData);
             } else {
-                generateQRCode(result.qrData || JSON.stringify({
-                    userId: userId,
-                    type: 'vote',
-                    timestamp: Date.now()
-                }));
+                // This should not happen after migration, but as a fallback
+                showError('QR码数据缺失，请联系管理员');
             }
         } else {
             showError(result.message || '加载用户信息失败');

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原有投票确认页面测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .info-box {
+            background: #e6fffa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #38b2ac;
+        }
+        .url-display {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .qr-code img {
+            max-width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 原有投票确认页面测试</h1>
+        
+        <div class="info-box">
+            <strong>测试说明：</strong><br>
+            验证QR码现在生成的是指向原有投票确认页面的URL格式 (/vote/:userId)
+        </div>
+        
+        <div class="test-section">
+            <h3>1. 生成测试QR码</h3>
+            <p>生成指向原有投票确认页面的QR码</p>
+            <button onclick="generateTestQR()">生成测试QR码</button>
+            <div id="testQRResult" style="display: none;">
+                <div id="testURL" class="url-display"></div>
+                <div id="qrCodeDisplay" class="qr-code"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. 测试投票确认页面</h3>
+            <p>打开原有的投票确认页面，测试功能</p>
+            <button onclick="openVotePage()" id="openVoteBtn" disabled>打开投票确认页面</button>
+            <p><small>注意：页面会显示候选人信息和投票确认按钮</small></p>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 验证URL格式</h3>
+            <p>验证生成的QR码URL格式是否正确</p>
+            <div id="formatInfo" style="display: none;">
+                <p><strong>预期格式：</strong></p>
+                <ul>
+                    <li>URL格式: http://192.168.0.97:3000/vote/:userId</li>
+                    <li>不包含查询参数</li>
+                    <li>直接指向原有的投票确认页面</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 运行迁移脚本</h3>
+            <p>将现有用户的QR码迁移到原有格式</p>
+            <button onclick="showMigrationInstructions()">查看迁移说明</button>
+            <div id="migrationInstructions" style="display: none;">
+                <div class="info-box">
+                    <h4>迁移步骤：</h4>
+                    <ol>
+                        <li>在项目根目录打开终端</li>
+                        <li>运行命令: <code>node migrate-qr-codes-to-original.js</code></li>
+                        <li>等待迁移完成</li>
+                        <li>验证用户QR码已更新为新格式</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. 快速访问</h3>
+            <a href="http://192.168.0.97:3000" target="_blank" class="btn">打开首页</a>
+            <a href="http://192.168.0.97:3000/admin" target="_blank" class="btn">管理后台</a>
+        </div>
+    </div>
+
+    <script>
+        let testVoteURL = '';
+
+        // 生成测试QR码
+        async function generateTestQR() {
+            try {
+                // 模拟生成QR码数据（使用已知用户ID）
+                const userId = '652fd327-5fd5-4f71-9bd4-e24caa5e2499'; // 王天龙
+                const baseURL = 'http://192.168.0.97:3000';
+                
+                testVoteURL = `${baseURL}/vote/${userId}`;
+                
+                // 显示URL
+                const urlDiv = document.getElementById('testURL');
+                urlDiv.textContent = testVoteURL;
+                
+                // 生成QR码图片（使用在线QR码生成器作为演示）
+                const qrCodeURL = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(testVoteURL)}`;
+                
+                const qrDisplay = document.getElementById('qrCodeDisplay');
+                qrDisplay.innerHTML = `<img src="${qrCodeURL}" alt="QR Code" />`;
+                
+                // 显示结果
+                document.getElementById('testQRResult').style.display = 'block';
+                
+                // 启用打开投票页面按钮
+                const openBtn = document.getElementById('openVoteBtn');
+                openBtn.disabled = false;
+                
+                // 显示格式信息
+                document.getElementById('formatInfo').style.display = 'block';
+                
+                console.log('生成的QR码URL:', testVoteURL);
+                
+            } catch (error) {
+                console.error('生成QR码时出错:', error);
+                alert('生成QR码失败: ' + error.message);
+            }
+        }
+
+        // 打开投票确认页面
+        function openVotePage() {
+            if (testVoteURL) {
+                window.open(testVoteURL, '_blank');
+            } else {
+                alert('请先生成测试QR码');
+            }
+        }
+
+        // 显示迁移说明
+        function showMigrationInstructions() {
+            const instructions = document.getElementById('migrationInstructions');
+            instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 页面加载时自动生成测试QR码
+        window.addEventListener('load', function() {
+            setTimeout(generateTestQR, 500);
+        });
+    </script>
+</body>
+</html>

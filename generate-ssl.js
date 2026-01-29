@@ -27,7 +27,7 @@ ST = Beijing
 L = Beijing
 O = Annual Party Voting System
 OU = IT Department
-CN = 172.18.0.250
+CN = 192.168.0.97
 
 [v3_req]
 keyUsage = keyEncipherment, dataEncipherment
@@ -36,9 +36,9 @@ subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = localhost
-DNS.2 = 172.18.0.250
+DNS.2 = 192.168.0.97
 IP.1 = 127.0.0.1
-IP.2 = 172.18.0.250
+IP.2 = 192.168.0.97
 `;
     
     fs.writeFileSync(path.join(sslDir, 'csr.conf'), csrConfig);

@@ -190,12 +190,19 @@ router.get('/:userId', async (req, res) => {
     let qrCodeBase64 = null;
     if (user.qrCode) {
       try {
-        // Validate QR code data first
-        validateQRData(user.qrCode);
-        qrCodeBase64 = await generateQRCodeImage(user.qrCode);
+        // Try to validate and generate QR code image
+        // Handle both old JSON format and new URL format
+        if (user.qrCode.startsWith('http')) {
+          // New URL format - validate as URL
+          validateQRData(user.qrCode);
+          qrCodeBase64 = await generateQRCodeImage(user.qrCode);
+        } else {
+          // Old JSON format or invalid data - regenerate as URL
+          throw new Error('Old format detected, regenerating...');
+        }
       } catch (qrError) {
         console.error('QR code validation/generation error:', qrError);
-        // If QR code is invalid, regenerate it
+        // If QR code is invalid or old format, regenerate it
         try {
           const allUsers = await getAllUsers();
           const existingQRCodes = allUsers

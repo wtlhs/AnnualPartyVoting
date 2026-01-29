@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票页面登录链接测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .info-box {
+            background: #e6fffa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #38b2ac;
+        }
+        .url-display {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 投票页面登录链接测试</h1>
+        
+        <div class="info-box">
+            <strong>测试说明：</strong><br>
+            验证投票页面中的登录和注册链接是否正确指向首页
+        </div>
+        
+        <div class="test-section">
+            <h3>1. 生成测试投票URL</h3>
+            <p>生成一个测试投票URL，用于测试登录链接</p>
+            <button onclick="generateTestURL()">生成测试URL</button>
+            <div id="testURL" class="url-display" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. 测试投票页面</h3>
+            <p>打开投票页面，测试登录和注册链接</p>
+            <button onclick="openVotePage()" id="openVoteBtn" disabled>打开投票页面</button>
+            <p><small>注意：页面会显示"需要登录"提示，点击登录或注册按钮应该跳转到首页</small></p>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 验证链接目标</h3>
+            <p>验证登录和注册链接是否正确指向首页</p>
+            <div id="linkInfo" style="display: none;">
+                <p><strong>预期行为：</strong></p>
+                <ul>
+                    <li>登录按钮：跳转到首页 (/) 并带有return参数</li>
+                    <li>注册按钮：跳转到首页 (/)</li>
+                    <li>用户可以在首页进行登录或注册</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 快速访问</h3>
+            <a href="http://192.168.0.97:3000" target="_blank" class="btn">打开首页</a>
+            <a href="http://192.168.0.97:3000/admin" target="_blank" class="btn">管理后台</a>
+        </div>
+    </div>
+
+    <script>
+        let testVoteURL = '';
+
+        // 生成测试投票URL
+        function generateTestURL() {
+            // 使用一个已知的用户ID生成测试URL
+            const candidateId = '652fd327-5fd5-4f71-9bd4-e24caa5e2499'; // 王天龙
+            const candidateName = '王天龙';
+            const timestamp = Math.floor(Date.now() / 1000);
+            
+            testVoteURL = `http://192.168.0.97:3000/vote?candidate_id=${candidateId}&candidate_name=${encodeURIComponent(candidateName)}&source=qrcode&timestamp=${timestamp}&category=${encodeURIComponent('男性候选人')}`;
+            
+            const urlDiv = document.getElementById('testURL');
+            urlDiv.style.display = 'block';
+            urlDiv.textContent = testVoteURL;
+            
+            // 启用打开投票页面按钮
+            const openBtn = document.getElementById('openVoteBtn');
+            openBtn.disabled = false;
+            
+            // 显示链接信息
+            document.getElementById('linkInfo').style.display = 'block';
+        }
+
+        // 打开投票页面
+        function openVotePage() {
+            if (testVoteURL) {
+                window.open(testVoteURL, '_blank');
+            } else {
+                alert('请先生成测试URL');
+            }
+        }
+
+        // 页面加载时自动生成测试URL
+        window.addEventListener('load', function() {
+            setTimeout(generateTestURL, 500);
+        });
+    </script>
+</body>
+</html>

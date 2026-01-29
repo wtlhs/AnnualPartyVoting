@@ -98,7 +98,7 @@
             <h3>快速解决方案：</h3>
             <p>1. 点击下面的按钮清除缓存</p>
             <p>2. 或者在地址栏手动输入完整地址：</p>
-            <div class="code">http://172.18.0.250:3000</div>
+            <div class="code">http://192.168.0.97:3000</div>
             <p>3. 确保地址以 <strong>http://</strong> 开头（不是https://）</p>
         </div>
 
@@ -111,7 +111,7 @@
             <h3>如果问题仍然存在：</h3>
             <p><strong>Chrome浏览器：</strong></p>
             <p>1. 地址栏输入：<span class="code">chrome://net-internals/#hsts</span></p>
-            <p>2. 在删除域名安全策略中输入：<span class="code">172.18.0.250</span></p>
+            <p>2. 在删除域名安全策略中输入：<span class="code">192.168.0.97</span></p>
             <p>3. 点击删除</p>
             
             <p><strong>或者使用隐身模式：</strong></p>
@@ -154,19 +154,19 @@
             
             // 3秒后跳转
             setTimeout(function() {
-                window.location.href = 'http://172.18.0.250:3000';
+                window.location.href = 'http://192.168.0.97:3000';
             }, 3000);
         }
         
         function testConnection() {
             showStatus('正在测试连接...', 'success');
             
-            fetch('http://172.18.0.250:3000/api/votes/statistics')
+            fetch('http://192.168.0.97:3000/api/votes/statistics')
                 .then(response => {
                     if (response.ok) {
                         showStatus('✅ 连接成功！可以正常访问网站了。', 'success');
                         setTimeout(function() {
-                            window.location.href = 'http://172.18.0.250:3000';
+                            window.location.href = 'http://192.168.0.97:3000';
                         }, 2000);
                     } else {
                         showStatus('❌ 连接失败，状态码：' + response.status, 'error');

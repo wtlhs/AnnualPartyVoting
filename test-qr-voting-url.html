@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR码投票URL测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #276749;
+        }
+        .error {
+            background: #fed7d7;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+        }
+        .qr-code {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .qr-code img {
+            max-width: 256px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .url-display {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 QR码投票URL功能测试</h1>
+        
+        <!-- URL生成测试 -->
+        <div class="test-section">
+            <h3>1. URL生成测试</h3>
+            <div class="form-group">
+                <label>候选人ID:</label>
+                <input type="text" id="candidateId" value="user123" placeholder="输入候选人ID">
+            </div>
+            <div class="form-group">
+                <label>候选人姓名:</label>
+                <input type="text" id="candidateName" value="张三" placeholder="输入候选人姓名">
+            </div>
+            <div class="form-group">
+                <label>分类 (可选):</label>
+                <input type="text" id="candidateCategory" value="最佳员工" placeholder="输入分类">
+            </div>
+            <div class="form-group">
+                <label>基础URL:</label>
+                <input type="text" id="baseURL" value="http://192.168.0.97:3000" placeholder="输入基础URL">
+            </div>
+            <button onclick="generateURL()">生成投票URL</button>
+            <div id="urlResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- QR码生成测试 -->
+        <div class="test-section">
+            <h3>2. QR码生成测试</h3>
+            <div class="form-group">
+                <label>QR码格式:</label>
+                <select id="qrFormat">
+                    <option value="wechat">微信优化</option>
+                    <option value="web">网页优化</option>
+                    <option value="print">打印优化</option>
+                    <option value="small">小尺寸</option>
+                </select>
+            </div>
+            <button onclick="generateQRCode()">生成QR码</button>
+            <div id="qrResult" class="result" style="display: none;"></div>
+            <div id="qrDisplay" class="qr-code" style="display: none;"></div>
+        </div>
+
+        <!-- URL验证测试 -->
+        <div class="test-section">
+            <h3>3. URL验证测试</h3>
+            <div class="form-group">
+                <label>待验证URL:</label>
+                <input type="text" id="validateURL" placeholder="输入要验证的URL">
+            </div>
+            <button onclick="validateURL()">验证URL</button>
+            <div id="validateResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- 投票页面测试 -->
+        <div class="test-section">
+            <h3>4. 投票页面测试</h3>
+            <p>点击下面的按钮将打开投票页面进行测试：</p>
+            <button onclick="testVotePage()">测试投票页面</button>
+            <button onclick="testVotePageWithAuth()">测试投票页面（模拟登录）</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // 导入QR码生成器
+        import { VotingQRCodeURLGenerator, QRCodePresets } from './src/utils/qr-code-url-generator.js';
+
+        let generator;
+        let currentURL = '';
+
+        // 初始化生成器
+        function initGenerator() {
+            const baseURL = document.getElementById('baseURL').value;
+            generator = new VotingQRCodeURLGenerator(baseURL);
+        }
+
+        // 生成投票URL
+        window.generateURL = function() {
+            try {
+                initGenerator();
+                
+                const candidateInfo = {
+                    id: document.getElementById('candidateId').value,
+                    name: document.getElementById('candidateName').value,
+                    category: document.getElementById('candidateCategory').value || undefined
+                };
+
+                currentURL = generator.generateVotingURL(candidateInfo);
+                
+                const resultDiv = document.getElementById('urlResult');
+                resultDiv.className = 'result success';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `✅ URL生成成功！\n\n生成的投票URL:\n${currentURL}`;
+                
+                // 自动填充到验证输入框
+                document.getElementById('validateURL').value = currentURL;
+                
+            } catch (error) {
+                const resultDiv = document.getElementById('urlResult');
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = `❌ URL生成失败: ${error.message}`;
+            }
+        };
+
+        // 生成QR码
+        window.generateQRCode = async function() {
+            if (!currentURL) {
+                alert('请先生成投票URL');
+                return;
+            }
+
+            try {
+                const format = document.getElementById('qrFormat').value;
+                const options = QRCodePresets[format];
+                
+                const qrData = await generator.generateQRCode(currentURL, options);
+                
+                const resultDiv = document.getElementById('qrResult');
+                resultDiv.className = 'result success';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `✅ QR码生成成功！\n\n格式: ${qrData.format}\n尺寸: ${qrData.size}px\n生成时间: ${qrData.timestamp.toLocaleString()}`;
+                
+                // 显示QR码图片
+                const qrDisplay = document.getElementById('qrDisplay');
+                qrDisplay.style.display = 'block';
+                qrDisplay.innerHTML = `
+                    <img src="${qrData.imageData}" alt="QR Code" />
+                    <div class="url-display">${currentURL}</div>
+                `;
+                
+            } catch (error) {
+                const resultDiv = document.getElementById('qrResult');
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = `❌ QR码生成失败: ${error.message}`;
+            }
+        };
+
+        // 验证URL
+        window.validateURL = function() {
+            try {
+                initGenerator();
+                
+                const url = document.getElementById('validateURL').value;
+                const isValid = generator.validateURL(url);
+                
+                const resultDiv = document.getElementById('validateResult');
+                
+                if (isValid) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ URL验证通过！\n\n这是一个有效的投票URL。`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ URL验证失败！\n\n这不是一个有效的投票URL。`;
+                }
+                
+                resultDiv.style.display = 'block';
+                
+            } catch (error) {
+                const resultDiv = document.getElementById('validateResult');
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = `❌ 验证过程出错: ${error.message}`;
+            }
+        };
+
+        // 测试投票页面
+        window.testVotePage = function() {
+            if (!currentURL) {
+                alert('请先生成投票URL');
+                return;
+            }
+            
+            // 清除登录状态
+            localStorage.removeItem('annual_party_user_id');
+            localStorage.removeItem('annual_party_user_name');
+            
+            window.open(currentURL, '_blank');
+        };
+
+        // 测试投票页面（模拟登录）
+        window.testVotePageWithAuth = function() {
+            if (!currentURL) {
+                alert('请先生成投票URL');
+                return;
+            }
+            
+            // 模拟登录状态
+            localStorage.setItem('annual_party_user_id', 'test_user_001');
+            localStorage.setItem('annual_party_user_name', '测试用户');
+            
+            window.open(currentURL, '_blank');
+        };
+
+        // 页面加载时自动生成一个示例URL
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                generateURL();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

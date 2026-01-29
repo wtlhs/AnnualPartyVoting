@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .vote-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .vote-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .vote-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .vote-header .subtitle {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .vote-content {
+            padding: 30px 20px;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .candidate-info {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+
+        .candidate-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .candidate-id {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .candidate-category {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+        }
+
+        .vote-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            color: #e53e3e;
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .error-message {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .auth-prompt {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .auth-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .auth-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .auth-message {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .success-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .success-icon {
+            font-size: 48px;
+            color: #38a169;
+            margin-bottom: 20px;
+        }
+
+        .success-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .success-message {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .status-qrcode {
+            background: #e6fffa;
+            color: #234e52;
+        }
+
+        .status-direct {
+            background: #fef5e7;
+            color: #744210;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .vote-container {
+                border-radius: 12px;
+            }
+
+            .vote-header {
+                padding: 25px 15px;
+            }
+
+            .vote-header h1 {
+                font-size: 20px;
+            }
+
+            .vote-content {
+                padding: 25px 15px;
+            }
+
+            .candidate-info {
+                padding: 15px;
+            }
+
+            .candidate-name {
+                font-size: 18px;
+            }
+
+            .vote-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                padding: 16px 20px;
+            }
+        }
+
+        /* WeChat browser optimizations */
+        @media screen and (-webkit-min-device-pixel-ratio: 2) {
+            .vote-container {
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            }
+
+            .vote-container {
+                background: #2d3748;
+                color: #e2e8f0;
+            }
+
+            .candidate-info {
+                background: #4a5568;
+                color: #e2e8f0;
+            }
+
+            .candidate-name {
+                color: #e2e8f0;
+            }
+
+            .candidate-id {
+                color: #a0aec0;
+            }
+
+            .error-title,
+            .auth-title,
+            .success-title {
+                color: #e2e8f0;
+            }
+
+            .error-message,
+            .auth-message,
+            .success-message {
+                color: #a0aec0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="vote-container">
+        <div class="vote-header">
+            <h1>投票页面</h1>
+            <div class="subtitle">Annual Party Voting</div>
+        </div>
+        
+        <div class="vote-content">
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+                <div class="loading-spinner"></div>
+                <div>正在加载投票信息...</div>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="error-state" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <div class="error-title">参数错误</div>
+                <div class="error-message" id="errorMessage"></div>
+                <div class="vote-actions">
+                    <a href="/" class="btn btn-secondary">返回首页</a>
+                </div>
+            </div>
+
+            <!-- Authentication Prompt -->
+            <div id="authPrompt" class="auth-prompt" style="display: none;">
+                <div class="auth-icon">🔐</div>
+                <div class="auth-title">需要登录</div>
+                <div class="auth-message">请先登录或注册以获得投票权限</div>
+                <div class="vote-actions">
+                    <a href="/" class="btn btn-primary" id="loginBtn">登录</a>
+                    <a href="/" class="btn btn-secondary">注册</a>
+                </div>
+            </div>
+
+            <!-- Vote Interface -->
+            <div id="voteInterface" class="vote-interface" style="display: none;">
+                <div class="status-badge" id="sourceBadge"></div>
+                
+                <div class="candidate-info">
+                    <div class="candidate-name" id="candidateName"></div>
+                    <div class="candidate-id" id="candidateId"></div>
+                    <div class="candidate-category" id="candidateCategory" style="display: none;"></div>
+                </div>
+
+                <div class="vote-actions">
+                    <button class="btn btn-primary" id="voteBtn">投票支持</button>
+                    <a href="/" class="btn btn-secondary">返回首页</a>
+                </div>
+            </div>
+
+            <!-- Success State -->
+            <div id="successState" class="success-state" style="display: none;">
+                <div class="success-icon">✅</div>
+                <div class="success-title">投票成功</div>
+                <div class="success-message" id="successMessage"></div>
+                <div class="vote-actions">
+                    <a href="/" class="btn btn-primary">返回首页</a>
+                    <a href="/results" class="btn btn-secondary">查看结果</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Vote Page Router Implementation
+        class VotePageRouter {
+            constructor() {
+                this.state = 'loading';
+                this.params = null;
+                this.user = null;
+                this.init();
+            }
+
+            async init() {
+                try {
+                    // Parse URL parameters
+                    this.params = this.parseURLParams(window.location.href);
+                    
+                    // Validate parameters
+                    const validation = this.validateParams(this.params);
+                    
+                    if (!validation.isValid) {
+                        this.showError('参数验证失败', validation.errors.join(', '));
+                        return;
+                    }
+
+                    // Use sanitized parameters
+                    this.params = validation.sanitizedParams || this.params;
+
+                    // Check authentication status
+                    const authStatus = await this.checkAuthStatus();
+                    
+                    if (!authStatus.isLoggedIn) {
+                        this.showAuthPrompt();
+                        return;
+                    }
+
+                    this.user = authStatus.user;
+                    
+                    // Check if user can vote for this candidate
+                    const canVote = await this.checkVotingEligibility();
+                    
+                    if (!canVote.eligible) {
+                        this.showError('投票限制', canVote.reason);
+                        return;
+                    }
+
+                    // Show vote interface
+                    this.showVoteInterface();
+                    
+                } catch (error) {
+                    console.error('Vote page initialization error:', error);
+                    this.showError('系统错误', '页面加载失败，请稍后重试');
+                }
+            }
+
+            parseURLParams(url) {
+                try {
+                    let queryString;
+                    
+                    if (url.includes('?')) {
+                        if (url.startsWith('http')) {
+                            const urlObj = new URL(url);
+                            queryString = urlObj.search.substring(1);
+                        } else {
+                            queryString = url.substring(url.indexOf('?') + 1);
+                        }
+                    } else {
+                        queryString = url;
+                    }
+                    
+                    const params = new URLSearchParams(queryString);
+                    
+                    return {
+                        candidateId: this.sanitizeInput(params.get('candidate_id') || ''),
+                        candidateName: this.sanitizeInput(params.get('candidate_name') || ''),
+                        source: params.get('source') || 'direct',
+                        category: this.sanitizeInput(params.get('category') || ''),
+                        timestamp: this.sanitizeInput(params.get('timestamp') || '')
+                    };
+                } catch (error) {
+                    console.warn('Failed to parse URL parameters:', error);
+                    return {
+                        candidateId: '',
+                        candidateName: '',
+                        source: 'direct',
+                        category: '',
+                        timestamp: ''
+                    };
+                }
+            }
+
+            sanitizeInput(input) {
+                if (typeof input !== 'string') return '';
+                return input
+                    .replace(/[<>]/g, '') // Remove dangerous HTML chars
+                    .replace(/['"]/g, '') // Remove quotes
+                    .trim();
+            }
+
+            validateParams(params) {
+                const errors = [];
+                
+                // Check required parameters
+                if (!params.candidateId) {
+                    errors.push('缺少候选人ID');
+                }
+                
+                if (!params.candidateName) {
+                    errors.push('缺少候选人姓名');
+                }
+                
+                // Validate candidate ID format
+                if (params.candidateId && !/^[a-zA-Z0-9\-_]+$/.test(params.candidateId)) {
+                    errors.push('候选人ID格式无效');
+                }
+                
+                // Validate candidate name
+                if (params.candidateName && (params.candidateName.length < 1 || params.candidateName.length > 50)) {
+                    errors.push('候选人姓名长度无效');
+                }
+                
+                // Validate source
+                if (params.source && !['qrcode', 'direct'].includes(params.source)) {
+                    errors.push('来源参数无效');
+                }
+                
+                // Validate timestamp if provided
+                if (params.timestamp) {
+                    const timestamp = parseInt(params.timestamp);
+                    if (isNaN(timestamp)) {
+                        errors.push('时间戳格式无效');
+                    } else {
+                        const now = Math.floor(Date.now() / 1000);
+                        const maxAge = 24 * 60 * 60; // 24 hours
+                        if (now - timestamp > maxAge) {
+                            errors.push('链接已过期');
+                        }
+                    }
+                }
+                
+                return {
+                    isValid: errors.length === 0,
+                    errors: errors,
+                    sanitizedParams: errors.length === 0 ? {
+                        candidateId: params.candidateId.trim(),
+                        candidateName: params.candidateName.trim(),
+                        source: params.source,
+                        category: params.category ? params.category.trim() : undefined,
+                        timestamp: params.timestamp ? params.timestamp.trim() : undefined
+                    } : undefined
+                };
+            }
+
+            async checkAuthStatus() {
+                // Simulate authentication check
+                // In a real application, this would make an API call
+                const userId = localStorage.getItem('annual_party_user_id');
+                const userName = localStorage.getItem('annual_party_user_name');
+                
+                if (userId && userName) {
+                    return {
+                        isLoggedIn: true,
+                        user: {
+                            id: userId,
+                            username: userName,
+                            email: `${userName}@example.com`,
+                            hasVotingRights: true
+                        }
+                    };
+                }
+                
+                return {
+                    isLoggedIn: false
+                };
+            }
+
+            async checkVotingEligibility() {
+                // Check if user is trying to vote for themselves
+                if (this.user && this.params.candidateId === this.user.id) {
+                    return {
+                        eligible: false,
+                        reason: '不能为自己投票'
+                    };
+                }
+                
+                // Check if user has already voted for this candidate
+                const existingVote = localStorage.getItem(`vote_${this.user.id}_${this.params.candidateId}`);
+                if (existingVote) {
+                    return {
+                        eligible: false,
+                        reason: '您已经为该候选人投过票了'
+                    };
+                }
+                
+                return {
+                    eligible: true
+                };
+            }
+
+            showError(title, message) {
+                this.hideAllStates();
+                document.getElementById('errorState').style.display = 'block';
+                document.getElementById('errorMessage').textContent = message;
+                this.state = 'error';
+            }
+
+            showAuthPrompt() {
+                this.hideAllStates();
+                document.getElementById('authPrompt').style.display = 'block';
+                
+                // Preserve voting context in login URL
+                const loginBtn = document.getElementById('loginBtn');
+                const returnUrl = encodeURIComponent(window.location.href);
+                loginBtn.href = `/?return=${returnUrl}`;
+                
+                this.state = 'auth';
+            }
+
+            showVoteInterface() {
+                this.hideAllStates();
+                document.getElementById('voteInterface').style.display = 'block';
+                
+                // Populate candidate information
+                document.getElementById('candidateName').textContent = this.params.candidateName;
+                document.getElementById('candidateId').textContent = `ID: ${this.params.candidateId}`;
+                
+                // Show category if available
+                if (this.params.category) {
+                    const categoryEl = document.getElementById('candidateCategory');
+                    categoryEl.textContent = this.params.category;
+                    categoryEl.style.display = 'inline-block';
+                }
+                
+                // Show source badge
+                const sourceBadge = document.getElementById('sourceBadge');
+                if (this.params.source === 'qrcode') {
+                    sourceBadge.textContent = '📱 扫码投票';
+                    sourceBadge.className = 'status-badge status-qrcode';
+                } else {
+                    sourceBadge.textContent = '🔗 直接访问';
+                    sourceBadge.className = 'status-badge status-direct';
+                }
+                
+                // Setup vote button
+                document.getElementById('voteBtn').onclick = () => this.submitVote();
+                
+                this.state = 'vote';
+            }
+
+            showSuccess(message) {
+                this.hideAllStates();
+                document.getElementById('successState').style.display = 'block';
+                document.getElementById('successMessage').textContent = message;
+                this.state = 'success';
+            }
+
+            hideAllStates() {
+                const states = ['loadingState', 'errorState', 'authPrompt', 'voteInterface', 'successState'];
+                states.forEach(stateId => {
+                    document.getElementById(stateId).style.display = 'none';
+                });
+            }
+
+            async submitVote() {
+                const voteBtn = document.getElementById('voteBtn');
+                const originalText = voteBtn.textContent;
+                
+                try {
+                    voteBtn.textContent = '投票中...';
+                    voteBtn.disabled = true;
+                    
+                    // Simulate vote submission
+                    // In a real application, this would make an API call
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Record vote locally (for demo purposes)
+                    const voteRecord = {
+                        voterId: this.user.id,
+                        candidateId: this.params.candidateId,
+                        candidateName: this.params.candidateName,
+                        timestamp: new Date().toISOString(),
+                        source: this.params.source
+                    };
+                    
+                    localStorage.setItem(`vote_${this.user.id}_${this.params.candidateId}`, JSON.stringify(voteRecord));
+                    
+                    // Show success
+                    this.showSuccess(`您已成功为 ${this.params.candidateName} 投票！`);
+                    
+                } catch (error) {
+                    console.error('Vote submission error:', error);
+                    this.showError('投票失败', '投票提交失败，请稍后重试');
+                    
+                    voteBtn.textContent = originalText;
+                    voteBtn.disabled = false;
+                }
+            }
+
+            // Utility methods for external access
+            getCurrentParams() {
+                return this.params;
+            }
+
+            getCurrentState() {
+                return this.state;
+            }
+
+            getCurrentUser() {
+                return this.user;
+            }
+        }
+
+        // Initialize vote page when DOM is loaded
+        let votePageRouter;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            votePageRouter = new VotePageRouter();
+        });
+
+        // Expose router for debugging
+        window.votePageRouter = votePageRouter;
+
+        // Handle browser back/forward navigation
+        window.addEventListener('popstate', function(event) {
+            if (votePageRouter) {
+                votePageRouter.init();
+            }
+        });
+
+        // Handle visibility change (for mobile browsers)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && votePageRouter && votePageRouter.getCurrentState() === 'error') {
+                // Retry initialization if page becomes visible and was in error state
+                votePageRouter.init();
+            }
+        });
+    </script>
+</body>
+</html>
