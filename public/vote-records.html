@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票记录管理 - 年会最佳服装评选</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="stylesheet" href="/static/css/vote-records.css">
+    <link rel="stylesheet" href="/static/libs/fontawesome.min.css">
+    
+    <!-- 管理员认证脚本 -->
+    <script src="/static/js/admin-auth.js"></script>
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- 侧边栏导航 -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-crown"></i> 管理后台</h2>
+                <p>年会最佳服装评选</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/admin" class="nav-item">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>仪表盘</span>
+                </a>
+                <a href="#participants" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>参与者管理</span>
+                </a>
+                <a href="#vote-records" class="nav-item active">
+                    <i class="fas fa-vote-yea"></i>
+                    <span>投票记录</span>
+                </a>
+                <a href="#voting" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>投票统计</span>
+                </a>
+                <a href="#winners" class="nav-item">
+                    <i class="fas fa-trophy"></i>
+                    <span>获奖名单</span>
+                </a>
+                <a href="#settings" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>系统设置</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>退出登录</span>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- 主内容区域 -->
+        <main class="admin-main">
+            <header class="admin-header">
+                <div class="header-left">
+                    <button class="sidebar-toggle" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="pageTitle">投票记录管理</h1>
+                </div>
+                
+                <div class="header-right">
+                    <div class="header-stats">
+                        <div class="header-stat">
+                            <i class="fas fa-vote-yea"></i>
+                            <span id="headerTotalVotes">0</span>
+                            <small>总投票数</small>
+                        </div>
+                        <div class="header-stat">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="headerActiveVotes">0</span>
+                            <small>有效投票</small>
+                        </div>
+                    </div>
+                    
+                    <div class="header-actions">
+                        <button id="refreshDataBtn" class="header-btn" title="刷新数据">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>刷新数据</span>
+                        </button>
+                        <button id="exportVoteRecordsBtn" class="header-btn" title="导出记录">
+                            <i class="fas fa-download"></i>
+                            <span>导出记录</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="admin-content" id="adminContent">
+                <!-- 筛选和搜索区域 -->
+                <div class="vote-records-filters">
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label for="searchInput">搜索投票记录：</label>
+                            <input type="text" id="searchInput" class="search-input" 
+                                   placeholder="输入投票者或被投票者姓名搜索...">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="statusFilter">投票状态：</label>
+                            <select id="statusFilter" class="filter-select">
+                                <option value="">所有状态</option>
+                                <option value="active">有效投票</option>
+                                <option value="inactive">无效投票</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="methodFilter">投票方式：</label>
+                            <select id="methodFilter" class="filter-select">
+                                <option value="">所有方式</option>
+                                <option value="qr_code">二维码投票</option>
+                                <option value="name_search">姓名搜索</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label for="dateFromInput">开始时间：</label>
+                            <input type="datetime-local" id="dateFromInput" class="date-input">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="dateToInput">结束时间：</label>
+                            <input type="datetime-local" id="dateToInput" class="date-input">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="sortBy">排序方式：</label>
+                            <select id="sortBy" class="filter-select">
+                                <option value="created_at_desc">按时间倒序</option>
+                                <option value="created_at_asc">按时间正序</option>
+                                <option value="voter_name">按投票者姓名</option>
+                                <option value="candidate_name">按被投票者姓名</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-actions">
+                            <button id="clearFiltersBtn" class="btn-secondary">
+                                <i class="fas fa-times"></i>
+                                清空筛选
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 统计概览 -->
+                <div class="vote-records-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <i class="fas fa-vote-yea"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>总投票数</h4>
+                            <span id="totalVotesCount">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon green">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>有效投票</h4>
+                            <span id="activeVotesCount">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon red">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>无效投票</h4>
+                            <span id="inactiveVotesCount">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon purple">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>参与投票者</h4>
+                            <span id="uniqueVotersCount">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 批量操作区域 -->
+                <div class="batch-operations" id="batchOperations" style="display: none;">
+                    <div class="batch-info">
+                        <span id="selectedCount">0</span> 条记录已选中
+                        <small class="batch-shortcuts">
+                            快捷键: Ctrl+D 作废 | Ctrl+U 激活 | Esc 清空选择
+                        </small>
+                    </div>
+                    <div class="batch-actions">
+                        <button id="batchActivateBtn" class="btn-success" title="批量激活选中的记录 (Ctrl+U)">
+                            <i class="fas fa-check"></i>
+                            批量激活
+                        </button>
+                        <button id="batchDeactivateBtn" class="btn-warning" title="批量作废选中的记录 (Ctrl+D)">
+                            <i class="fas fa-ban"></i>
+                            批量作废
+                        </button>
+                        <button id="clearSelectionBtn" class="btn-secondary" title="清空所有选择 (Esc)">
+                            <i class="fas fa-times"></i>
+                            清空选择
+                        </button>
+                        <button id="selectAllVisibleBtn" class="btn-info" title="选择当前页面所有记录">
+                            <i class="fas fa-check-square"></i>
+                            全选当前页
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 投票记录表格 -->
+                <div class="vote-records-table-container">
+                    <!-- 桌面端表格视图 -->
+                    <div class="desktop-table-view">
+                        <table class="vote-records-table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" id="selectAllCheckbox" class="select-all-checkbox">
+                                    </th>
+                                    <th>投票者</th>
+                                    <th>被投票者</th>
+                                    <th>投票时间</th>
+                                    <th>投票状态</th>
+                                    <th>投票方式</th>
+                                    <th>IP地址</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="voteRecordsTableBody">
+                                <tr>
+                                    <td colspan="8" class="loading">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                        加载中...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 移动端卡片视图 -->
+                    <div class="mobile-cards-view" id="mobileCardsView">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            加载中...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 分页控件 -->
+                <div class="table-pagination" id="tablePagination">
+                    <!-- 分页控件将通过JavaScript生成 -->
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- 移动端侧边栏遮罩层 -->
+    <div class="sidebar-overlay"></div>
+    
+    <!-- 投票记录详情模态框 -->
+    <div id="voteRecordModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-vote-yea"></i> 投票记录详情</h3>
+                <button class="close-btn" onclick="closeVoteRecordModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="voteRecordModalBody">
+                <!-- 详情内容将通过JavaScript生成 -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- 批量操作确认模态框 -->
+    <div id="batchConfirmModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> 批量操作确认</h3>
+                <button class="close-btn" onclick="closeBatchConfirmModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="batchConfirmModalBody">
+                <!-- 确认内容将通过JavaScript生成 -->
+            </div>
+            <div class="modal-footer">
+                <button id="confirmBatchActionBtn" class="btn-primary">确认操作</button>
+                <button onclick="closeBatchConfirmModal()" class="btn-secondary">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 数据导出模态框 -->
+    <div id="exportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-download"></i> 导出投票记录</h3>
+                <button class="close-btn" onclick="closeExportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="exportForm">
+                    <div class="form-group">
+                        <label for="exportFormat">导出格式：</label>
+                        <select id="exportFormat" name="format" class="form-control">
+                            <option value="csv">CSV格式 (.csv)</option>
+                            <option value="excel">Excel格式 (.xlsx)</option>
+                        </select>
+                        <small class="form-text text-muted">CSV格式适合数据分析，Excel格式适合查看和编辑</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>导出范围：</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="exportRange" value="current" checked>
+                                <span>当前筛选结果</span>
+                                <small id="currentFilterCount" style="color: #6c757d; font-size: 12px;"></small>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="exportRange" value="all">
+                                <span>所有投票记录</span>
+                                <small style="color: #6c757d; font-size: 12px;">包含所有状态的投票记录</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>包含字段：</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="fields" value="voter_name" checked>
+                                投票者姓名
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="fields" value="candidate_name" checked>
+                                被投票者姓名
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="fields" value="vote_time" checked>
+                                投票时间
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="fields" value="status" checked>
+                                投票状态
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="fields" value="vote_method" checked>
+                                投票方式
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="fields" value="ip_address">
+                                IP地址
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="fields" value="user_agent">
+                                用户代理信息
+                            </label>
+                        </div>
+                        <small class="form-text text-muted">请至少选择一个字段进行导出</small>
+                    </div>
+                    
+                    <!-- 导出预览信息 -->
+                    <div class="export-summary" id="exportSummary" style="display: none;">
+                        <h5><i class="fas fa-info-circle"></i> 导出预览</h5>
+                        <div class="summary-item">
+                            <span class="summary-label">预计记录数：</span>
+                            <span class="summary-value" id="previewRecordCount">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">选择字段数：</span>
+                            <span class="summary-value" id="previewFieldCount">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">导出格式：</span>
+                            <span class="summary-value" id="previewFormat">CSV</span>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- 导出进度指示 -->
+                <div class="export-progress" id="exportProgress">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #007bff; margin-bottom: 12px;"></i>
+                    <p>正在生成导出文件，请稍候...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="startExportBtn" class="btn-primary">
+                    <i class="fas fa-download"></i>
+                    开始导出
+                </button>
+                <button onclick="closeExportModal()" class="btn-secondary">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/vote-records.js"></script>
+</body>
+</html>

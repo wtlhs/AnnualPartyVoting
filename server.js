@@ -9,6 +9,9 @@ const fs = require('fs');
 // Import database initialization
 const { initializeDatabase } = require('./src/database/init');
 
+// Import cleanup service
+const { exportCleanupService } = require('./src/utils/exportCleanupService');
+
 // Import routes
 const userRoutes = require('./src/routes/users');
 const voteRoutes = require('./src/routes/votes');
@@ -252,6 +255,10 @@ async function startServer() {
     await initializeDatabase();
     console.log('Database initialized successfully');
     
+    // Start export cleanup service
+    exportCleanupService.start(6, 24); // Clean every 6 hours, keep files for 24 hours
+    console.log('Export cleanup service started');
+    
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Access the application at: http://localhost:${PORT}`);
@@ -263,5 +270,18 @@ async function startServer() {
 }
 
 startServer();
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  exportCleanupService.stop();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  exportCleanupService.stop();
+  process.exit(0);
+});
 
 module.exports = app;

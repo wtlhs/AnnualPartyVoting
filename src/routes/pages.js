@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const { requireAdmin } = require('../middleware/adminAuth');
 const router = express.Router();
 
 // Serve static HTML pages
@@ -33,6 +34,11 @@ router.get('/vote/:userId', (req, res) => {
 // Admin page
 router.get('/admin', (req, res) => {
   res.sendFile(path.join(publicPath, 'admin.html'));
+});
+
+// Vote records management page (protected)
+router.get('/vote-records', requireAdmin, (req, res) => {
+  res.sendFile(path.join(publicPath, 'vote-records.html'));
 });
 
 // Computer display ranking page

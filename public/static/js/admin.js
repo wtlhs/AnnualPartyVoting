@@ -3,13 +3,45 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeAdmin();
 });
 
-let adminToken = localStorage.getItem('admin_token');
 let currentSection = 'dashboard';
 let refreshInterval = null;
+let adminToken = null; // 管理员认证令牌
+
+// 使用统一的认证管理器
+const auth = window.adminAuth;
+
+// 全局API调用包装器，使用认证管理器
+async function apiCall(url, options = {}) {
+    return await auth.apiCall(url, options);
+}
+
+// 获取当前认证令牌
+function getAdminToken() {
+    if (!adminToken) {
+        adminToken = auth.getToken();
+    }
+    return adminToken;
+}
 
 function initializeAdmin() {
-    checkAdminAuth();
+    // 检查认证状态，但不自动重定向
+    if (!auth.isAuthenticated(false)) {
+        // 认证失败，显示登录表单
+        showLoginForm();
+        return;
+    }
+    
+    // 设置管理员令牌
+    adminToken = auth.getToken();
+    
+    // 认证成功，启动会话监控
+    auth.startSessionMonitoring();
+    
+    // 显示管理界面
+    showAdminInterface();
     setupEventListeners();
+    loadCurrentSectionData();
+    startAutoRefresh();
 }
 
 function setupEventListeners() {
@@ -72,7 +104,8 @@ function toggleFullscreen() {
 }
 
 function checkAdminAuth() {
-    if (!adminToken) {
+    // 使用认证管理器检查认证状态
+    if (!auth.isAuthenticated(false)) {
         showLoginForm();
         return;
     }
@@ -90,16 +123,26 @@ function checkAdminAuth() {
 }
 
 async function verifyToken() {
-    try {
-        const response = await fetch('/api/admin/dashboard', {
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
-        });
-        return response.ok;
-    } catch (error) {
-        return false;
-    }
+    // 使用认证管理器验证会话
+    return await auth.validateSession();
+}
+
+function handleSessionExpired() {
+    // 使用认证管理器处理会话过期
+    auth.handleSessionExpired();
+    stopAutoRefresh();
+    setTimeout(() => {
+        showLoginForm();
+    }, 2000);
+}
+
+function scheduleSessionRefresh(remainingTime) {
+    // 在会话过期前5分钟刷新会话
+    const refreshTime = Math.max(remainingTime - 5 * 60 * 1000, 60 * 1000);
+    
+    setTimeout(() => {
+        verifyToken();
+    }, refreshTime);
 }
 
 function showLoginForm() {
@@ -158,8 +201,7 @@ async function handleLogin(event) {
         const result = await response.json();
         
         if (result.success) {
-            adminToken = result.token;
-            localStorage.setItem('admin_token', adminToken);
+            auth.setToken(result.token);
             showSuccess('登录成功，正在加载管理面板...');
             
             setTimeout(() => {
@@ -655,7 +697,7 @@ async function loadDashboardData() {
     try {
         const response = await fetch('/api/admin/dashboard', {
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         });
         
@@ -686,7 +728,7 @@ async function loadParticipantsData() {
     try {
         const response = await fetch('/api/admin/users?limit=1000', {
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         });
         
@@ -735,7 +777,7 @@ async function loadVotingStatsData() {
     try {
         const response = await fetch('/api/admin/dashboard', {
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         });
         
@@ -758,7 +800,7 @@ async function loadWinnersData() {
     try {
         const response = await fetch('/api/admin/winners', {
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         });
         
@@ -1156,15 +1198,18 @@ function getTimeAgo(timestamp) {
 }
 
 function logout() {
-    if (confirm('确定要退出登录吗？')) {
-        localStorage.removeItem('admin_token');
-        adminToken = null;
-        stopAutoRefresh();
-        showSuccess('已退出登录');
+    // 使用认证管理器处理登出
+    auth.logout().then(() => {
         setTimeout(() => {
             location.reload();
-        }, 1000);
-    }
+        }, 1500);
+    });
+}
+
+async function logoutFromServer() {
+    // 这个函数现在由认证管理器的logout方法处理
+    // 保留以保持兼容性
+    return await auth.logout();
 }
 
 async function generateWinnersList() {
@@ -1178,7 +1223,7 @@ async function generateWinnersList() {
     try {
         const response = await fetch('/api/admin/winners', {
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         });
         
@@ -1243,7 +1288,7 @@ async function exportResults() {
     try {
         const response = await fetch('/api/admin/export', {
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         });
         
@@ -1291,7 +1336,7 @@ async function clearAllData() {
         const response = await fetch('/api/admin/clear-data', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         });
         
@@ -1331,46 +1376,20 @@ function stopAutoRefresh() {
 }
 
 function showError(message) {
-    showMessage(message, 'error');
+    auth.showMessage(message, 'error');
 }
 
 function showSuccess(message) {
-    showMessage(message, 'success');
+    auth.showMessage(message, 'success');
 }
 
 function showInfo(message) {
-    showMessage(message, 'info');
+    auth.showMessage(message, 'info');
 }
 
 function showMessage(message, type) {
-    // 移除现有消息
-    const existingMessage = document.querySelector('.message');
-    if (existingMessage) {
-        existingMessage.remove();
-    }
-    
-    // 创建新消息
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}-message`;
-    
-    const icon = type === 'error' ? 'fas fa-exclamation-circle' : 
-                 type === 'success' ? 'fas fa-check-circle' : 'fas fa-info-circle';
-    
-    messageDiv.innerHTML = `
-        <i class="${icon}"></i>
-        <span>${message}</span>
-    `;
-    
-    // 插入到页面顶部
-    const adminContent = document.getElementById('adminContent');
-    adminContent.insertBefore(messageDiv, adminContent.firstChild);
-    
-    // 3秒后自动移除
-    setTimeout(() => {
-        if (messageDiv.parentNode) {
-            messageDiv.remove();
-        }
-    }, 3000);
+    // 使用认证管理器的消息显示功能
+    auth.showMessage(message, type);
 }
 
 // ==================== 数据管理功能 ====================
@@ -1386,7 +1405,7 @@ async function createDataBackup() {
     try {
         const response = await fetch('/api/admin/backup', {
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         });
         
@@ -1436,7 +1455,7 @@ async function archiveAndClearData() {
         const response = await fetch('/api/admin/archive-and-clear', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${adminToken}`,
+                'Authorization': `Bearer ${getAdminToken()}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ includeFiles: true })
@@ -1484,7 +1503,7 @@ async function showDatabaseInfo() {
     try {
         const response = await fetch('/api/admin/database-info', {
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         });
         
@@ -1661,7 +1680,7 @@ function editParticipant(userId) {
     // 获取用户数据
     fetch(`/api/users/${userId}`, {
         headers: {
-            'Authorization': `Bearer ${adminToken}`
+            'Authorization': `Bearer ${getAdminToken()}`
         }
     })
     .then(response => response.json())
@@ -1764,7 +1783,7 @@ function viewParticipantDetails(userId) {
     // 获取用户详细信息
     fetch(`/api/users/${userId}`, {
         headers: {
-            'Authorization': `Bearer ${adminToken}`
+            'Authorization': `Bearer ${getAdminToken()}`
         }
     })
     .then(response => response.json())
@@ -1880,7 +1899,7 @@ function deleteParticipant(userId, userName) {
         fetch(`/api/users/${userId}`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             }
         })
         .then(response => response.json())
@@ -1982,7 +2001,7 @@ async function handleEditParticipant(event) {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${getAdminToken()}`
             },
             body: JSON.stringify(userData)
         });
