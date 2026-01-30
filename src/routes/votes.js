@@ -12,8 +12,10 @@ const {
   getRecentVotes,
   getVotingProgress
 } = require('../database/operations');
+const VotingSettingsManager = require('../database/VotingSettingsManager');
 
 const router = express.Router();
+const votingSettings = new VotingSettingsManager();
 
 // Simple in-memory cache for performance optimization
 const cache = {
@@ -46,6 +48,21 @@ router.post('/', async (req, res) => {
         success: false,
         errorCode: 'MISSING_REQUIRED_FIELDS',
         message: '投票者ID和目标用户ID不能为空'
+      });
+    }
+    
+    // Check voting status first
+    const votingStatus = await votingSettings.getVotingStatus();
+    if (!votingStatus.canVote) {
+      return res.status(403).json({
+        success: false,
+        errorCode: 'VOTING_DISABLED',
+        message: votingStatus.message,
+        details: {
+          votingEnabled: votingStatus.enabled,
+          withinTimeRange: votingStatus.withinTimeRange,
+          reason: votingStatus.enabled ? 'TIME_RESTRICTION' : 'VOTING_DISABLED'
+        }
       });
     }
     

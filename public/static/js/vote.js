@@ -197,6 +197,21 @@ async function fetchCandidateInfo(candidateId) {
  */
 async function checkVotingEligibility(candidateId) {
     try {
+        // 首先检查全局投票状态
+        const statusResponse = await fetch('/api/voting-settings/status');
+        const statusResult = await statusResponse.json();
+        
+        if (statusResult.success && !statusResult.status.canVote) {
+            return {
+                eligible: false,
+                reason: statusResult.status.message,
+                details: {
+                    votingDisabled: true,
+                    allowedActions: ['查看投票结果', '等待主持人开启投票']
+                }
+            };
+        }
+        
         // 检查是否为自己投票
         if (currentUser && candidateId === currentUser.id) {
             return {

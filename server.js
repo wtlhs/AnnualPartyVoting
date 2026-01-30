@@ -17,6 +17,7 @@ const userRoutes = require('./src/routes/users');
 const voteRoutes = require('./src/routes/votes');
 const adminRoutes = require('./src/routes/admin');
 const pageRoutes = require('./src/routes/pages');
+const votingSettingsRoutes = require('./src/routes/voting-settings');
 
 const app = express();
 
@@ -207,6 +208,7 @@ app.locals.upload = upload;
 app.use('/api/users', userRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/voting-settings', votingSettingsRoutes);
 
 // Page Routes (serve HTML pages)
 app.use('/', pageRoutes);

@@ -623,6 +623,106 @@ async function loadSettings() {
         <div class="dashboard-grid">
             <div class="dashboard-card">
                 <div class="card-header">
+                    <h3 class="card-title">投票控制</h3>
+                    <div class="card-icon settings">
+                        <i class="fas fa-toggle-on"></i>
+                    </div>
+                </div>
+                <div class="voting-controls">
+                    <div class="control-section">
+                        <div class="control-header">
+                            <h4><i class="fas fa-power-off"></i> 投票开关</h4>
+                            <div class="voting-status" id="votingStatusIndicator">
+                                <div class="loading">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    加载中...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="control-actions">
+                            <button id="toggleVotingBtn" class="btn-toggle" disabled>
+                                <i class="fas fa-spinner fa-spin"></i>
+                                加载中...
+                            </button>
+                            <button id="refreshStatusBtn" class="btn-secondary">
+                                <i class="fas fa-sync-alt"></i>
+                                刷新状态
+                            </button>
+                        </div>
+                        
+                        <div class="control-message">
+                            <label for="votingMessage">投票关闭时的提示消息：</label>
+                            <textarea id="votingMessage" class="message-input" 
+                                      placeholder="请输入投票关闭时显示给用户的消息..." 
+                                      maxlength="200" rows="3"></textarea>
+                            <small class="form-help">最多200个字符</small>
+                        </div>
+                        
+                        <div class="quick-actions">
+                            <button id="enableVotingBtn" class="btn-success" disabled>
+                                <i class="fas fa-play"></i>
+                                开启投票
+                            </button>
+                            <button id="disableVotingBtn" class="btn-danger" disabled>
+                                <i class="fas fa-stop"></i>
+                                关闭投票
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-section">
+                        <h4><i class="fas fa-clock"></i> 时间控制（可选）</h4>
+                        <div class="time-controls">
+                            <div class="time-input-group">
+                                <label for="votingStartTime">投票开始时间：</label>
+                                <input type="datetime-local" id="votingStartTime" class="time-input">
+                                <small class="form-help">留空表示不限制开始时间</small>
+                            </div>
+                            <div class="time-input-group">
+                                <label for="votingEndTime">投票结束时间：</label>
+                                <input type="datetime-local" id="votingEndTime" class="time-input">
+                                <small class="form-help">留空表示不限制结束时间</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-section">
+                        <h4><i class="fas fa-cog"></i> 高级设置</h4>
+                        <div class="advanced-settings">
+                            <div class="setting-item">
+                                <label for="maxVotesPerUser">每用户最大投票数：</label>
+                                <select id="maxVotesPerUser" class="setting-select">
+                                    <option value="1">1票（只能投一个性别）</option>
+                                    <option value="2">2票（男女各一票）</option>
+                                    <option value="3">3票</option>
+                                    <option value="4">4票</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="allowSelfVote">
+                                    <span class="checkbox-text">允许为自己投票</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-actions-bottom">
+                        <button id="saveSettingsBtn" class="btn-primary">
+                            <i class="fas fa-save"></i>
+                            保存所有设置
+                        </button>
+                        <button id="resetSettingsBtn" class="btn-warning">
+                            <i class="fas fa-undo"></i>
+                            重置为默认值
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-card">
+                <div class="card-header">
                     <h3 class="card-title">系统操作</h3>
                     <div class="card-icon settings">
                         <i class="fas fa-cog"></i>
@@ -666,6 +766,8 @@ async function loadSettings() {
     `;
     
     setupSettingsActions();
+    setupVotingControls();
+    await loadVotingSettings();
     await loadSystemInfo();
 }
 
@@ -2051,3 +2153,339 @@ document.addEventListener('click', function(event) {
         closeParticipantModal();
     }
 });
+
+// ==================== 投票控制功能 ====================
+
+/**
+ * 设置投票控制事件监听器
+ */
+function setupVotingControls() {
+    const toggleBtn = document.getElementById('toggleVotingBtn');
+    const enableBtn = document.getElementById('enableVotingBtn');
+    const disableBtn = document.getElementById('disableVotingBtn');
+    const refreshBtn = document.getElementById('refreshStatusBtn');
+    const saveBtn = document.getElementById('saveSettingsBtn');
+    const resetBtn = document.getElementById('resetSettingsBtn');
+    
+    if (toggleBtn) toggleBtn.addEventListener('click', toggleVotingStatus);
+    if (enableBtn) enableBtn.addEventListener('click', () => setVotingStatus(true));
+    if (disableBtn) disableBtn.addEventListener('click', () => setVotingStatus(false));
+    if (refreshBtn) refreshBtn.addEventListener('click', loadVotingSettings);
+    if (saveBtn) saveBtn.addEventListener('click', saveAllVotingSettings);
+    if (resetBtn) resetBtn.addEventListener('click', resetVotingSettings);
+}
+
+/**
+ * 加载投票设置
+ */
+async function loadVotingSettings() {
+    try {
+        const response = await apiCall('/api/voting-settings');
+        const result = await response.json();
+        
+        if (result.success) {
+            updateVotingControlsUI(result.settings);
+            updateVotingStatusIndicator(result.settings);
+        } else {
+            showError('加载投票设置失败');
+        }
+    } catch (error) {
+        console.error('Load voting settings error:', error);
+        showError('加载投票设置失败');
+    }
+}
+
+/**
+ * 更新投票控制界面
+ */
+function updateVotingControlsUI(settings) {
+    // 更新投票消息
+    const messageInput = document.getElementById('votingMessage');
+    if (messageInput && settings.voting_message) {
+        messageInput.value = settings.voting_message.value || '';
+    }
+    
+    // 更新时间控制
+    const startTimeInput = document.getElementById('votingStartTime');
+    const endTimeInput = document.getElementById('votingEndTime');
+    
+    if (startTimeInput && settings.voting_start_time) {
+        const startTime = settings.voting_start_time.value;
+        if (startTime) {
+            startTimeInput.value = formatDateTimeForInput(startTime);
+        }
+    }
+    
+    if (endTimeInput && settings.voting_end_time) {
+        const endTime = settings.voting_end_time.value;
+        if (endTime) {
+            endTimeInput.value = formatDateTimeForInput(endTime);
+        }
+    }
+    
+    // 更新高级设置
+    const maxVotesSelect = document.getElementById('maxVotesPerUser');
+    if (maxVotesSelect && settings.max_votes_per_user) {
+        maxVotesSelect.value = settings.max_votes_per_user.value || '2';
+    }
+    
+    const allowSelfVoteCheckbox = document.getElementById('allowSelfVote');
+    if (allowSelfVoteCheckbox && settings.allow_self_vote) {
+        allowSelfVoteCheckbox.checked = settings.allow_self_vote.value === 'true';
+    }
+    
+    // 启用按钮
+    enableVotingControlButtons();
+}
+
+/**
+ * 更新投票状态指示器
+ */
+function updateVotingStatusIndicator(settings) {
+    const indicator = document.getElementById('votingStatusIndicator');
+    const toggleBtn = document.getElementById('toggleVotingBtn');
+    const enableBtn = document.getElementById('enableVotingBtn');
+    const disableBtn = document.getElementById('disableVotingBtn');
+    
+    if (!indicator || !settings.voting_enabled) return;
+    
+    const isEnabled = settings.voting_enabled.value === 'true';
+    
+    // 更新状态指示器
+    indicator.innerHTML = `
+        <div class="status-badge ${isEnabled ? 'enabled' : 'disabled'}">
+            <i class="fas fa-${isEnabled ? 'check-circle' : 'times-circle'}"></i>
+            <span>投票${isEnabled ? '已开启' : '已关闭'}</span>
+        </div>
+    `;
+    
+    // 更新切换按钮
+    if (toggleBtn) {
+        toggleBtn.className = `btn-toggle ${isEnabled ? 'enabled' : 'disabled'}`;
+        toggleBtn.innerHTML = `
+            <i class="fas fa-${isEnabled ? 'toggle-on' : 'toggle-off'}"></i>
+            ${isEnabled ? '关闭投票' : '开启投票'}
+        `;
+        toggleBtn.disabled = false;
+    }
+    
+    // 更新快捷按钮状态
+    if (enableBtn) {
+        enableBtn.disabled = isEnabled;
+    }
+    if (disableBtn) {
+        disableBtn.disabled = !isEnabled;
+    }
+}
+
+/**
+ * 启用投票控制按钮
+ */
+function enableVotingControlButtons() {
+    const buttons = [
+        'toggleVotingBtn',
+        'enableVotingBtn', 
+        'disableVotingBtn',
+        'saveSettingsBtn',
+        'resetSettingsBtn'
+    ];
+    
+    buttons.forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (button && button.disabled) {
+            button.disabled = false;
+        }
+    });
+}
+
+/**
+ * 切换投票状态
+ */
+async function toggleVotingStatus() {
+    const toggleBtn = document.getElementById('toggleVotingBtn');
+    const messageInput = document.getElementById('votingMessage');
+    
+    if (!toggleBtn) return;
+    
+    const originalText = toggleBtn.innerHTML;
+    toggleBtn.disabled = true;
+    toggleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+    
+    try {
+        const message = messageInput ? messageInput.value.trim() : '';
+        
+        const response = await apiCall('/api/voting-settings/toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            await loadVotingSettings(); // 重新加载设置
+        } else {
+            showError(result.message || '切换投票状态失败');
+        }
+    } catch (error) {
+        console.error('Toggle voting error:', error);
+        showError('切换投票状态失败');
+    } finally {
+        toggleBtn.disabled = false;
+        toggleBtn.innerHTML = originalText;
+    }
+}
+
+/**
+ * 设置投票状态
+ */
+async function setVotingStatus(enable) {
+    const btn = document.getElementById(enable ? 'enableVotingBtn' : 'disableVotingBtn');
+    const messageInput = document.getElementById('votingMessage');
+    
+    if (!btn) return;
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+    
+    try {
+        const endpoint = enable ? '/api/voting-settings/enable' : '/api/voting-settings/disable';
+        const message = messageInput ? messageInput.value.trim() : '';
+        
+        const response = await apiCall(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            await loadVotingSettings(); // 重新加载设置
+        } else {
+            showError(result.message || `${enable ? '开启' : '关闭'}投票失败`);
+        }
+    } catch (error) {
+        console.error('Set voting status error:', error);
+        showError(`${enable ? '开启' : '关闭'}投票失败`);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+/**
+ * 保存所有投票设置
+ */
+async function saveAllVotingSettings() {
+    const saveBtn = document.getElementById('saveSettingsBtn');
+    
+    if (!saveBtn) return;
+    
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+    
+    try {
+        // 收集所有设置
+        const settings = {
+            voting_message: document.getElementById('votingMessage')?.value.trim() || '',
+            voting_start_time: document.getElementById('votingStartTime')?.value || '',
+            voting_end_time: document.getElementById('votingEndTime')?.value || '',
+            max_votes_per_user: document.getElementById('maxVotesPerUser')?.value || '2',
+            allow_self_vote: document.getElementById('allowSelfVote')?.checked ? 'true' : 'false'
+        };
+        
+        const response = await apiCall('/api/voting-settings', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ settings })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess('投票设置保存成功');
+            await loadVotingSettings(); // 重新加载设置
+        } else {
+            showError(result.message || '保存投票设置失败');
+        }
+    } catch (error) {
+        console.error('Save voting settings error:', error);
+        showError('保存投票设置失败');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    }
+}
+
+/**
+ * 重置投票设置
+ */
+async function resetVotingSettings() {
+    if (!confirm('确定要重置所有投票设置为默认值吗？\n\n这将重置：\n• 投票开关状态\n• 提示消息\n• 时间限制\n• 高级设置\n\n此操作不可撤销！')) {
+        return;
+    }
+    
+    const resetBtn = document.getElementById('resetSettingsBtn');
+    
+    if (!resetBtn) return;
+    
+    const originalText = resetBtn.innerHTML;
+    resetBtn.disabled = true;
+    resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 重置中...';
+    
+    try {
+        const response = await apiCall('/api/voting-settings/reset', {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess('投票设置已重置为默认值');
+            await loadVotingSettings(); // 重新加载设置
+        } else {
+            showError(result.message || '重置投票设置失败');
+        }
+    } catch (error) {
+        console.error('Reset voting settings error:', error);
+        showError('重置投票设置失败');
+    } finally {
+        resetBtn.disabled = false;
+        resetBtn.innerHTML = originalText;
+    }
+}
+
+/**
+ * 格式化日期时间为输入框格式
+ */
+function formatDateTimeForInput(dateString) {
+    if (!dateString) return '';
+    
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        
+        // 格式化为 YYYY-MM-DDTHH:MM
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+        console.error('Format date error:', error);
+        return '';
+    }
+}
