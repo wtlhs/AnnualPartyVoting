@@ -7,6 +7,65 @@ const { getDatabase } = require('./init');
 class AuditLogManager {
   
   /**
+   * 通用日志记录方法
+   * @param {Object} logData - 日志数据
+   * @param {string} logData.action - 操作类型
+   * @param {string} logData.userId - 用户ID
+   * @param {Object} logData.details - 详细信息
+   * @param {string} logData.ipAddress - IP地址
+   * @param {string} logData.userAgent - 用户代理
+   * @returns {Promise<Object>} 创建的日志记录
+   */
+  async log(logData) {
+    return new Promise((resolve, reject) => {
+      const db = getDatabase();
+      
+      const sql = `
+        INSERT INTO audit_logs (
+          vote_id, admin_id, operation, reason, metadata, created_at
+        ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `;
+      
+      // 构建日志记录
+      const voteId = logData.voteId || null;
+      const adminId = logData.userId || logData.adminId || 'system';
+      const operation = logData.action || 'UNKNOWN_OPERATION';
+      const reason = logData.reason || null;
+      
+      // 将IP地址和用户代理信息包含在metadata中
+      const metadata = JSON.stringify({
+        details: logData.details || {},
+        ipAddress: logData.ipAddress || null,
+        userAgent: logData.userAgent || null,
+        timestamp: new Date().toISOString(),
+        source: 'voting_settings'
+      });
+      
+      db.run(sql, [voteId, adminId, operation, reason, metadata], function(err) {
+        db.close();
+        
+        if (err) {
+          console.error('Error creating audit log:', err);
+          return reject(err);
+        }
+        
+        const logRecord = {
+          id: this.lastID,
+          voteId: voteId,
+          adminId: adminId,
+          operation: operation,
+          reason: reason,
+          metadata: metadata,
+          createdAt: new Date().toISOString()
+        };
+        
+        console.log(`Audit log created: ${operation} by ${adminId}`);
+        resolve(logRecord);
+      });
+    });
+  }
+
+  /**
    * 记录操作日志
    * @param {number} voteId - 投票记录ID
    * @param {string} adminId - 管理员ID
