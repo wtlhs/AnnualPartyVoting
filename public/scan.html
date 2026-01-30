@@ -9,13 +9,13 @@
 <body>
     <div class="container">
         <header>
-            <h1>扫码投票</h1>
-            <p>扫描参与者的二维码或输入6位数字ID进行投票</p>
+            <h1>投票</h1>
+            <p>输入6位数字ID进行投票</p>
         </header>
         
         <main>
             <!-- HTTPS提示 -->
-            <div class="https-notice" style="background: #e8f5e8; border: 1px solid #4caf50; color: #2e7d32; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <div class="https-notice" style="display: none; background: #e8f5e8; border: 1px solid #4caf50; color: #2e7d32; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
                 <strong>📱 摄像头功能已启用：</strong><br>
                 系统现在支持HTTPS，可以正常使用摄像头扫码功能。<br>
                 如果摄像头无法启动，请使用下方的<strong>手动输入6位数字ID功能</strong>。
@@ -27,15 +27,15 @@
             </div>
             
             <div class="scanner-controls">
-                <button id="startScanBtn" class="btn-primary">开始扫描</button>
+                <button id="startScanBtn" class="btn-primary" style="display: none;">开始扫描</button>
                 <button id="switchCameraBtn" class="btn-secondary" style="display: none;">切换摄像头</button>
                 <button id="stopScanBtn" class="btn-secondary" style="display: none;">停止扫描</button>
             </div>
             
             <!-- 手动输入6位数字ID -->
-            <div class="manual-input" style="display: none;">
+            <div class="manual-input">
                 <h3>手动输入6位数字ID</h3>
-                <p>如果无法扫描二维码，请输入参与者的6位数字ID：</p>
+                <p>请输入参与者的6位数字ID：</p>
                 <div class="id-input-box">
                     <input type="text" id="numericIdInput" placeholder="例如：123456" maxlength="6" pattern="\d{6}" autocomplete="off">
                     <button id="submitIdBtn" class="btn-secondary">确认投票</button>
@@ -53,7 +53,7 @@
             <div class="actions">
                 <a href="/user-list" class="btn-primary" style="background: linear-gradient(135deg, #20bf55 0%, #01baef 100%);">👥 按姓名/头像投票</a>
                 <a href="/" class="btn-secondary">返回首页</a>
-                <button id="toggleManualBtn" class="btn-secondary">手动输入ID</button>
+                <button id="toggleManualBtn" class="btn-secondary" style="display: none;">手动输入ID</button>
             </div>
         </main>
     </div>

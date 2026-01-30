@@ -446,7 +446,7 @@
             </div>
             
             <div class="actions">
-                <a href="/scan" class="btn-secondary">返回扫码</a>
+                <a href="/scan" class="btn-secondary">输入ID投票</a>
                 <a href="/" class="btn-secondary">返回首页</a>
             </div>
         </main>
@@ -763,10 +763,22 @@
                 }
             `;
             
+            // 检查头像URL是否有效，避免加载 "null" 导致 404 错误
+            const hasAvatar = user.avatarUrl && user.avatarUrl !== 'null' && user.avatarUrl !== 'undefined';
+            
+            let avatarHtml = '';
+            let fallbackStyle = 'display: none;';
+            
+            if (hasAvatar) {
+                avatarHtml = `<img src="${user.avatarUrl}" alt="${user.name}" class="avatar" 
+                     onerror="${handleAvatarError.replace(/\n/g, ' ')}">`;
+            } else {
+                fallbackStyle = 'display: flex;';
+            }
+            
             card.innerHTML = `
-                <img src="${user.avatarUrl}" alt="${user.name}" class="avatar" 
-                     onerror="${handleAvatarError.replace(/\n/g, ' ')}">
-                <div class="avatar error" style="display: none;">${genderIcon}</div>
+                ${avatarHtml}
+                <div class="avatar error" style="${fallbackStyle}">${genderIcon}</div>
                 <div class="user-info">
                     <div class="name" title="${user.name}">${highlightedName}</div>
                     <div class="details">

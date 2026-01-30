@@ -22,8 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
     setupScannerControls();
     setupManualInput();
     
-    // 检查摄像头权限
-    checkCameraPermissions();
+    // 取消自动检查摄像头权限和启动扫描
+    // checkCameraPermissions();
+    
+    // 默认显示手动输入框 (now handled in HTML, but kept for safety if toggled)
+    // toggleManualInput();
 });
 
 function checkUserRegistration() {
@@ -93,7 +96,8 @@ async function checkCameraPermissions() {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             // Permission granted, stop the stream immediately
             stream.getTracks().forEach(track => track.stop());
-            showMessage('摄像头权限已获取，可以开始扫描', 'success');
+            // Auto start scanning
+            startScanning();
         } else {
             // 如果 navigator.mediaDevices 不存在或 getUserMedia 不可用，手动抛出错误以便在 catch 中处理
             const error = new Error('Camera API not available');
@@ -357,7 +361,7 @@ function updateScannerUI() {
             switchBtn.style.display = 'none';
         }
     } else {
-        startBtn.style.display = 'block';
+        startBtn.style.display = 'none'; // 始终隐藏，即使未在扫描
         stopBtn.style.display = 'none';
         switchBtn.style.display = 'none';
     }
