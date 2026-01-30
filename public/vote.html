@@ -322,7 +322,7 @@
                 <div class="error-actions" id="errorActions" style="display: none;"></div>
                 <div class="actions">
                     <button onclick="location.reload()" class="btn-primary">重试</button>
-                    <a href="/" class="btn-secondary">返回首页</a>
+                    <a href="/" class="btn-secondary" onclick="safeNavigateHome(); return false;">返回首页</a>
                 </div>
             </div>
 
@@ -333,7 +333,7 @@
                 <div class="auth-message">请先登录或注册以获得投票权限</div>
                 <div class="actions">
                     <a href="/" class="btn-primary" id="loginBtn">登录/注册</a>
-                    <a href="/" class="btn-secondary">返回首页</a>
+                    <a href="/" class="btn-secondary" onclick="safeNavigateHome(); return false;">返回首页</a>
                 </div>
             </div>
 
@@ -354,7 +354,7 @@
                     </button>
                     <div class="actions">
                         <a href="/user-list" class="btn-secondary">选择其他候选人</a>
-                        <a href="/" class="btn-secondary">返回首页</a>
+                        <a href="/" class="btn-secondary" onclick="safeNavigateHome(); return false;">返回首页</a>
                     </div>
                 </div>
             </div>
@@ -366,7 +366,7 @@
                 <div class="success-message" id="successMessage"></div>
                 <div class="actions">
                     <a href="/mobile-stats" class="btn-primary">查看结果</a>
-                    <a href="/" class="btn-secondary">返回首页</a>
+                    <a href="/" class="btn-secondary" onclick="safeNavigateHome(); return false;">返回首页</a>
                 </div>
             </div>
         </main>

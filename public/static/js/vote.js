@@ -580,8 +580,13 @@ function hideAllStates() {
 
 // 处理浏览器返回按钮
 window.addEventListener('popstate', function(event) {
-    // 如果用户点击返回，重新初始化页面
-    initializeVotePage();
+    // 只在特定情况下重新初始化页面，避免干扰正常导航
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/vote/')) {
+        // 如果用户在投票页面内导航，重新初始化页面
+        initializeVotePage();
+    }
+    // 如果用户导航到其他页面，让浏览器正常处理
 });
 
 // 处理页面可见性变化（移动端优化）
@@ -595,6 +600,33 @@ document.addEventListener('visibilitychange', function() {
         }
     }
 });
+
+/**
+ * 安全导航到首页
+ * 提供多种备用方案确保导航成功
+ */
+function safeNavigateHome() {
+    try {
+        // 方法1: 标准导航
+        window.location.href = '/';
+    } catch (error) {
+        console.error('标准导航失败，尝试备用方案:', error);
+        try {
+            // 方法2: 使用replace
+            window.location.replace('/');
+        } catch (replaceError) {
+            console.error('Replace导航失败，尝试最后方案:', replaceError);
+            try {
+                // 方法3: 使用assign
+                window.location.assign('/');
+            } catch (assignError) {
+                console.error('所有导航方法都失败:', assignError);
+                // 最后手段：显示手动导航提示
+                alert('导航失败，请手动点击浏览器地址栏输入首页地址');
+            }
+        }
+    }
+}
 
 /**
  * 获取当前页面状态
