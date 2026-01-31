@@ -598,6 +598,13 @@ function showGenderConfirmationModal(name, gender, submitBtn, originalText) {
         radio.checked = radio.value === gender;
     });
     
+    // 初始化样式
+    const infoSummary = document.querySelector('.gender-confirmation .info-summary');
+    if (infoSummary) {
+        infoSummary.classList.remove('male', 'female');
+        infoSummary.classList.add(gender);
+    }
+    
     // 显示模态框
     const modal = document.getElementById('genderConfirmationModal');
     modal.classList.add('active');
@@ -608,6 +615,19 @@ function showGenderConfirmationModal(name, gender, submitBtn, originalText) {
             const newGender = this.value;
             document.getElementById('confirmGender').textContent = newGender === 'male' ? '男' : '女';
             currentRegistrationData.gender = newGender;
+            
+            // 更新样式
+            if (infoSummary) {
+                infoSummary.classList.remove('male', 'female');
+                infoSummary.classList.add(newGender);
+                
+                // 添加数值跳动动画效果
+                const values = infoSummary.querySelectorAll('.info-value');
+                values.forEach(val => {
+                    val.style.transform = 'scale(1.15)';
+                    setTimeout(() => val.style.transform = 'scale(1)', 300);
+                });
+            }
         });
     });
 }
