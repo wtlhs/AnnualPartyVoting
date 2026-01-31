@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>投票确认 - 年会最佳服装评选</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.3">
     <script src="/static/js/urlUtils.js"></script>
     <script src="/static/js/errorHandler.js"></script>
     <style>
@@ -297,6 +297,26 @@
                 font-size: 16px;
             }
         }
+
+        /* 图片预览模态框 */
+        #imagePreviewModal {
+            background: rgba(0, 0, 0, 0.9);
+            cursor: zoom-out;
+        }
+
+        #previewImage {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -372,6 +392,13 @@
         </main>
     </div>
 
-    <script src="/static/js/vote.js"></script>
+    <!-- 图片预览模态框 -->
+    <div id="imagePreviewModal" class="modal-overlay" onclick="closeImagePreview()">
+        <div class="preview-content">
+            <img id="previewImage" src="" alt="预览图片">
+        </div>
+    </div>
+
+    <script src="/static/js/vote.js?v=2.4"></script>
 </body>
 </html>

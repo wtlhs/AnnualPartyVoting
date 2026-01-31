@@ -44,9 +44,28 @@ async function initializeVotePage() {
         currentCandidate = candidate;
         console.log('Current candidate set:', currentCandidate);
 
-        // 直接显示投票界面，不在此处检查投票资格
-        // 投票资格检查将在用户点击投票按钮时进行
-        showVoteInterface();
+        // 检查投票资格
+        const eligibility = await checkVotingEligibility(candidate.id);
+        console.log('Initial eligibility check:', eligibility);
+
+        if (eligibility.eligible) {
+            showVoteInterface();
+        } else {
+            // 如果不可投票，检查是否已完成所有投票
+            if (eligibility.voterStatus && 
+                eligibility.voterStatus.maleVoted && 
+                eligibility.voterStatus.femaleVoted) {
+                
+                // 已完成所有投票
+                const votingStatus = {
+                    remainingVotes: { male: 0, female: 0 }
+                };
+                showSuccess('您已完成所有投票任务，感谢您的参与！', votingStatus, '投票已完成');
+            } else {
+                // 其他限制（如重复投票同一性别，或自己给自己投票）
+                showVotingRestrictionError(eligibility.reason, eligibility.details);
+            }
+        }
         
     } catch (error) {
         console.error('Vote page initialization error:', error);
@@ -243,30 +262,45 @@ async function checkVotingEligibility(candidateId) {
             // 如果不能投票，构建详细信息
             if (!result.canVote && result.voterStatus) {
                 const targetGender = result.targetUser ? result.targetUser.gender : null;
-                const votedUsers = result.voterStatus.votedUsers || [];
                 
-                // 找到已投票的同性别用户
-                let votedUser = null;
-                if (targetGender === 'male' && result.voterStatus.maleVoted) {
-                    votedUser = votedUsers.find(user => user.gender === 'male');
-                } else if (targetGender === 'female' && result.voterStatus.femaleVoted) {
-                    votedUser = votedUsers.find(user => user.gender === 'female');
+                if (!targetGender) {
+                     // 如果没有目标用户信息（例如不能为自己投票），根据剩余票数提供建议
+                     const actions = ['查看投票结果'];
+                     if (!result.voterStatus.maleVoted) actions.push('为男士参与者投票');
+                     if (!result.voterStatus.femaleVoted) actions.push('为女士参与者投票');
+                     
+                     details = {
+                         votedUser: null,
+                         targetGender: null,
+                         allowedActions: actions
+                     };
+                } else {
+                    const votedUsers = result.voterStatus.votedUsers || [];
+                    
+                    // 找到已投票的同性别用户
+                    let votedUser = null;
+                    if (targetGender === 'male' && result.voterStatus.maleVoted) {
+                        votedUser = votedUsers.find(user => user.gender === 'male');
+                    } else if (targetGender === 'female' && result.voterStatus.femaleVoted) {
+                        votedUser = votedUsers.find(user => user.gender === 'female');
+                    }
+                    
+                    details = {
+                        votedUser: votedUser ? votedUser.name : null,
+                        targetGender: targetGender === 'male' ? '男士' : '女士',
+                        allowedActions: [
+                            '查看投票结果',
+                            `为${targetGender === 'male' ? '女士' : '男士'}参与者投票`
+                        ]
+                    };
                 }
-                
-                details = {
-                    votedUser: votedUser ? votedUser.name : null,
-                    targetGender: targetGender === 'male' ? '男士' : '女士',
-                    allowedActions: [
-                        '查看投票结果',
-                        `为${targetGender === 'male' ? '女士' : '男士'}参与者投票`
-                    ]
-                };
             }
             
             return {
                 eligible: result.canVote,
                 reason: result.reason || null,
-                details: details
+                details: details,
+                voterStatus: result.voterStatus
             };
         } else {
             console.error('Eligibility check failed:', result.message);
@@ -324,13 +358,37 @@ function showError(title, message, details = null) {
         }
         
         if (details.allowedActions && details.allowedActions.length > 0 && errorActionsEl) {
-            const actionsHtml = details.allowedActions.map(action => 
-                `<li class="allowed-action">${action}</li>`
-            ).join('');
+            const actionsHtml = details.allowedActions.map(action => {
+                let url = '#';
+                let onclick = '';
+                let icon = '👉';
+                let style = 'display: block; width: 100%; box-sizing: border-box; margin-bottom: 0; text-decoration: none; padding: 12px; border-radius: 8px; text-align: center; font-weight: 500; transition: all 0.2s;';
+
+                if (action.includes('为女士参与者投票')) {
+                    url = '/user-list';
+                    icon = '👩';
+                    style += 'background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: white; box-shadow: 0 2px 4px rgba(236, 72, 153, 0.2);';
+                } else if (action.includes('为男士参与者投票')) {
+                    url = '/user-list';
+                    icon = '🧔‍♂️';
+                    style += 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);';
+                } else if (action.includes('查看结果')) {
+                    url = '/mobile-stats';
+                    icon = '📊';
+                    style += 'background: #fff; color: #475569; border: 1px solid #cbd5e1;';
+                } else if (action.includes('返回首页')) {
+                    url = '/';
+                    onclick = 'onclick="safeNavigateHome(); return false;"';
+                    icon = '🏠';
+                    style += 'background: #fff; color: #475569; border: 1px solid #cbd5e1;';
+                }
+
+                return `<a href="${url}" ${onclick} style="${style}">${icon} ${action}</a>`;
+            }).join('');
             
             errorActionsEl.innerHTML = `
-                <div class="suggestions-title">您可以：</div>
-                <ul class="suggestions-list">${actionsHtml}</ul>
+                <div class="suggestions-title" style="margin-bottom: 12px; font-weight: 600; color: #374151; font-size: 15px;">您还可以进行以下操作：</div>
+                <div class="actions-list" style="display: flex; flex-direction: column; gap: 10px;">${actionsHtml}</div>
             `;
             errorActionsEl.style.display = 'block';
         }
@@ -413,9 +471,45 @@ function showVoteInterface() {
         avatarEl.src = getDefaultAvatar(currentCandidate.gender);
     }
     
+    // 设置点击放大功能
+    setupImagePreview(avatarEl);
+    
     // 设置投票按钮事件
     document.getElementById('voteBtn').onclick = submitVote;
 }
+
+/**
+ * 设置图片预览功能
+ * @param {HTMLElement} avatarEl - 头像元素
+ */
+function setupImagePreview(avatarEl) {
+    if (!avatarEl) return;
+    
+    avatarEl.style.cursor = 'zoom-in';
+    avatarEl.title = '点击放大图片';
+    
+    avatarEl.onclick = function(e) {
+        e.stopPropagation();
+        const modal = document.getElementById('imagePreviewModal');
+        const previewImg = document.getElementById('previewImage');
+        
+        if (modal && previewImg) {
+            previewImg.src = this.src;
+            modal.classList.add('active');
+        }
+    };
+}
+
+/**
+ * 关闭图片预览
+ * 供HTML中的onclick调用
+ */
+window.closeImagePreview = function() {
+    const modal = document.getElementById('imagePreviewModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+};
 
 /**
  * 获取默认头像
@@ -473,9 +567,11 @@ async function submitVote() {
         });
         
         const result = await response.json();
+        console.log('Vote result:', result);
         
         if (result.success) {
-            showSuccess(`您已成功为 ${currentCandidate.name} 投票！`);
+            console.log('Voting status for success display:', result.votingStatus);
+            showSuccess(`您已成功为 ${currentCandidate.name} 投票！`, result.votingStatus);
         } else {
             // 处理API返回的详细错误信息
             handleVoteSubmissionError(result);
@@ -576,11 +672,70 @@ function handleVoteSubmissionError(result) {
 /**
  * 显示成功状态
  * @param {string} message - 成功消息
+ * @param {Object} [votingStatus] - 投票状态信息（可选）
+ * @param {string} [title] - 标题（可选，默认为"投票成功"）
  */
-function showSuccess(message) {
+function showSuccess(message, votingStatus = null, title = '投票成功') {
     hideAllStates();
     document.getElementById('successState').style.display = 'block';
+    
+    // 更新标题
+    const titleEl = document.querySelector('#successState .success-title');
+    if (titleEl) {
+        titleEl.textContent = title;
+    }
+    
     document.getElementById('successMessage').textContent = message;
+    
+    // 如果有投票状态，更新操作按钮
+    if (votingStatus) {
+        const actionsContainer = document.querySelector('#successState .actions');
+        if (actionsContainer) {
+            let actionsHtml = '';
+            
+            // 添加剩余票数提示
+            const remainingTotal = votingStatus.remainingVotes.male + votingStatus.remainingVotes.female;
+            
+            let hintHtml = '';
+            if (remainingTotal > 0) {
+                 hintHtml = `<div class="success-hint" style="margin-bottom: 24px; color: #166534; background: rgba(22, 101, 52, 0.05); padding: 16px; border-radius: 12px; border: 1px dashed rgba(22, 101, 52, 0.2);">
+                    <p style="margin: 0; font-weight: 600; font-size: 16px;">您还可以投 <strong style="color: #15803d; font-size: 18px;">${remainingTotal}</strong> 票</p>
+                    <div style="margin-top: 8px; font-size: 14px; display: flex; justify-content: center; gap: 16px; color: #166534;">
+                        <span>🧔‍♂️ 男士: <strong>${votingStatus.remainingVotes.male}</strong></span>
+                        <span>👩 女士: <strong>${votingStatus.remainingVotes.female}</strong></span>
+                    </div>
+                 </div>`;
+            } else {
+                 hintHtml = `<div class="success-hint" style="margin-bottom: 24px; color: #666; background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                    <p style="margin: 0;">🎉 恭喜！您已完成所有投票任务</p>
+                 </div>`;
+            }
+            
+            // 动态生成按钮
+            // 如果还有男士票，显示去列表页（暗示去投男士）
+            if (votingStatus.remainingVotes.male > 0) {
+                 actionsHtml += `<a href="/user-list" class="btn-primary" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); margin-bottom: 12px;">🧔‍♂️ 继续为男士投票</a>`;
+            }
+            
+            // 如果还有女士票
+            if (votingStatus.remainingVotes.female > 0) {
+                 actionsHtml += `<a href="/user-list" class="btn-primary" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); margin-bottom: 12px;">👩 继续为女士投票</a>`;
+            }
+            
+            // 总是显示查看排名和返回首页
+            actionsHtml += `<a href="/mobile-stats" class="btn-secondary" style="margin-bottom: 12px;">📊 查看实时排名</a>`;
+            actionsHtml += `<a href="/" class="btn-secondary" onclick="safeNavigateHome(); return false;">🏠 返回首页</a>`;
+            
+            actionsContainer.innerHTML = hintHtml + actionsHtml;
+            
+            // 调整按钮样式为垂直排列（如果按钮较多）
+            if (remainingTotal > 0) {
+                actionsContainer.style.display = 'flex';
+                actionsContainer.style.flexDirection = 'column';
+                actionsContainer.style.gap = '4px';
+            }
+        }
+    }
 }
 
 /**

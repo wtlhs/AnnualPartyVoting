@@ -726,3 +726,43 @@ async function confirmGender() {
         currentRegistrationData = null;
     }
 }
+
+// 姓名冲突处理函数
+function showNameConflictDialog(name, gender) {
+    const modal = document.getElementById('nameConflictModal');
+    if (!modal) {
+        // 如果模态框不存在，回退到普通消息提示
+        showMessage(`姓名 "${name}" 已被注册，请使用其他姓名`, 'error');
+        return;
+    }
+    
+    // 设置冲突的姓名
+    const conflictNameEl = document.getElementById('conflictName');
+    if (conflictNameEl) conflictNameEl.textContent = name;
+    
+    // 生成建议名称
+    const suggestedNameEl = document.getElementById('suggestedName');
+    if (suggestedNameEl) {
+        // 生成几个建议
+        const suffix = gender === 'male' ? '先生' : '女士';
+        suggestedNameEl.textContent = `${name} (${suffix}) 或 ${name}B`;
+    }
+    
+    modal.classList.add('active');
+}
+
+function closeNameConflictModal() {
+    const modal = document.getElementById('nameConflictModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    
+    // 聚焦到姓名输入框并选中内容，方便用户修改
+    const nameInput = document.getElementById('name');
+    if (nameInput) {
+        setTimeout(() => {
+            nameInput.focus();
+            nameInput.select();
+        }, 100);
+    }
+}

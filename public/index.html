@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>年会最佳服装评选</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=2.1">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.4">
     <link rel="preload" href="/static/js/app.js" as="script">
     <link rel="preload" href="/static/css/style.css" as="style">
     <meta name="theme-color" content="#667eea">
@@ -20,9 +20,20 @@
         
         <main>
             <div class="registration-form">
-                <h2>注册参与</h2>
-                <div class="gender-selection-warning">
-                    <strong>⚠️ 重要提醒：</strong>请正确选择您的性别，因为这将决定您参与哪个组别的评选（男士组/女士组），一旦注册成功后将无法修改！
+                <h2 style="text-align: center">注册参与</h2>
+                <div class="gender-selection-warning" style="background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); border: 1px solid #ddd; color: #333; padding: 12px 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                    <div style="text-align: center; margin-bottom: 8px; border-bottom: 1px solid #667eea; padding-bottom: 5px;">
+                        <h3 style="margin: 0; color: #667eea; font-size: 1.1rem;">✨ 最受欢迎着装奖 活动规则 ✨</h3>
+                    </div>
+                    <div style="text-align: left; line-height: 1.4; font-size: 0.95rem;">
+                        <p style="margin: 4px 0;"><strong>1.</strong> 完成注册，方可参选成为男神/女神候选人</p>
+                        <p style="margin: 4px 0;"><strong>2.</strong> 注册成功后，可为心仪人选打call投票</p>
+                        <p style="margin: 4px 0;"><strong>3.</strong> 投票通道晚会开启后开放，<span style="color: #f44336; font-weight: bold;">19:30准时关闭</span></p>
+                    </div>
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ccc; text-align: center; font-weight: bold; color: #e91e63; font-size: 0.95rem;">
+                        <p style="margin: 2px 0;">复古潮搭，颜值开挂！<br>着装大奖，花落你家！</p>
+                    </div>
+                    
                 </div>
                 <form id="registerForm">
                     <div class="form-group">
@@ -54,7 +65,7 @@
                 <!-- <a href="/user-list" class="btn-secondary">按姓名投票</a> -->
                 <a href="/user-list" class="btn-primary" style="background: linear-gradient(135deg, #20bf55 0%, #01baef 100%);">👥 按姓名/头像投票</a>
                 <a href="/scan" class="btn-secondary">输入ID投票</a>
-                <a href="/mobile-stats" class="btn-secondary">查看统计</a>
+                <a href="/mobile-stats" class="btn-secondary">📊 查看实时排名</a>
             </div>
         </main>
     </div>
@@ -110,7 +121,36 @@
         </div>
     </div>
     
+    <!-- 姓名冲突模态框 -->
+    <div id="nameConflictModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ 姓名已被使用</h3>
+            </div>
+            <div class="modal-body">
+                <p>姓名 <strong id="conflictName" style="color: #e53e3e;">-</strong> 已经被注册。</p>
+                
+                <div class="conflict-options" style="margin-top: 15px; text-align: left; background: #fff5f5; padding: 15px; border-radius: 8px;">
+                    <p style="margin-bottom: 10px;"><strong>这是您本人吗？</strong></p>
+                    <ul style="padding-left: 20px; color: #555; font-size: 0.95em;">
+                        <li>如果是本人，请勿重复注册。</li>
+                        <li>您可以直接<a href="/user-list" style="color: #667eea; font-weight: bold;">查看用户列表</a>找到您的ID。</li>
+                    </ul>
+                    
+                    <p style="margin: 10px 0;"><strong>是同名同姓？</strong></p>
+                    <ul style="padding-left: 20px; color: #555; font-size: 0.95em;">
+                        <li>请在姓名后添加部门或昵称以示区分。</li>
+                        <li>例如：<span id="suggestedName" style="color: #667eea;">-</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer" style="margin-top: 20px; text-align: right;">
+                <button type="button" class="btn-primary" onclick="closeNameConflictModal()">返回修改姓名</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/errorHandler.js" defer></script>
-    <script src="/static/js/app.js?v=2.1" defer></script>
+    <script src="/static/js/app.js?v=2.2" defer></script>
 </body>
 </html>

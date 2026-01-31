@@ -237,26 +237,39 @@ main {
 
 /* 性别确认模态框特定样式 */
 .gender-confirmation .info-summary {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 20px;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
     text-align: center;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
 }
 
 .gender-confirmation .info-item {
-    margin: 8px 0;
+    margin: 12px 0;
     font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .gender-confirmation .info-label {
-    color: #666;
-    margin-right: 8px;
+    color: #5a67d8;
+    margin-right: 0;
+    font-weight: 500;
 }
 
 .gender-confirmation .info-value {
-    font-weight: 600;
-    color: #333;
+    font-weight: 800;
+    color: #434190;
+    font-size: 18px;
+    letter-spacing: 0.5px;
 }
 
 .gender-confirmation .warning-box {
@@ -1162,16 +1175,165 @@ main {
     text-align: center;
 }
 
+/* 错误状态整体容器 */
+.error-state {
+    text-align: center;
+    padding: 40px 20px;
+    animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.error-icon {
+    font-size: 72px;
+    line-height: 1;
+    margin-bottom: 24px;
+    animation: scaleInBounce 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: inline-block;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+}
+
+.error-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #dc2626;
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
 .error-message {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    color: #991b1b;
+    padding: 20px;
+    border-radius: 16px;
+    margin: 0 auto 32px;
+    font-size: 16px;
+    line-height: 1.6;
+    max-width: 90%;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    text-align: center;
+    font-weight: 500;
+}
+
+/* 错误详情和建议操作 */
+.error-details, .error-actions {
+    margin: 0 auto 24px;
+    max-width: 90%;
+    text-align: left;
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.error-details {
+    background: #fff5f5;
+    border: 1px dashed #feb2b2;
+}
+
+.error-detail-item {
+    color: #9b2c2c;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.error-detail-item strong {
+    color: #7f1d1d;
+}
+
+.error-actions {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+}
+
+.suggestions-title {
+    font-weight: 600;
+    color: #0369a1;
+    margin-bottom: 12px;
+    font-size: 15px;
+}
+
+.suggestions-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.allowed-action {
+    position: relative;
+    padding-left: 24px;
+    margin-bottom: 8px;
+    color: #0c4a6e;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.allowed-action::before {
+    content: "👉";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 14px;
 }
 
 .success-message {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%);
+    color: #166534;
+    padding: 20px;
+    border-radius: 16px;
+    margin: 0 auto 32px;
+    font-size: 16px;
+    line-height: 1.6;
+    max-width: 90%;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(22, 163, 74, 0.2);
+    text-align: center;
+    font-weight: 500;
+}
+
+/* 投票成功状态整体容器 */
+.success-state {
+    text-align: center;
+    padding: 40px 20px;
+    animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.success-icon {
+    font-size: 72px;
+    line-height: 1;
+    margin-bottom: 24px;
+    animation: scaleInBounce 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: inline-block;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+}
+
+.success-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #166534;
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* 动画定义 */
+@keyframes scaleInBounce {
+    0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+    60% { transform: scale(1.2) rotate(10deg); }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 .info-message {
