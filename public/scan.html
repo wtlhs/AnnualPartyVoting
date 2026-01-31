@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>扫码投票 - 年会最佳服装评选</title>
+    <title>投票 - 年会最佳服装评选</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -14,28 +14,9 @@
         </header>
         
         <main>
-            <!-- HTTPS提示 -->
-            <div class="https-notice" style="display: none; background: #e8f5e8; border: 1px solid #4caf50; color: #2e7d32; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-                <strong>📱 摄像头功能已启用：</strong><br>
-                系统现在支持HTTPS，可以正常使用摄像头扫码功能。<br>
-                如果摄像头无法启动，请使用下方的<strong>手动输入6位数字ID功能</strong>。
-            </div>
-            
-            <div class="scanner-container">
-                <div id="qr-reader" style="width: 100%;"></div>
-                <div id="qr-reader-results"></div>
-            </div>
-            
-            <div class="scanner-controls">
-                <button id="startScanBtn" class="btn-primary" style="display: none;">开始扫描</button>
-                <button id="switchCameraBtn" class="btn-secondary" style="display: none;">切换摄像头</button>
-                <button id="stopScanBtn" class="btn-secondary" style="display: none;">停止扫描</button>
-            </div>
-            
             <!-- 手动输入6位数字ID -->
-            <div class="manual-input">
-                <h3>手动输入6位数字ID</h3>
-                <p>请输入参与者的6位数字ID：</p>
+            <div class="manual-input" style="display: block;">
+                <h3>请输入参与者的6位数字ID</h3>
                 <div class="id-input-box">
                     <input type="text" id="numericIdInput" placeholder="例如：123456" maxlength="6" pattern="\d{6}" autocomplete="off">
                     <button id="submitIdBtn" class="btn-secondary">确认投票</button>
@@ -45,7 +26,7 @@
                     <ul>
                         <li>ID必须是6位数字</li>
                         <li>可在参与者的个人资料页面查看其ID</li>
-                        <li>输入完成后点击"确认投票"或按回车键</li>
+                        <li>输入完成后点击"确认投票"进行投票</li>
                     </ul>
                 </div>
             </div>
@@ -53,12 +34,10 @@
             <div class="actions">
                 <a href="/user-list" class="btn-primary" style="background: linear-gradient(135deg, #20bf55 0%, #01baef 100%);">👥 按姓名/头像投票</a>
                 <a href="/" class="btn-secondary">返回首页</a>
-                <button id="toggleManualBtn" class="btn-secondary" style="display: none;">手动输入ID</button>
             </div>
         </main>
     </div>
     
-    <script src="/static/libs/html5-qrcode.min.js"></script>
-    <script src="/static/js/scan.js?v=2.1"></script>
+    <script src="/static/js/scan.js?v=2.2"></script>
 </body>
 </html>
