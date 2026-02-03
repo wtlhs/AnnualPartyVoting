@@ -12,12 +12,103 @@
 - 📊 实时投票统计和排名展示
 - 💻 电脑端大屏排名展示
 - 🛡️ 管理后台和数据导出
+- 🐳 Docker容器化部署
+- 💾 数据库持久化支持
 
 ## 技术栈
 
 - **后端**: Node.js + Express
 - **数据库**: SQLite
 - **前端**: HTML5 + CSS3 + JavaScript
+- **容器化**: Docker + Docker Volume
+- **反向代理**: Nginx（可选）
+
+## 🚀 快速部署
+
+### 方式一：Docker本地构建（Windows）
+
+1. **安装Docker Desktop**
+   - 下载并安装 [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)
+
+2. **构建Docker镜像**
+   ```bash
+   # 运行构建脚本
+   build-docker.bat
+   ```
+
+3. **本地测试运行**
+   ```bash
+   # 脚本会自动测试运行，访问 http://localhost:3000
+   ```
+
+### 方式二：服务器部署
+
+1. **上传项目到服务器**
+   ```bash
+   scp -r AnnualPartyVoting user@server:/opt/
+   ```
+
+2. **运行部署脚本**
+   ```bash
+   cd /opt/AnnualPartyVoting
+   chmod +x deploy-server.sh
+   ./deploy-server.sh
+   ```
+
+3. **配置Nginx反向代理（可选）**
+   ```bash
+   # 将80端口指向3000端口
+   sudo apt install nginx
+   # 配置文件见 DATABASE_PERSISTENCE_GUIDE.md
+   ```
+
+## 📦 数据持久化
+
+### Docker Volume方式（推荐）
+```bash
+# 创建数据卷
+docker volume create annual-party-data
+
+# 运行容器
+docker run -d \
+  -p 3000:3000 \
+  -v annual-party-data:/app/data \
+  --name annual-party-voting \
+  --restart unless-stopped \
+  annual-party-voting:latest
+```
+
+### 主机目录方式
+```bash
+# 创建数据目录
+sudo mkdir -p /opt/annual-party/data
+sudo chmod 755 /opt/annual-party/data
+
+# 运行容器
+docker run -d \
+  -p 3000:3000 \
+  -v /opt/annual-party/data:/app/data \
+  --name annual-party-voting \
+  --restart unless-stopped \
+  annual-party-voting:latest
+```
+
+## 💾 数据备份
+
+### 自动备份脚本
+```bash
+# 运行备份脚本
+./backup-data.sh
+
+# 手动备份
+docker run --rm -v annual-party-data:/data -v $(pwd):/backup alpine tar czf /backup/backup.tar.gz -C /data .
+```
+
+### 恢复数据
+```bash
+# 从备份恢复
+docker run --rm -v annual-party-data:/data -v $(pwd):/backup alpine tar xzf /backup/backup.tar.gz -C /data
+```
 - **二维码**: qrcode.js + html5-qrcode
 - **文件上传**: Multer
 - **安全**: Helmet + CORS + Rate Limiting

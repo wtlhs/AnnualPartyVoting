@@ -162,7 +162,7 @@ main {
 }
 
 .gender-selection-warning strong::before {
-    content: '⚠️';
+    /* content: '⚠️'; */
     font-size: 16px;
 }
 

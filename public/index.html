@@ -37,7 +37,7 @@
                 </div>
                 <form id="registerForm">
                     <div class="form-group">
-                        <label for="name">姓名</label>
+                        <label for="name">姓名<span style="color: #f44336; font-weight: bold;">*</span></label>
                         <input type="text" id="name" name="name" required>
                     </div>
                     
@@ -115,8 +115,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeGenderModal()">返回修改</button>
                 <button type="button" class="btn-primary" onclick="confirmGender()">确认注册</button>
+                <button type="button" class="btn-secondary" onclick="closeGenderModal()">返回修改</button>
             </div>
         </div>
     </div>
@@ -134,7 +134,7 @@
                     <p style="margin-bottom: 10px;"><strong>这是您本人吗？</strong></p>
                     <ul style="padding-left: 20px; color: #555; font-size: 0.95em;">
                         <li>如果是本人，请勿重复注册。</li>
-                        <li>您可以直接<a href="/user-list" style="color: #667eea; font-weight: bold;">查看用户列表</a>找到您的ID。</li>
+                        <li>如果您已经注册，但是提示姓名已被使用，请联系主持人或活动教练。</li>
                     </ul>
                     
                     <p style="margin: 10px 0;"><strong>是同名同姓？</strong></p>
