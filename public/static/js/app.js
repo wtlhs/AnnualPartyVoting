@@ -221,18 +221,11 @@ function showExistingRegistrationMessage(userName, userId) {
             <p>注册时间: ${new Date(localStorage.getItem(STORAGE_KEYS.REGISTRATION_TIME)).toLocaleString('zh-CN')}</p>
             <div class="existing-actions">
                 <a href="/profile/${userId}" class="btn-primary">查看我的资料</a>
-                <button id="reregister-btn" class="btn-secondary">重新注册</button>
             </div>
         </div>
     `;
-    
+
     container.insertBefore(existingDiv, form);
-    
-    // 添加重新注册按钮的事件监听器
-    const reregisterBtn = document.getElementById('reregister-btn');
-    if (reregisterBtn) {
-        reregisterBtn.addEventListener('click', clearRegistrationAndReload);
-    }
 }
 
 function clearRegistrationAndReload() {

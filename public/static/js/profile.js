@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (userId) {
         loadUserProfile(userId);
         setupAvatarUpload(userId);
+        setupQRCodeReregisterTrigger(userId);
     } else {
         showError('无效的用户ID');
     }
@@ -172,20 +173,101 @@ function showMessage(message, type) {
     if (existingMessage) {
         existingMessage.remove();
     }
-    
+
     // 创建新消息
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type === 'error' ? 'error-message' : 'success-message'}`;
+    const messageClass = type === 'error' ? 'error-message' :
+                        type === 'info' ? 'info-message' : 'success-message';
+    messageDiv.className = `message ${messageClass}`;
     messageDiv.textContent = message;
-    
+
     // 插入到页面顶部
     const main = document.querySelector('main');
     main.insertBefore(messageDiv, main.firstChild);
-    
+
     // 3秒后自动移除
     setTimeout(() => {
         if (messageDiv.parentNode) {
             messageDiv.remove();
         }
     }, 3000);
+}
+
+// 设置二维码连续点击触发重新注册的功能
+function setupQRCodeReregisterTrigger(userId) {
+    const qrCodeContainer = document.getElementById('qrCodeContainer');
+    if (!qrCodeContainer) return;
+
+    // 添加点击提示样式
+    qrCodeContainer.style.cursor = 'pointer';
+    qrCodeContainer.style.transition = 'transform 0.1s';
+
+    let clickCount = 0;
+    const requiredClicks = 5;
+    const clickTimeout = 2000; // 2秒内点击才算有效
+
+    qrCodeContainer.addEventListener('click', () => {
+        clickCount++;
+
+        if (clickCount === requiredClicks) {
+            // 达到5次点击，触发重新注册确认
+            clickCount = 0;
+            showReregisterConfirmDialog(userId);
+        }
+
+        // 2秒后重置点击计数
+        setTimeout(() => {
+            clickCount = 0;
+        }, clickTimeout);
+    });
+}
+
+// 显示重新注册确认对话框
+function showReregisterConfirmDialog(userId) {
+    if (confirm('⚠️ 确定要清除当前注册信息并重新注册吗？\n\n这将删除您的所有账号数据，包括：\n• 个人信息\n• 投票记录\n• 二维码\n\n此操作不可恢复！')) {
+        clearRegistrationAndReload(userId);
+    }
+}
+
+// 清除注册信息并重新加载
+async function clearRegistrationAndReload(userId) {
+    try {
+        showMessage('正在删除账号数据...', 'info');
+
+        // 清除本地存储
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('user_name');
+        localStorage.removeItem('user_gender');
+        localStorage.removeItem('numeric_id');
+        localStorage.removeItem('registration_time');
+
+        // 调用后端API删除用户数据
+        const response = await fetch(`/api/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showMessage('账号数据已删除，正在返回首页...', 'success');
+        } else {
+            console.error('Backend deletion failed:', result.message);
+            showMessage('本地数据已清除，正在返回首页...', 'success');
+        }
+
+        // 延迟跳转，让用户看到提示信息
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 1500);
+    } catch (error) {
+        console.error('Delete user account error:', error);
+        showMessage('本地数据已清除，正在返回首页...', 'success');
+
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 1500);
+    }
 }
