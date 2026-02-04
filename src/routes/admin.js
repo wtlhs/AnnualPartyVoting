@@ -455,8 +455,10 @@ router.get('/vote-records', requireAdmin, async (req, res) => {
       search
     } = req.query;
 
+    console.log('Vote records query params:', { page, limit, status, voter, candidate, dateFrom, dateTo, voteMethod, sortBy, sortOrder, search }); // 调试日志
+
     const voteRecordManager = new VoteRecordManager();
-    
+
     // 构建筛选条件
     const filters = {};
     if (status) filters.status = status;
@@ -465,6 +467,8 @@ router.get('/vote-records', requireAdmin, async (req, res) => {
     if (dateFrom) filters.dateFrom = dateFrom;
     if (dateTo) filters.dateTo = dateTo;
     if (voteMethod) filters.voteMethod = voteMethod;
+
+    console.log('Filters object:', filters); // 调试日志
     
     // 构建分页参数
     const pagination = {
@@ -555,11 +559,11 @@ router.put('/vote-records/:id/status', requireAdmin, async (req, res) => {
       });
     }
     
-    if (!status || !['active', 'inactive'].includes(status)) {
+    if (!status || !['active', 'inactive', 'disabled', 'discarded'].includes(status)) {
       return res.status(400).json({
         success: false,
         errorCode: 'INVALID_STATUS',
-        message: '状态值必须是 active 或 inactive'
+        message: '状态值必须是 active、inactive、disabled 或 discarded'
       });
     }
     
@@ -621,11 +625,11 @@ router.put('/vote-records/batch-status', requireAdmin, async (req, res) => {
       });
     }
     
-    if (!status || !['active', 'inactive'].includes(status)) {
+    if (!status || !['active', 'inactive', 'disabled', 'discarded'].includes(status)) {
       return res.status(400).json({
         success: false,
         errorCode: 'INVALID_STATUS',
-        message: '状态值必须是 active 或 inactive'
+        message: '状态值必须是 active、inactive、disabled 或 discarded'
       });
     }
     

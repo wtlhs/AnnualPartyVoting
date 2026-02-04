@@ -52,13 +52,14 @@ class VoteRecordManager {
       }
       
       if (voter) {
-        whereConditions.push('(voter_user.name LIKE ? OR voter_user.numeric_id LIKE ?)');
-        params.push(`%${voter}%`, `%${voter}%`);
+        whereConditions.push('(voter_user.name LIKE ? OR voter_user.numeric_id LIKE ? OR voter_user.id = ?)');
+        params.push(`%${voter}%`, `%${voter}%`, voter);
       }
-      
+
       if (candidate) {
-        whereConditions.push('(target_user.name LIKE ? OR target_user.numeric_id LIKE ?)');
-        params.push(`%${candidate}%`, `%${candidate}%`);
+        whereConditions.push('(target_user.name LIKE ? OR target_user.numeric_id LIKE ? OR target_user.id = ?)');
+        params.push(`%${candidate}%`, `%${candidate}%`, candidate);
+        console.log('Candidate filter added:', candidate); // 调试日志
       }
       
       if (dateFrom) {
@@ -263,9 +264,9 @@ class VoteRecordManager {
       const db = getDatabase();
       
       // 验证状态值
-      if (!['active', 'inactive'].includes(status)) {
+      if (!['active', 'inactive', 'disabled', 'discarded'].includes(status)) {
         db.close();
-        return reject(new Error('状态值必须是 active 或 inactive'));
+        return reject(new Error('状态值必须是 active、inactive、disabled 或 discarded'));
       }
       
       db.serialize(() => {
@@ -373,9 +374,9 @@ class VoteRecordManager {
         return reject(new Error('投票记录ID数组不能为空'));
       }
       
-      if (!['active', 'inactive'].includes(status)) {
+      if (!['active', 'inactive', 'disabled', 'discarded'].includes(status)) {
         db.close();
-        return reject(new Error('状态值必须是 active 或 inactive'));
+        return reject(new Error('状态值必须是 active、inactive、disabled 或 discarded'));
       }
       
       const results = {
@@ -526,13 +527,15 @@ class VoteRecordManager {
       
       // 构建WHERE条件 - 搜索投票者或被投票者
       const whereConditions = [
-        '(voter_user.name LIKE ? OR voter_user.numeric_id LIKE ? OR target_user.name LIKE ? OR target_user.numeric_id LIKE ?)'
+        '(voter_user.name LIKE ? OR voter_user.numeric_id LIKE ? OR voter_user.id = ? OR target_user.name LIKE ? OR target_user.numeric_id LIKE ? OR target_user.id = ?)'
       ];
       const params = [
-        `%${searchTerm}%`, 
-        `%${searchTerm}%`, 
-        `%${searchTerm}%`, 
-        `%${searchTerm}%`
+        `%${searchTerm}%`,
+        `%${searchTerm}%`,
+        searchTerm,
+        `%${searchTerm}%`,
+        `%${searchTerm}%`,
+        searchTerm
       ];
       
       // 添加其他筛选条件

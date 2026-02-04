@@ -50,13 +50,29 @@ function setupEventListeners() {
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', toggleSidebar);
     }
-    
+
+    // 遮罩层点击关闭侧边栏
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
+    }
+
+    // 点击导航项后关闭移动端侧边栏
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+        });
+    });
+
     // 全屏切换
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     if (fullscreenBtn) {
         fullscreenBtn.addEventListener('click', toggleFullscreen);
     }
-    
+
     // 键盘快捷键
     document.addEventListener('keydown', handleKeyboardShortcuts);
 }
@@ -79,9 +95,31 @@ function handleKeyboardShortcuts(event) {
 function toggleSidebar() {
     const sidebar = document.querySelector('.admin-sidebar');
     const main = document.querySelector('.admin-main');
-    
-    sidebar.classList.toggle('show');
-    main.classList.toggle('expanded');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    const isOpen = sidebar.classList.contains('show');
+
+    if (isOpen) {
+        closeSidebar();
+    } else {
+        sidebar.classList.add('show');
+        main.classList.add('expanded');
+        overlay.classList.add('show');
+        // 防止背景滚动
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeSidebar() {
+    const sidebar = document.querySelector('.admin-sidebar');
+    const main = document.querySelector('.admin-main');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    sidebar.classList.remove('show');
+    main.classList.remove('expanded');
+    overlay.classList.remove('show');
+    // 恢复背景滚动
+    document.body.style.overflow = '';
 }
 
 function toggleFullscreen() {
@@ -1092,6 +1130,9 @@ function updateParticipantsTable(participants) {
                     <button class="btn-view" onclick="viewParticipantDetails('${participant.id}')" title="查看详情">
                         <i class="fas fa-eye"></i>
                     </button>
+                    <button class="btn-view" style="background: #17a2b8;" onclick="viewParticipantVotes('${participant.id}', '${participant.name}')" title="查看投票">
+                        <i class="fas fa-vote-yea"></i>
+                    </button>
                     <button class="btn-delete" onclick="deleteParticipant('${participant.id}', '${participant.name}')" title="删除">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -1785,21 +1826,59 @@ function editParticipant(userId) {
             'Authorization': `Bearer ${getAdminToken()}`
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(result => {
+        console.log('Edit participant API response:', result); // 调试日志
+
         if (result.success) {
-            showEditParticipantModal(result.user);
+            // API 返回的用户数据可能在 result.user 中,也可能直接在 result 中
+            const userData = result.user || result;
+            showEditParticipantModal(userData);
         } else {
-            showError('获取用户信息失败');
+            console.error('Invalid API response:', result);
+            showError(result.message || '获取用户信息失败');
         }
     })
     .catch(error => {
         console.error('Get user error:', error);
-        showError('获取用户信息失败');
+        showError('获取用户信息失败: ' + error.message);
     });
 }
 
 function showEditParticipantModal(user) {
+    // 验证用户数据
+    if (!user || typeof user !== 'object') {
+        console.error('Invalid user data:', user);
+        showError('用户数据无效');
+        return;
+    }
+
+    // 先移除已存在的 modal,避免叠加
+    const existingModal = document.getElementById('participantModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // 提供默认值,防止 undefined 错误
+    const userData = {
+        id: user.id || user.userId || 'N/A',
+        name: user.name || '未知用户',
+        gender: user.gender || 'male',
+        avatarUrl: user.avatarUrl || user.avatar_url || null,
+        numericId: user.numericId || user.numeric_id || 'N/A',
+        createdAt: user.createdAt || user.created_at || new Date(),
+        voteCount: user.voteCount || user.vote_count || 0
+    };
+
+    const defaultAvatar = userData.gender === 'male'
+        ? '/static/images/default-male-avatar.svg'
+        : '/static/images/default-female-avatar.svg';
+
     const modalHtml = `
         <div class="participant-modal" id="participantModal">
             <div class="modal-content">
@@ -1809,56 +1888,58 @@ function showEditParticipantModal(user) {
                 </div>
                 <div class="modal-body">
                     <form id="participantForm">
-                        <input type="hidden" id="participantId" value="${user.id}">
-                        
+                        <input type="hidden" id="participantId" value="${userData.id}">
+
                         <div class="form-group">
                             <label for="participantName">姓名 *</label>
-                            <input type="text" id="participantName" name="name" required 
-                                   value="${user.name}" placeholder="请输入参与者姓名" maxlength="20">
+                            <input type="text" id="participantName" name="name" required
+                                   value="${userData.name}" placeholder="请输入参与者姓名" maxlength="20">
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="participantGender">性别 *</label>
                             <select id="participantGender" name="gender" required disabled>
-                                <option value="male" ${user.gender === 'male' ? 'selected' : ''}>男士</option>
-                                <option value="female" ${user.gender === 'female' ? 'selected' : ''}>女士</option>
+                                <option value="male" ${userData.gender === 'male' ? 'selected' : ''}>男士</option>
+                                <option value="female" ${userData.gender === 'female' ? 'selected' : ''}>女士</option>
                             </select>
                             <small class="form-help">性别不可修改</small>
                         </div>
-                        
+
                         <div class="form-group">
                             <label>当前头像</label>
                             <div class="current-avatar">
-                                <img src="${user.avatarUrl || (user.gender === 'male' ? '/static/images/default-male-avatar.svg' : '/static/images/default-female-avatar.svg')}" 
-                                     alt="${user.name}" class="avatar-preview">
+                                <img src="${userData.avatarUrl || defaultAvatar}"
+                                     alt="${userData.name}"
+                                     onerror="this.src='${defaultAvatar}'"
+                                     class="avatar-preview">
                             </div>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="participantAvatar">更换头像</label>
-                            <input type="file" id="participantAvatar" name="avatar" 
+                            <input type="file" id="participantAvatar" name="avatar"
                                    accept="image/jpeg,image/png" class="file-input">
                             <small class="form-help">支持JPG、PNG格式，最大2MB</small>
                         </div>
-                        
+
                         <div class="form-group">
                             <label>统计信息</label>
                             <div class="user-stats">
                                 <div class="stat-item">
                                     <span class="label">数字ID:</span>
-                                    <span class="value">${user.numericId || 'N/A'}</span>
+                                    <span class="value">${userData.numericId}</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="label">得票数:</span>
-                                    <span class="value">${user.voteCount || 0} 票</span>
+                                    <span class="value">${userData.voteCount} 票</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="label">注册时间:</span>
-                                    <span class="value">${new Date(user.createdAt).toLocaleString('zh-CN')}</span>
+                                    <span class="value">${new Date(userData.createdAt).toLocaleString('zh-CN')}</span>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" onclick="closeParticipantModal()">
                                 取消
@@ -1873,9 +1954,9 @@ function showEditParticipantModal(user) {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
+
     // 设置表单提交事件
     const form = document.getElementById('participantForm');
     form.addEventListener('submit', handleEditParticipant);
@@ -1888,21 +1969,61 @@ function viewParticipantDetails(userId) {
             'Authorization': `Bearer ${getAdminToken()}`
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(result => {
+        console.log('Participant details API response:', result); // 调试日志
+
         if (result.success) {
-            showParticipantDetailsModal(result.user);
+            // API 返回的用户数据可能在 result.user 中,也可能直接在 result 中
+            const userData = result.user || result;
+            showParticipantDetailsModal(userData);
         } else {
-            showError('获取用户信息失败');
+            console.error('Invalid API response:', result);
+            showError(result.message || '获取用户信息失败: 返回数据格式错误');
         }
     })
     .catch(error => {
         console.error('Get user error:', error);
-        showError('获取用户信息失败');
+        showError('获取用户信息失败: ' + error.message);
     });
 }
 
 function showParticipantDetailsModal(user) {
+    // 验证用户数据
+    if (!user || typeof user !== 'object') {
+        console.error('Invalid user data:', user);
+        showError('用户数据无效');
+        return;
+    }
+
+    // 先移除已存在的 modal,避免叠加
+    const existingModal = document.getElementById('participantModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // 提供默认值,防止 undefined 错误
+    const userData = {
+        id: user.id || user.userId || 'N/A',
+        name: user.name || '未知用户',
+        gender: user.gender || 'male',
+        avatarUrl: user.avatarUrl || user.avatar_url || null,
+        numericId: user.numericId || user.numeric_id || 'N/A',
+        createdAt: user.createdAt || user.created_at || new Date(),
+        updatedAt: user.updatedAt || user.updated_at || new Date(),
+        voteCount: user.voteCount || user.vote_count || 0,
+        qrCode: user.qrCode || user.qr_code || null
+    };
+
+    const defaultAvatar = userData.gender === 'male'
+        ? '/static/images/default-male-avatar.svg'
+        : '/static/images/default-female-avatar.svg';
+
     const modalHtml = `
         <div class="participant-modal" id="participantModal">
             <div class="modal-content">
@@ -1915,66 +2036,67 @@ function showParticipantDetailsModal(user) {
                         <div class="detail-section">
                             <div class="user-profile">
                                 <div class="profile-avatar">
-                                    <img src="${user.avatarUrl || (user.gender === 'male' ? '/static/images/default-male-avatar.svg' : '/static/images/default-female-avatar.svg')}" 
-                                         alt="${user.name}">
+                                    <img src="${userData.avatarUrl || defaultAvatar}"
+                                         alt="${userData.name}"
+                                         onerror="this.src='${defaultAvatar}'">
                                 </div>
                                 <div class="profile-info">
-                                    <h4>${user.name}</h4>
+                                    <h4>${userData.name}</h4>
                                     <p class="gender-info">
-                                        <i class="fas fa-${user.gender === 'male' ? 'mars' : 'venus'}"></i>
-                                        ${user.gender === 'male' ? '男士' : '女士'}
+                                        <i class="fas fa-${userData.gender === 'male' ? 'mars' : 'venus'}"></i>
+                                        ${userData.gender === 'male' ? '男士' : '女士'}
                                     </p>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="detail-section">
                             <h5><i class="fas fa-info-circle"></i> 基本信息</h5>
                             <div class="info-grid">
                                 <div class="info-item">
                                     <span class="label">用户ID:</span>
-                                    <span class="value">${user.id}</span>
+                                    <span class="value">${userData.id}</span>
                                 </div>
                                 <div class="info-item">
                                     <span class="label">数字ID:</span>
-                                    <span class="value">${user.numericId || 'N/A'}</span>
+                                    <span class="value">${userData.numericId}</span>
                                 </div>
                                 <div class="info-item">
                                     <span class="label">注册时间:</span>
-                                    <span class="value">${new Date(user.createdAt).toLocaleString('zh-CN')}</span>
+                                    <span class="value">${new Date(userData.createdAt).toLocaleString('zh-CN')}</span>
                                 </div>
                                 <div class="info-item">
                                     <span class="label">最后更新:</span>
-                                    <span class="value">${new Date(user.updatedAt).toLocaleString('zh-CN')}</span>
+                                    <span class="value">${new Date(userData.updatedAt).toLocaleString('zh-CN')}</span>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="detail-section">
                             <h5><i class="fas fa-chart-bar"></i> 投票统计</h5>
                             <div class="vote-stats">
                                 <div class="stat-card">
-                                    <div class="stat-number">${user.voteCount || 0}</div>
+                                    <div class="stat-number">${userData.voteCount}</div>
                                     <div class="stat-label">获得票数</div>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="detail-section">
                             <h5><i class="fas fa-qrcode"></i> 二维码</h5>
                             <div class="qr-code-section">
-                                ${user.qrCode ? `
+                                ${userData.qrCode ? `
                                     <div class="qr-code-display">
-                                        <img src="${user.qrCode}" alt="二维码" class="qr-code-image">
+                                        <img src="${userData.qrCode}" alt="二维码" class="qr-code-image">
                                         <p>扫描此二维码为该参与者投票</p>
                                     </div>
                                 ` : '<p class="no-qr">暂无二维码</p>'}
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="modal-actions">
-                        <button class="btn-primary" onclick="editParticipant('${user.id}')">
+                        <button class="btn-primary" onclick="editParticipant('${userData.id}')">
                             <i class="fas fa-edit"></i>
                             编辑信息
                         </button>
@@ -1986,7 +2108,7 @@ function showParticipantDetailsModal(user) {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
@@ -2487,5 +2609,332 @@ function formatDateTimeForInput(dateString) {
     } catch (error) {
         console.error('Format date error:', error);
         return '';
+    }
+}
+
+// ==================== 参与者投票管理功能 ====================
+
+/**
+ * 查看参与者的投票记录
+ */
+async function viewParticipantVotes(userId, userName) {
+    try {
+        const response = await fetch(`/api/admin/vote-records?candidate=${userId}&limit=1000`, {
+            headers: {
+                'Authorization': `Bearer ${getAdminToken()}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load vote records');
+        }
+
+        const result = await response.json();
+        console.log('Vote records API response:', result); // 调试日志
+        if (result.success) {
+            // 后端返回的数据结构是 { success: true, data: { records: [...], pagination: {...} } }
+            const records = result.data?.records || result.records || [];
+            console.log('Parsed records:', records); // 调试日志
+            showVotesModal(userId, userName, records);
+        } else {
+            showError('加载投票记录失败');
+        }
+    } catch (error) {
+        console.error('Load vote records error:', error);
+        showError('加载投票记录失败');
+    }
+}
+
+/**
+ * 显示投票记录模态框
+ */
+function showVotesModal(userId, userName, votes) {
+    // 先移除已存在的 modal,避免叠加
+    const existingModal = document.getElementById('votesModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const validVotes = votes.filter(v => v.status === 'active');
+    const disabledVotes = votes.filter(v => v.status === 'disabled');
+    const discardedVotes = votes.filter(v => v.status === 'discarded');
+
+    const modalHtml = `
+        <div class="participant-modal" id="votesModal">
+            <div class="modal-content" style="max-width: 900px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-vote-yea"></i> ${userName} 的投票记录</h3>
+                    <button class="close-btn" onclick="closeVotesModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="votes-stats" style="display: flex; gap: 12px; margin-bottom: 20px;">
+                        <div class="stat-card" style="flex: 1; padding: 12px; background: #d4edda; border-radius: 8px;">
+                            <strong style="color: #155724;">有效票: ${validVotes.length}</strong>
+                        </div>
+                        <div class="stat-card" style="flex: 1; padding: 12px; background: #fff3cd; border-radius: 8px;">
+                            <strong style="color: #856404;">冻结票: ${disabledVotes.length}</strong>
+                        </div>
+                        <div class="stat-card" style="flex: 1; padding: 12px; background: #f8d7da; border-radius: 8px;">
+                            <strong style="color: #721c24;">废弃票: ${discardedVotes.length}</strong>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <label style="font-weight: 600;">批量操作:</label>
+                            <button class="btn-secondary" onclick="selectAllVotes()" style="padding: 6px 12px; font-size: 13px;">
+                                <i class="fas fa-check-square"></i> 全选
+                            </button>
+                            <button class="btn-secondary" onclick="deselectAllVotes()" style="padding: 6px 12px; font-size: 13px;">
+                                <i class="fas fa-square"></i> 取消全选
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-success" onclick="batchUpdateVoteStatus('active')" style="padding: 6px 12px; font-size: 13px;">
+                                <i class="fas fa-check"></i> 恢复有效
+                            </button>
+                            <button class="btn-warning" onclick="batchUpdateVoteStatus('disabled')" style="padding: 6px 12px; font-size: 13px;">
+                                <i class="fas fa-pause"></i> 冻结
+                            </button>
+                            <button class="btn-danger" onclick="batchUpdateVoteStatus('discarded')" style="padding: 6px 12px; font-size: 13px;">
+                                <i class="fas fa-trash"></i> 废弃
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="max-height: 500px; overflow-y: auto;">
+                        <table class="data-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">
+                                        <input type="checkbox" id="selectAllVotesCheckbox" onchange="toggleSelectAll(this)">
+                                    </th>
+                                    <th>投票人</th>
+                                    <th>状态</th>
+                                    <th>投票时间</th>
+                                    <th>投票方式</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="votesTableBody">
+                                ${votes.length === 0 ? `
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+                                            <i class="fas fa-inbox" style="font-size: 32px; margin-bottom: 12px;"></i>
+                                            <p>暂无投票记录</p>
+                                        </td>
+                                    </tr>
+                                ` : votes.map(vote => renderVoteRow(vote)).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // 存储投票数据以供批量操作使用
+    window.currentVotesData = votes;
+}
+
+/**
+ * 渲染单行投票记录
+ */
+function renderVoteRow(vote) {
+    const statusConfig = {
+        active: { class: 'success', label: '有效', icon: 'check' },
+        disabled: { class: 'warning', label: '冻结', icon: 'pause' },
+        discarded: { class: 'danger', label: '废弃', icon: 'trash' }
+    };
+
+    const status = statusConfig[vote.status] || statusConfig.active;
+    const statusBadge = `<span style="padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; background: #${status.class === 'success' ? 'd4edda; color: #155724' : status.class === 'warning' ? 'fff3cd; color: #856404' : 'f8d7da; color: #721c24'};">
+        <i class="fas fa-${status.icon}"></i> ${status.label}
+    </span>`;
+
+    const voterName = vote.voterName || vote.voterNumericId || '未知';
+    const voteTime = new Date(vote.voteTime).toLocaleString('zh-CN');
+    const voteMethod = vote.voteMethod === 'qrcode' ? '扫码投票' : vote.voteMethod === 'manual' ? '手动投票' : '未知';
+
+    return `
+        <tr data-vote-id="${vote.id}" data-vote-status="${vote.status}">
+            <td>
+                <input type="checkbox" class="vote-checkbox" value="${vote.id}">
+            </td>
+            <td>
+                <strong>${voterName}</strong>
+            </td>
+            <td>${statusBadge}</td>
+            <td style="font-size: 13px; color: #666;">${voteTime}</td>
+            <td style="font-size: 13px;">${voteMethod}</td>
+            <td>
+                <div style="display: flex; gap: 4px;">
+                    <button class="btn-view" style="width: 28px; height: 28px; padding: 0; ${vote.status === 'active' ? 'display: none;' : ''}"
+                            onclick="updateSingleVoteStatus(${vote.id}, 'active')" title="恢复有效">
+                        <i class="fas fa-check" style="font-size: 12px;"></i>
+                    </button>
+                    <button class="btn-warning" style="width: 28px; height: 28px; padding: 0; ${vote.status === 'disabled' ? 'display: none;' : ''}"
+                            onclick="updateSingleVoteStatus(${vote.id}, 'disabled')" title="冻结">
+                        <i class="fas fa-pause" style="font-size: 12px;"></i>
+                    </button>
+                    <button class="btn-delete" style="width: 28px; height: 28px; padding: 0; ${vote.status === 'discarded' ? 'display: none;' : ''}"
+                            onclick="updateSingleVoteStatus(${vote.id}, 'discarded')" title="废弃">
+                        <i class="fas fa-trash" style="font-size: 12px;"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * 关闭投票记录模态框
+ */
+function closeVotesModal() {
+    const modal = document.getElementById('votesModal');
+    if (modal) {
+        modal.remove();
+    }
+    window.currentVotesData = null;
+}
+
+/**
+ * 全选投票记录
+ */
+function selectAllVotes() {
+    const checkboxes = document.querySelectorAll('.vote-checkbox');
+    checkboxes.forEach(cb => cb.checked = true);
+    document.getElementById('selectAllVotesCheckbox').checked = true;
+}
+
+/**
+ * 取消全选投票记录
+ */
+function deselectAllVotes() {
+    const checkboxes = document.querySelectorAll('.vote-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    document.getElementById('selectAllVotesCheckbox').checked = false;
+}
+
+/**
+ * 切换全选状态
+ */
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.vote-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+}
+
+/**
+ * 更新单条投票状态
+ */
+async function updateSingleVoteStatus(voteId, newStatus) {
+    const statusLabels = {
+        active: '恢复为有效',
+        disabled: '冻结',
+        discarded: '废弃'
+    };
+
+    if (!confirm(`确定要${statusLabels[newStatus]}这条投票记录吗?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/vote-records/${voteId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAdminToken()}`
+            },
+            body: JSON.stringify({
+                status: newStatus,
+                reason: `管理员手动${statusLabels[newStatus]}`
+            })
+        });
+
+        // 处理401未授权错误
+        if (response.status === 401 || response.status === 403) {
+            showError('认证失败，请重新登录');
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            return;
+        }
+
+        const result = await response.json();
+        if (result.success) {
+            showSuccess(`投票记录已${statusLabels[newStatus]}`);
+            // 刷新模态框
+            const modal = document.getElementById('votesModal');
+            if (modal && window.currentVotesData && window.currentVotesData.length > 0) {
+                const userId = window.currentVotesData[0]?.targetUserId;
+                const userName = modal.querySelector('h3').textContent.replace(' 的投票记录', '').replace(' ', '').replace(/^[^\u4e00-\u9fa5]*/, '');
+                if (userId) {
+                    await viewParticipantVotes(userId, userName);
+                }
+            }
+        } else {
+            showError(result.message || '操作失败');
+        }
+    } catch (error) {
+        console.error('Update vote status error:', error);
+        showError('操作失败');
+    }
+}
+
+/**
+ * 批量更新投票状态
+ */
+async function batchUpdateVoteStatus(newStatus) {
+    const checkboxes = document.querySelectorAll('.vote-checkbox:checked');
+    if (checkboxes.length === 0) {
+        showError('请先选择要操作的投票记录');
+        return;
+    }
+
+    const voteIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    const statusLabels = {
+        active: '恢复为有效',
+        disabled: '冻结',
+        discarded: '废弃'
+    };
+
+    if (!confirm(`确定要将选中的 ${voteIds.length} 条投票记录${statusLabels[newStatus]}吗?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/vote-records/batch-status', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAdminToken()}`
+            },
+            body: JSON.stringify({
+                voteIds: voteIds,
+                status: newStatus,
+                reason: `管理员批量${statusLabels[newStatus]}`
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showSuccess(`已${statusLabels[newStatus]} ${result.updated || voteIds.length} 条投票记录`);
+            // 刷新模态框
+            const modal = document.getElementById('votesModal');
+            if (modal) {
+                const userId = window.currentVotesData[0]?.targetUserId;
+                const userName = modal.querySelector('h3').textContent.replace(' 的投票记录', '').replace(' ', '').replace(/^[^\u4e00-\u9fa5]*/, '');
+                if (userId) {
+                    await viewParticipantVotes(userId, userName);
+                }
+            }
+        } else {
+            showError(result.message || '批量操作失败');
+        }
+    } catch (error) {
+        console.error('Batch update vote status error:', error);
+        showError('批量操作失败');
     }
 }

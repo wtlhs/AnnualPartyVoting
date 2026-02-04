@@ -1,14 +1,59 @@
 // 投票记录管理页面 JavaScript
+console.log('[vote-records.js] 文件已加载');
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[vote-records.js] DOM已加载完成,开始初始化');
     initializeVoteRecords();
 });
 
 let currentPage = 1;
 let pageSize = 20;
 let totalRecords = 0;
+let totalPages = 0;  // 添加总页数变量
 let selectedRecords = new Set();
+
+/**
+ * 关闭所有打开的模态窗口
+ */
+function closeAllModals() {
+    console.log('[closeAllModals] 开始清理所有模态窗口...');
+
+    // 关闭投票记录详情模态窗口
+    const voteRecordModal = document.getElementById('voteRecordModal');
+    if (voteRecordModal) {
+        voteRecordModal.style.display = 'none';
+        console.log('[closeAllModals] 已关闭 voteRecordModal');
+    }
+
+    // 关闭批量确认模态窗口
+    const batchConfirmModal = document.getElementById('batchConfirmModal');
+    if (batchConfirmModal) {
+        batchConfirmModal.style.display = 'none';
+        console.log('[closeAllModals] 已关闭 batchConfirmModal');
+    }
+
+    // 关闭导出模态窗口
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) {
+        exportModal.style.display = 'none';
+        console.log('[closeAllModals] 已关闭 exportModal');
+    }
+
+    // 移除所有动态创建的确认对话框 (包括有样式类 .modal 的元素)
+    const allModals = document.querySelectorAll('.modal');
+    let removedCount = 0;
+    allModals.forEach(modal => {
+        // 只移除动态创建的(没有 id 的)模态窗口
+        if (!modal.id && modal.parentNode) {
+            modal.parentNode.removeChild(modal);
+            removedCount++;
+        }
+    });
+    console.log(`[closeAllModals] 已移除 ${removedCount} 个动态模态窗口`);
+}
 let currentFilters = {};
 let allVoteRecords = [];
+let paginationData = null;  // 保存完整的分页数据
 
 // 使用统一的认证管理器
 const auth = window.adminAuth;
@@ -195,24 +240,32 @@ const UXManager = {
                 }
                 
                 cancelBtn.addEventListener('click', () => {
-                    document.body.removeChild(modal);
+                    if (modal && modal.parentNode) {
+                        modal.parentNode.removeChild(modal);
+                    }
+                    document.removeEventListener('keydown', handleEsc);
                     resolve({ confirmed: false });
                 });
-                
+
                 confirmBtn.addEventListener('click', () => {
                     const reason = reasonInput ? reasonInput.value.trim() : '';
-                    document.body.removeChild(modal);
-                    resolve({ 
-                        confirmed: true, 
-                        reason: reason 
+                    if (modal && modal.parentNode) {
+                        modal.parentNode.removeChild(modal);
+                    }
+                    document.removeEventListener('keydown', handleEsc);
+                    resolve({
+                        confirmed: true,
+                        reason: reason
                     });
                 });
-                
+
                 // ESC键取消
                 const handleEsc = (e) => {
                     if (e.key === 'Escape') {
+                        if (modal && modal.parentNode) {
+                            modal.parentNode.removeChild(modal);
+                        }
                         document.removeEventListener('keydown', handleEsc);
-                        document.body.removeChild(modal);
                         resolve({ confirmed: false });
                     }
                 };
@@ -718,10 +771,13 @@ async function logout() {
 }
 
 async function loadVoteRecords() {
+    // 关闭所有打开的模态窗口
+    closeAllModals();
+
     const refreshBtn = document.getElementById('refreshDataBtn');
     UXManager.loading.show(refreshBtn, '刷新中...');
     UXManager.progress.show();
-    
+
     try {
         // 构建查询参数
         const params = new URLSearchParams({
@@ -748,23 +804,27 @@ async function loadVoteRecords() {
         }
         
         const result = await response.json();
-        
+
         UXManager.progress.update(90);
-        
+
         if (result.success) {
-            allVoteRecords = result.records || [];
-            totalRecords = result.total || 0;
-            
-            updateVoteRecordsDisplay(result.records || []);
-            updateStatistics(result.statistics || {});
+            // 后端返回的数据结构是 { success: true, data: { records: [], pagination: {} } }
+            const voteData = result.data || result;
+            allVoteRecords = voteData.records || [];
+            paginationData = voteData.pagination || null;  // 保存完整的分页数据
+            totalRecords = paginationData?.total || 0;
+            totalPages = paginationData?.totalPages || 0;  // 更新总页数
+
+            updateVoteRecordsDisplay(voteData.records || []);
+            updateStatistics(voteData.statistics || {});
             updatePagination();
-            updateHeaderStats(result.statistics || {});
-            
+            updateHeaderStats(voteData.statistics || {});
+
             UXManager.progress.update(100);
-            
+
             // 显示加载成功反馈
             if (currentPage === 1 && Object.keys(currentFilters).length === 0) {
-                UXManager.feedback.show('success', '数据加载完成', `成功加载 ${result.records?.length || 0} 条投票记录`);
+                UXManager.feedback.show('success', '数据加载完成', `成功加载 ${voteData.records?.length || 0} 条投票记录`);
             }
         } else {
             throw new Error(result.message || '加载投票记录失败');
@@ -1002,11 +1062,12 @@ function updateHeaderStats(stats) {
 function updatePagination() {
     const container = document.getElementById('tablePagination');
     if (!container) return;
-    
-    const totalPages = Math.ceil(totalRecords / pageSize);
-    const startRecord = (currentPage - 1) * pageSize + 1;
+
+    // 使用保存的分页数据或计算默认值
+    const actualTotalPages = totalPages || Math.ceil(totalRecords / pageSize);
+    const startRecord = totalRecords > 0 ? (currentPage - 1) * pageSize + 1 : 0;
     const endRecord = Math.min(currentPage * pageSize, totalRecords);
-    
+
     container.innerHTML = `
         <div class="pagination-info">
             显示第 ${startRecord}-${endRecord} 条，共 ${totalRecords} 条记录
@@ -1018,13 +1079,13 @@ function updatePagination() {
             <button class="pagination-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
                 <i class="fas fa-angle-left"></i>
             </button>
-            
-            ${generatePageNumbers(currentPage, totalPages)}
-            
-            <button class="pagination-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+
+            ${generatePageNumbers(currentPage, actualTotalPages)}
+
+            <button class="pagination-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === actualTotalPages ? 'disabled' : ''}>
                 <i class="fas fa-angle-right"></i>
             </button>
-            <button class="pagination-btn" onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>
+            <button class="pagination-btn" onclick="goToPage(${actualTotalPages})" ${currentPage === actualTotalPages ? 'disabled' : ''}>
                 <i class="fas fa-angle-double-right"></i>
             </button>
         </div>
@@ -1346,11 +1407,11 @@ function showVoteRecordModal(record) {
         </div>
         
         <div class="modal-actions" style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
-            ${record.status === 'active' ? 
-                `<button class="btn-warning" onclick="toggleVoteStatus('${record.id}', 'inactive'); closeVoteRecordModal();">
+            ${record.status === 'active' ?
+                `<button class="btn-warning" onclick="toggleVoteStatus('${record.id}', 'inactive')">
                     <i class="fas fa-ban"></i> 作废投票
                 </button>` :
-                `<button class="btn-success" onclick="toggleVoteStatus('${record.id}', 'active'); closeVoteRecordModal();">
+                `<button class="btn-success" onclick="toggleVoteStatus('${record.id}', 'active')">
                     <i class="fas fa-check"></i> 激活投票
                 </button>`
             }
@@ -1370,29 +1431,48 @@ function closeVoteRecordModal() {
 }
 
 async function toggleVoteStatus(recordId, newStatus) {
+    console.log(`[toggleVoteStatus] 开始执行操作 - recordId: ${recordId}, newStatus: ${newStatus}`);
+
+    // 防止重复调用
+    if (window.isTogglingStatus) {
+        console.warn('[toggleVoteStatus] 操作正在进行中,请勿重复点击');
+        return;
+    }
+
+    // 先关闭所有现有的模态窗口,避免叠加
+    console.log('[toggleVoteStatus] 先关闭所有现有的模态窗口');
+    closeAllModals();
+
     const record = allVoteRecords.find(r => r.id == recordId);
     if (!record) {
         UXManager.feedback.show('error', '记录不存在', '找不到指定的投票记录');
         return;
     }
-    
+
     const actionText = newStatus === 'active' ? '激活' : '作废';
-    
-    const result = await UXManager.confirm.show({
-        type: newStatus === 'active' ? 'info' : 'warning',
-        title: `${actionText}投票记录`,
-        message: `您即将${actionText}这条投票记录：${record.voterName} → ${record.candidateName}`,
-        details: [
-            `投票时间: ${formatDateTime(record.createdAt)}`,
-            `当前状态: ${record.status === 'active' ? '有效' : '无效'}`,
-            `投票方式: ${record.voteMethod === 'qr_code' ? '二维码' : '姓名搜索'}`
-        ],
-        requireReason: true,
-        confirmText: `确认${actionText}`
-    });
-    
-    if (result.confirmed) {
-        await executeSingleStatusChange(recordId, newStatus, result.reason);
+    console.log(`[toggleVoteStatus] 准备显示确认对话框 - ${actionText}`);
+
+    window.isTogglingStatus = true;
+
+    try {
+        const result = await UXManager.confirm.show({
+            type: newStatus === 'active' ? 'info' : 'warning',
+            title: `${actionText}投票记录`,
+            message: `您即将${actionText}这条投票记录：${record.voterName} → ${record.candidateName}`,
+            details: [
+                `投票时间: ${formatDateTime(record.createdAt)}`,
+                `当前状态: ${record.status === 'active' ? '有效' : '无效'}`,
+                `投票方式: ${record.voteMethod === 'qr_code' ? '二维码' : '姓名搜索'}`
+            ],
+            requireReason: true,
+            confirmText: `确认${actionText}`
+        });
+
+        if (result.confirmed) {
+            await executeSingleStatusChange(recordId, newStatus, result.reason);
+        }
+    } finally {
+        window.isTogglingStatus = false;
     }
 }
 
@@ -1556,7 +1636,7 @@ async function executeBatchAction(action, reason) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                recordIds: Array.from(selectedRecords),
+                voteIds: Array.from(selectedRecords),
                 status: action === 'activate' ? 'active' : 'inactive',
                 reason: reason
             })
@@ -1602,34 +1682,10 @@ async function executeBatchAction(action, reason) {
     } catch (error) {
         console.error('Batch action error:', error);
         UXManager.feedback.hide(feedbackId);
-        UXManager.feedback.show('error', '批量操作失败', 
+        UXManager.feedback.show('error', '批量操作失败',
             error.message || `批量${actionText}操作失败，请重试`);
     } finally {
         UXManager.progress.hide();
-    }
-}
-            
-            showSuccess(`✅ 批量操作完成！成功${actionText}了 ${updatedCount} 条记录`);
-            closeBatchConfirmModal();
-            clearSelection();
-            loadVoteRecords();
-            
-            // 显示详细的操作结果
-            if (result.data?.failedCount > 0) {
-                setTimeout(() => {
-                    showInfo(`⚠️ 注意：${result.data.failedCount} 条记录操作失败，可能是因为记录不存在或状态冲突`);
-                }, 1500);
-            }
-        } else {
-            showError(result.message || '批量操作失败');
-        }
-        
-    } catch (error) {
-        console.error('Execute batch action error:', error);
-        showError('❌ 批量操作失败，请重试');
-    } finally {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = originalText;
     }
 }
 
