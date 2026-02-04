@@ -1,7 +1,7 @@
 const express = require('express');
-const { 
-  getVoteStatistics, 
-  getRanking, 
+const {
+  getVoteStatistics,
+  getRanking,
   clearAllData,
   getAllUsers,
   getRecentVotes,
@@ -14,7 +14,9 @@ const {
 const VoteRecordManager = require('../database/VoteRecordManager');
 const AuditLogManager = require('../database/AuditLogManager');
 const DataExportManager = require('../database/DataExportManager');
+const GuestManager = require('../database/GuestManager');
 const { exportCleanupService } = require('../utils/exportCleanupService');
+const rosterValidationService = require('../services/RosterValidationService');
 
 // Import enhanced authentication middleware
 const { 
@@ -924,6 +926,312 @@ router.post('/export/cleanup/manual', requireAdmin, async (req, res) => {
       success: false,
       errorCode: 'MANUAL_CLEANUP_FAILED',
       message: '手动清理失败',
+      error: error.message
+    });
+  }
+});
+
+// ==================== 嘉宾管理路由 ====================
+
+// GET /api/admin/guests - 获取嘉宾列表
+router.get('/guests', requireAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, name, gender, source } = req.query;
+
+    const result = await GuestManager.getGuests({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      name,
+      gender,
+      source
+    });
+
+    res.json({
+      success: true,
+      ...result
+    });
+
+  } catch (error) {
+    console.error('Get guests error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'GET_GUESTS_FAILED',
+      message: '获取嘉宾列表失败',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/admin/guests - 添加嘉宾
+router.post('/guests', requireAdmin, async (req, res) => {
+  try {
+    const { name, gender, notes } = req.body;
+    const adminId = req.adminId;
+
+    // Validate input
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'INVALID_NAME',
+        message: '嘉宾姓名不能为空'
+      });
+    }
+
+    if (!gender || !['male', 'female'].includes(gender)) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'INVALID_GENDER',
+        message: '请选择有效的性别'
+      });
+    }
+
+    const guest = await GuestManager.addGuest({
+      name: name.trim(),
+      gender,
+      notes,
+      source: 'admin',
+      addedBy: adminId
+    });
+
+    // Log the operation
+    await AuditLogManager.log({
+      action: 'add_guest',
+      userId: adminId,
+      reason: '添加嘉宾',
+      details: { guestName: guest.name, gender: guest.gender }
+    });
+
+    res.json({
+      success: true,
+      message: '嘉宾添加成功',
+      guest
+    });
+
+  } catch (error) {
+    console.error('Add guest error:', error);
+
+    if (error.message.includes('已存在')) {
+      return res.status(409).json({
+        success: false,
+        errorCode: 'GUEST_EXISTS',
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      errorCode: 'ADD_GUEST_FAILED',
+      message: '添加嘉宾失败',
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/admin/guests/:id - 更新嘉宾
+router.put('/guests/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, gender, notes } = req.body;
+    const adminId = req.adminId;
+
+    const guest = await GuestManager.updateGuest(id, { name, gender, notes });
+
+    // Log the operation
+    await AuditLogManager.log({
+      action: 'update_guest',
+      userId: adminId,
+      reason: '更新嘉宾信息',
+      details: { guestId: id, updates: { name, gender, notes } }
+    });
+
+    res.json({
+      success: true,
+      message: '嘉宾信息更新成功',
+      guest
+    });
+
+  } catch (error) {
+    console.error('Update guest error:', error);
+
+    if (error.message === '嘉宾不存在') {
+      return res.status(404).json({
+        success: false,
+        errorCode: 'GUEST_NOT_FOUND',
+        message: '嘉宾不存在'
+      });
+    }
+
+    if (error.message.includes('已存在')) {
+      return res.status(409).json({
+        success: false,
+        errorCode: 'GUEST_EXISTS',
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      errorCode: 'UPDATE_GUEST_FAILED',
+      message: '更新嘉宾信息失败',
+      error: error.message
+    });
+  }
+});
+
+// DELETE /api/admin/guests/:id - 删除嘉宾
+router.delete('/guests/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.adminId;
+
+    await GuestManager.deleteGuest(id);
+
+    // Log the operation
+    await AuditLogManager.log({
+      action: 'delete_guest',
+      userId: adminId,
+      reason: '删除嘉宾',
+      details: { guestId: id }
+    });
+
+    res.json({
+      success: true,
+      message: '嘉宾删除成功'
+    });
+
+  } catch (error) {
+    console.error('Delete guest error:', error);
+
+    if (error.message === '嘉宾不存在') {
+      return res.status(404).json({
+        success: false,
+        errorCode: 'GUEST_NOT_FOUND',
+        message: '嘉宾不存在'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      errorCode: 'DELETE_GUEST_FAILED',
+      message: '删除嘉宾失败',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/admin/guests/bulk - 批量导入嘉宾
+router.post('/guests/bulk', requireAdmin, async (req, res) => {
+  try {
+    const { guests } = req.body;
+    const adminId = req.adminId;
+
+    if (!guests || !Array.isArray(guests)) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'INVALID_GUESTS_DATA',
+        message: '请提供有效的嘉宾数据数组'
+      });
+    }
+
+    const result = await GuestManager.bulkImportGuests(guests, adminId);
+
+    // Log the operation
+    await AuditLogManager.log({
+      action: 'bulk_import_guests',
+      userId: adminId,
+      reason: '批量导入嘉宾',
+      details: {
+        total: result.total,
+        success: result.success.length,
+        failed: result.failed.length
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `批量导入完成：成功 ${result.success.length} 条，失败 ${result.failed.length} 条`,
+      ...result
+    });
+
+  } catch (error) {
+    console.error('Bulk import guests error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'BULK_IMPORT_FAILED',
+      message: '批量导入嘉宾失败',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/admin/guests/statistics - 获取嘉宾统计信息
+router.get('/guests/statistics', requireAdmin, async (req, res) => {
+  try {
+    const stats = await GuestManager.getStatistics();
+
+    res.json({
+      success: true,
+      statistics: stats
+    });
+
+  } catch (error) {
+    console.error('Get guest statistics error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'GET_GUEST_STATS_FAILED',
+      message: '获取嘉宾统计信息失败',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/admin/roster/stats - 获取花名册统计信息（员工+嘉宾）
+router.get('/roster/stats', requireAdmin, async (req, res) => {
+  try {
+    const stats = await rosterValidationService.getStatistics();
+
+    res.json({
+      success: true,
+      statistics: stats
+    });
+
+  } catch (error) {
+    console.error('Get roster stats error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'GET_ROSTER_STATS_FAILED',
+      message: '获取花名册统计信息失败',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/admin/roster/reload - 重新加载员工名单配置
+router.post('/roster/reload', requireAdmin, async (req, res) => {
+  try {
+    const adminId = req.adminId;
+
+    await rosterValidationService.refreshCache();
+
+    // Log the operation
+    await AuditLogManager.log({
+      action: 'reload_roster',
+      userId: adminId,
+      reason: '重新加载员工名单',
+      details: { timestamp: new Date().toISOString() }
+    });
+
+    res.json({
+      success: true,
+      message: '员工名单配置已重新加载'
+    });
+
+  } catch (error) {
+    console.error('Reload roster error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'RELOAD_ROSTER_FAILED',
+      message: '重新加载员工名单失败',
       error: error.message
     });
   }

@@ -73,14 +73,24 @@ npm run generate-ssl     # Generate self-signed SSL certificates
 
 - **AuditLogManager.js** - Operation logging for admin actions with IP address, user agent tracking
 
+- **GuestManager.js** - Guest user management with CRUD operations, bulk import, and statistics
+
+**Service Layer:**
+- **RosterValidationService.js** - Employee roster validation service with 5-minute cache:
+  - Loads employee roster from `config/employee-roster.json` (111 employees)
+  - Validates name+gender combinations against employee list and guest table
+  - Returns validation results with source (employee/guest/unknown)
+  - Provides statistics and cache refresh functionality
+
 **Migration System:**
 - **migrationRunner.js** - Database migration system with version tracking and `migrations` table
-- **migrations/** - Schema migration files (001-005):
+- **migrations/** - Schema migration files (001-006):
   - 001: Extend votes table with status, user_agent, vote_method
   - 002: Create audit_logs table
   - 003: Create export_tasks table for async export jobs
   - 004: Create voting_settings table
   - 005: Update audit_logs for system operations
+  - 006: Create guests table for pre-approved guest registrations
 
 **Database Schema:**
 - `users` - id (UUID), numeric_id (6-digit, unique), name, gender, avatar_url, qr_code, timestamps
@@ -89,13 +99,14 @@ npm run generate-ssl     # Generate self-signed SSL certificates
 - `audit_logs` - id, vote_id, admin_id, operation, reason, metadata (JSON), created_at
 - `export_tasks` - id, task_type, status, filters, file_path, created_by, timestamps
 - `voting_settings` - setting_key (unique), setting_value, description, updated_at
+- `guests` - id (UUID), name, gender, source (admin/self), added_by, notes, timestamps, UNIQUE(name, gender)
 - `migrations` - id, filename, description, applied_at
 
 ### Route Layer (`src/routes/`)
 
-- **users.js** - User registration (generates UUID + 6-digit numeric ID with collision retry), QR code generation, profile management, avatar upload
+- **users.js** - User registration (generates UUID + 6-digit numeric ID with collision retry), QR code generation, profile management, avatar upload, roster validation
 - **votes.js** - Voting operations with 30-second in-memory cache for statistics/ranking. Checks voting status, self-vote restrictions, gender-based vote limits (1 male + 1 female per voter)
-- **admin.js** - Admin panel with authentication, user management, vote record management with filtering, data export (CSV/Excel), database operations
+- **admin.js** - Admin panel with authentication, user management, vote record management with filtering, data export (CSV/Excel), database operations, guest management (CRUD, bulk import, statistics)
 - **voting-settings.js** - Admin settings for voting enable/disable, time restrictions, custom messages
 - **pages.js** - Static HTML page serving
 
@@ -148,6 +159,26 @@ Static HTML pages with responsive mobile-first design:
 - **Voting Settings**: 5-minute cache in `VotingSettingsManager.js:13-15`
   - `settingsCache` Map with `cacheExpiry: 5 * 60 * 1000`
   - Cleared on: settings updates, refreshed via `refreshCache()`
+- **Employee Roster**: 5-minute cache in `RosterValidationService.js`
+  - `employeeRoster` Map with key format: `name_gender`
+  - Auto-loaded from `config/employee-roster.json` on startup (111 employees)
+  - Refreshed via `refreshCache()` or admin API endpoint
+
+### Registration with Roster Validation Flow
+
+1. User fills registration form (name + gender) → basic frontend validation
+2. User confirms gender in modal → triggers `validateRoster()` check
+3. `POST /api/users/validate-registration` validates against:
+   - Employee roster (config/employee-roster.json) - 111 employees
+   - Guest table (database guests table)
+4. If NOT found in either:
+   - Show warning modal: "姓名/性别不在公司花名册中..."
+   - User can choose: "返回修改" or "我是嘉宾，继续注册"
+5. If user proceeds as guest OR validation passes:
+   - Submit to `/api/users/register`
+   - Create user record with UUID and 6-digit numeric ID
+   - Generate QR code for voting
+   - Save to localStorage and redirect to profile
 
 ### Rate Limiting (server.js)
 
@@ -179,12 +210,14 @@ Static HTML pages with responsive mobile-first design:
 
 ```
 AnnualPartyVoting/
+├── config/                    # Configuration files (NEW)
+│   └── employee-roster.json   # Employee roster config (111 employees)
 ├── data/                      # Database directory (auto-created)
 │   └── voting.db             # SQLite database file
 ├── exports/                   # Exported data files
 ├── uploads/                   # User avatar uploads
 ├── public/                    # Static frontend files
-│   ├── index.html            # Landing page
+│   ├── index.html            # Landing page with roster validation modal
 │   ├── vote.html             # Voting page
 │   ├── admin.html            # Admin dashboard
 │   └── ...
@@ -196,12 +229,15 @@ AnnualPartyVoting/
 │   │   ├── VoteRecordManager.js
 │   │   ├── DataExportManager.js
 │   │   ├── AuditLogManager.js
+│   │   ├── GuestManager.js   # Guest CRUD operations (NEW)
 │   │   ├── migrationRunner.js
-│   │   └── migrations/       # Migration files 001-005
+│   │   └── migrations/       # Migration files 001-006
+│   ├── services/             # Service layer (NEW)
+│   │   └── RosterValidationService.js  # Employee roster validation
 │   ├── routes/
-│   │   ├── users.js
+│   │   ├── users.js          # Registration with roster validation
 │   │   ├── votes.js          # Vote API with 30s cache
-│   │   ├── admin.js
+│   │   ├── admin.js          # Admin API with guest management
 │   │   ├── voting-settings.js
 │   │   └── pages.js
 │   ├── middleware/

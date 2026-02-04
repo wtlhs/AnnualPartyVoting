@@ -577,4 +577,7 @@ class AuditLogManager {
   }
 }
 
-module.exports = AuditLogManager;
+// 导出单例
+const auditLogManager = new AuditLogManager();
+
+module.exports = auditLogManager;

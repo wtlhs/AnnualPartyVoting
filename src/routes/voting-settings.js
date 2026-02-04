@@ -6,11 +6,10 @@
 const express = require('express');
 const { requireAdmin } = require('../middleware/adminAuth');
 const VotingSettingsManager = require('../database/VotingSettingsManager');
-const AuditLogManager = require('../database/AuditLogManager');
+const auditLog = require('../database/AuditLogManager');
 
 const router = express.Router();
 const votingSettings = new VotingSettingsManager();
-const auditLog = new AuditLogManager();
 
 /**
  * 获取投票状态（公开接口）

@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const { createUser, getUserById, getUserByName, getUserByNumericId, updateUser, deleteUser, getAllUsers } = require('../database/operations');
 const { generateCompleteQRCode, validateQRData, generateQRCodeImage, getServerBaseURL } = require('../utils/qrcode');
+const rosterValidationService = require('../services/RosterValidationService');
 
 const router = express.Router();
 
@@ -750,6 +751,52 @@ router.post('/batch-update-qr', async (req, res) => {
       success: false,
       errorCode: 'BATCH_UPDATE_FAILED',
       message: 'QR码批量更新失败'
+    });
+  }
+});
+
+// Validate registration against roster
+router.post('/validate-registration', async (req, res) => {
+  try {
+    const { name, gender } = req.body;
+
+    // Validate input
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        valid: false,
+        source: 'unknown',
+        canProceedAsGuest: true,
+        message: '姓名不能为空'
+      });
+    }
+
+    if (!gender || !['male', 'female'].includes(gender)) {
+      return res.status(400).json({
+        success: false,
+        valid: false,
+        source: 'unknown',
+        canProceedAsGuest: true,
+        message: '请选择有效的性别'
+      });
+    }
+
+    // Validate against roster
+    const validationResult = await rosterValidationService.validateRegistration(name.trim(), gender);
+
+    res.json({
+      success: true,
+      ...validationResult
+    });
+
+  } catch (error) {
+    console.error('Roster validation error:', error);
+    res.status(500).json({
+      success: false,
+      valid: false,
+      source: 'unknown',
+      canProceedAsGuest: true,
+      message: '验证服务暂时不可用，您可以继续注册'
     });
   }
 });

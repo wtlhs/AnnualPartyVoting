@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="data:,">
 </head>
 <body>
     <div class="container">
@@ -151,7 +152,32 @@
         </div>
     </div>
 
+    <!-- 花名册校验警告模态框 -->
+    <div id="rosterWarningModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ 姓名验证提醒</h3>
+            </div>
+            <div class="modal-body">
+                <p>您当前输入的姓名/性别不在公司花名册中，请确认是否正确。</p>
+
+                <div style="margin-top: 15px; text-align: left; background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                    <p style="margin-bottom: 10px;"><strong style="color: #dc2626;">⚠️ 使用非真实姓名可能会导致投票无效</strong></p>
+                    <p style="color: #555; font-size: 0.95em;">请您确认输入的姓名和性别是否正确，确保使用真实身份信息参与投票活动。</p>
+                </div>
+
+                <div style="margin-top: 15px; text-align: left; background: #f0f9ff; padding: 15px; border-radius: 8px;">
+                    <p style="color: #555; font-size: 0.95em;"><strong>如您是嘉宾，请正常注册，继续参加活动。</strong></p>
+                </div>
+            </div>
+            <div class="modal-footer" style="margin-top: 20px; text-align: right;">
+                <button type="button" class="btn-secondary" onclick="closeRosterWarningModal()">返回修改</button>
+                <button type="button" class="btn-primary" onclick="proceedAsGuest()">我是嘉宾，继续注册</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/errorHandler.js" defer></script>
-    <script src="/static/js/app.js?v=2.2" defer></script>
+    <script src="/static/js/app.js?v=2.5&t=20250204085000" defer></script>
 </body>
 </html>

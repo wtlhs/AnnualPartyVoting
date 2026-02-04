@@ -334,6 +334,9 @@ async function loadCurrentSectionData() {
             case 'participants':
                 await loadParticipants();
                 break;
+            case 'guests':
+                await loadGuests();
+                break;
             case 'voting':
                 await loadVotingStats();
                 break;
@@ -580,6 +583,123 @@ async function loadParticipants() {
     
     await loadParticipantsData();
     setupParticipantsManagement();
+}
+
+async function loadGuests() {
+    const adminContent = document.getElementById('adminContent');
+    adminContent.innerHTML = `
+        <div class="participants-management">
+            <div class="management-header">
+                <div class="header-left">
+                    <h3 class="section-title"><i class="fas fa-user-tie"></i> 嘉宾管理</h3>
+                    <p class="section-subtitle">管理嘉宾信息，支持添加、编辑和删除操作</p>
+                </div>
+                <div class="header-actions">
+                    <button id="addGuestBtn" class="btn-primary">
+                        <i class="fas fa-plus"></i>
+                        添加嘉宾
+                    </button>
+                    <button id="bulkImportGuestsBtn" class="btn-secondary">
+                        <i class="fas fa-file-import"></i>
+                        批量导入
+                    </button>
+                    <button id="refreshGuestsBtn" class="btn-secondary">
+                        <i class="fas fa-sync-alt"></i>
+                        刷新数据
+                    </button>
+                </div>
+            </div>
+
+            <div class="management-filters">
+                <div class="filter-group">
+                    <label for="guestSearchInput">搜索嘉宾：</label>
+                    <input type="text" id="guestSearchInput" class="search-input" placeholder="输入姓名搜索...">
+                </div>
+                <div class="filter-group">
+                    <label for="guestGenderFilter">性别筛选：</label>
+                    <select id="guestGenderFilter" class="filter-select">
+                        <option value="">所有性别</option>
+                        <option value="male">男士</option>
+                        <option value="female">女士</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="guestSourceFilter">来源筛选：</label>
+                    <select id="guestSourceFilter" class="filter-select">
+                        <option value="">所有来源</option>
+                        <option value="admin">管理员添加</option>
+                        <option value="self">自助注册</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="participants-stats">
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>总嘉宾数</h4>
+                        <span id="totalGuestsCount">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-mars"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>男性嘉宾</h4>
+                        <span id="maleGuestsCount">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon pink">
+                        <i class="fas fa-venus"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>女性嘉宾</h4>
+                        <span id="femaleGuestsCount">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4>自助注册</h4>
+                        <span id="selfRegisteredCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="participants-table-container">
+                <table class="participants-table">
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>性别</th>
+                            <th>来源</th>
+                            <th>添加人</th>
+                            <th>添加时间</th>
+                            <th>备注</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="guestsTableBody">
+                        <tr>
+                            <td colspan="7" class="loading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                加载中...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    await loadGuestsData();
+    setupGuestsManagement();
 }
 
 async function loadVotingStats() {
@@ -892,6 +1012,56 @@ async function loadParticipantsData() {
     }
 }
 
+async function loadGuestsData() {
+    try {
+        const response = await fetch('/api/admin/guests', {
+            headers: {
+                'Authorization': `Bearer ${getAdminToken()}`
+            }
+        });
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                showLoginForm();
+                return;
+            }
+            throw new Error('Failed to load guests data');
+        }
+
+        const result = await response.json();
+        if (result.success) {
+            allGuests = result.guests || [];
+            updateGuestsTable(allGuests);
+            updateGuestsStats(allGuests);
+        }
+
+    } catch (error) {
+        console.error('Load guests data error:', error);
+        showError('加载嘉宾数据失败');
+    }
+}
+
+function updateGuestsStats(guests) {
+    const totalCount = guests.length;
+    const maleCount = guests.filter(g => g.gender === 'male').length;
+    const femaleCount = guests.filter(g => g.gender === 'female').length;
+    const selfRegisteredCount = guests.filter(g => g.source === 'self').length;
+
+    const elements = {
+        totalGuestsCount: totalCount,
+        maleGuestsCount: maleCount,
+        femaleGuestsCount: femaleCount,
+        selfRegisteredCount: selfRegisteredCount
+    };
+
+    Object.entries(elements).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    });
+}
+
 function updateParticipantsStats(participants) {
     const totalCount = participants.length;
     const maleCount = participants.filter(p => p.gender === 'male').length;
@@ -1167,6 +1337,99 @@ function setupParticipantsManagement() {
     
     if (refreshBtn) {
         refreshBtn.addEventListener('click', loadParticipantsData);
+    }
+}
+
+function updateGuestsTable(guests) {
+    const tbody = document.getElementById('guestsTableBody');
+
+    if (!tbody) return;
+
+    if (guests.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <i class="fas fa-user-tie"></i>
+                    <p>暂无嘉宾数据</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = guests.map(guest => `
+        <tr data-guest-id="${guest.id}">
+            <td>
+                <div class="participant-name">
+                    <strong>${guest.name}</strong>
+                </div>
+            </td>
+            <td>
+                <span class="gender-badge ${guest.gender}">
+                    <i class="fas fa-${guest.gender === 'male' ? 'mars' : 'venus'}"></i>
+                    ${guest.gender === 'male' ? '男士' : '女士'}
+                </span>
+            </td>
+            <td>
+                <span class="source-badge ${guest.source}">
+                    ${guest.source === 'admin' ? '管理员添加' : '自助注册'}
+                </span>
+            </td>
+            <td>
+                <small>${guest.addedBy || 'N/A'}</small>
+            </td>
+            <td>
+                <div class="created-time">
+                    ${new Date(guest.createdAt).toLocaleString('zh-CN')}
+                </div>
+            </td>
+            <td>
+                <small>${guest.notes || '-'}</small>
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-edit" onclick="editGuest('${guest.id}')" title="编辑">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-delete" onclick="deleteGuest('${guest.id}', '${guest.name}')" title="删除">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function setupGuestsManagement() {
+    const searchInput = document.getElementById('guestSearchInput');
+    const genderFilter = document.getElementById('guestGenderFilter');
+    const sourceFilter = document.getElementById('guestSourceFilter');
+    const addBtn = document.getElementById('addGuestBtn');
+    const bulkImportBtn = document.getElementById('bulkImportGuestsBtn');
+    const refreshBtn = document.getElementById('refreshGuestsBtn');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', filterGuests);
+    }
+
+    if (genderFilter) {
+        genderFilter.addEventListener('change', filterGuests);
+    }
+
+    if (sourceFilter) {
+        sourceFilter.addEventListener('change', filterGuests);
+    }
+
+    if (addBtn) {
+        addBtn.addEventListener('click', showAddGuestModal);
+    }
+
+    if (bulkImportBtn) {
+        bulkImportBtn.addEventListener('click', showBulkImportGuestsModal);
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadGuestsData);
     }
 }
 
@@ -1534,6 +1797,20 @@ function showMessage(message, type) {
     // 使用认证管理器的消息显示功能
     auth.showMessage(message, type);
 }
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 点击弹窗背景关闭弹窗
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.remove();
+    }
+});
 
 // ==================== 数据管理功能 ====================
 
@@ -2936,5 +3213,309 @@ async function batchUpdateVoteStatus(newStatus) {
     } catch (error) {
         console.error('Batch update vote status error:', error);
         showError('批量操作失败');
+    }
+}
+
+// ==================== Guest Management Functions ====================
+
+let allGuests = [];
+
+function filterGuests() {
+    const searchTerm = document.getElementById('guestSearchInput').value.toLowerCase();
+    const genderFilter = document.getElementById('guestGenderFilter').value;
+    const sourceFilter = document.getElementById('guestSourceFilter').value;
+
+    const filtered = allGuests.filter(guest => {
+        const matchesSearch = guest.name.toLowerCase().includes(searchTerm);
+        const matchesGender = !genderFilter || guest.gender === genderFilter;
+        const matchesSource = !sourceFilter || guest.source === sourceFilter;
+        return matchesSearch && matchesGender && matchesSource;
+    });
+
+    updateGuestsTable(filtered);
+}
+
+async function showAddGuestModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'addGuestModal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-plus"></i> 添加嘉宾</h3>
+                <button class="close-btn" onclick="closeModal('addGuestModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addGuestForm">
+                    <div class="form-group">
+                        <label for="guestName">姓名 *</label>
+                        <input type="text" id="guestName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="guestGender">性别 *</label>
+                        <select id="guestGender" class="form-control" required>
+                            <option value="">请选择</option>
+                            <option value="male">男士</option>
+                            <option value="female">女士</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="guestNotes">备注</label>
+                        <textarea id="guestNotes" class="form-control" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('addGuestModal')">取消</button>
+                <button type="submit" form="addGuestForm" class="btn-primary">添加</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('addGuestForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await addGuest();
+    });
+}
+
+async function addGuest() {
+    const name = document.getElementById('guestName').value.trim();
+    const gender = document.getElementById('guestGender').value;
+    const notes = document.getElementById('guestNotes').value.trim();
+
+    if (!name || !gender) {
+        showError('请填写姓名和性别');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/guests', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAdminToken()}`
+            },
+            body: JSON.stringify({ name, gender, notes })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showSuccess('嘉宾添加成功');
+            closeModal('addGuestModal');
+            await loadGuestsData();
+        } else {
+            showError(result.message || '添加失败');
+        }
+    } catch (error) {
+        console.error('Add guest error:', error);
+        showError('添加嘉宾失败');
+    }
+}
+
+async function editGuest(guestId) {
+    try {
+        const response = await fetch('/api/admin/guests', {
+            headers: {
+                'Authorization': `Bearer ${getAdminToken()}`
+            }
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            showError('获取嘉宾信息失败');
+            return;
+        }
+
+        const guest = result.guests.find(g => g.id === guestId);
+        if (!guest) {
+            showError('嘉宾不存在');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = 'editGuestModal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-edit"></i> 编辑嘉宾</h3>
+                    <button class="close-btn" onclick="closeModal('editGuestModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="editGuestForm">
+                        <input type="hidden" id="editGuestId" value="${guest.id}">
+                        <div class="form-group">
+                            <label for="editGuestName">姓名 *</label>
+                            <input type="text" id="editGuestName" class="form-control" value="${guest.name}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editGuestGender">性别 *</label>
+                            <select id="editGuestGender" class="form-control" required>
+                                <option value="male" ${guest.gender === 'male' ? 'selected' : ''}>男士</option>
+                                <option value="female" ${guest.gender === 'female' ? 'selected' : ''}>女士</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editGuestNotes">备注</label>
+                            <textarea id="editGuestNotes" class="form-control" rows="3">${guest.notes || ''}</textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeModal('editGuestModal')">取消</button>
+                    <button type="submit" form="editGuestForm" class="btn-primary">保存</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        document.getElementById('editGuestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await updateGuest();
+        });
+    } catch (error) {
+        console.error('Edit guest error:', error);
+        showError('编辑嘉宾失败');
+    }
+}
+
+async function updateGuest() {
+    const id = document.getElementById('editGuestId').value;
+    const name = document.getElementById('editGuestName').value.trim();
+    const gender = document.getElementById('editGuestGender').value;
+    const notes = document.getElementById('editGuestNotes').value.trim();
+
+    if (!name || !gender) {
+        showError('请填写姓名和性别');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/guests/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAdminToken()}`
+            },
+            body: JSON.stringify({ name, gender, notes })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showSuccess('嘉宾更新成功');
+            closeModal('editGuestModal');
+            await loadGuestsData();
+        } else {
+            showError(result.message || '更新失败');
+        }
+    } catch (error) {
+        console.error('Update guest error:', error);
+        showError('更新嘉宾失败');
+    }
+}
+
+async function deleteGuest(guestId, guestName) {
+    if (!confirm(`确定要删除嘉宾 "${guestName}" 吗?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/guests/${guestId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${getAdminToken()}`
+            }
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showSuccess('嘉宾删除成功');
+            await loadGuestsData();
+        } else {
+            showError(result.message || '删除失败');
+        }
+    } catch (error) {
+        console.error('Delete guest error:', error);
+        showError('删除嘉宾失败');
+    }
+}
+
+async function showBulkImportGuestsModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'bulkImportGuestsModal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-import"></i> 批量导入嘉宾</h3>
+                <button class="close-btn" onclick="closeModal('bulkImportGuestsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>嘉宾数据 (JSON格式)</label>
+                    <textarea id="bulkGuestsData" class="form-control" rows="10" placeholder='[{"name": "张三", "gender": "male", "notes": "备注"}, {"name": "李四", "gender": "female"}]'></textarea>
+                    <small class="text-muted">格式: [{"name": "姓名", "gender": "male/female", "notes": "备注"}]</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('bulkImportGuestsModal')">取消</button>
+                <button type="button" class="btn-primary" onclick="bulkImportGuests()">导入</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+}
+
+async function bulkImportGuests() {
+    const dataText = document.getElementById('bulkGuestsData').value.trim();
+
+    if (!dataText) {
+        showError('请输入嘉宾数据');
+        return;
+    }
+
+    let guests;
+    try {
+        guests = JSON.parse(dataText);
+        if (!Array.isArray(guests)) {
+            throw new Error('数据必须是数组格式');
+        }
+    } catch (error) {
+        showError('JSON格式错误: ' + error.message);
+        return;
+    }
+
+    // 验证数据格式
+    const invalid = guests.find(g => !g.name || !g.gender);
+    if (invalid) {
+        showError('每条记录必须包含 name 和 gender 字段');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/guests/bulk', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAdminToken()}`
+            },
+            body: JSON.stringify({ guests })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showSuccess(`成功导入 ${result.imported} 位嘉宾${result.failed ? `,失败 ${result.failed} 条` : ''}`);
+            closeModal('bulkImportGuestsModal');
+            await loadGuestsData();
+        } else {
+            showError(result.message || '导入失败');
+        }
+    } catch (error) {
+        console.error('Bulk import guests error:', error);
+        showError('批量导入失败');
     }
 }

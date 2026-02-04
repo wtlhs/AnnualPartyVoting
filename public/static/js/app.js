@@ -648,23 +648,32 @@ function closeGenderModal() {
 
 async function confirmGender() {
     if (!currentRegistrationData) return;
-    
+
     // 关闭模态框
     const modal = document.getElementById('genderConfirmationModal');
     modal.classList.remove('active');
-    
+
     // 确保按钮处于加载状态
     if (currentSubmitBtn) {
         currentSubmitBtn.disabled = true;
         currentSubmitBtn.textContent = '注册中...';
     }
-    
+
     try {
         const { name, gender } = currentRegistrationData;
-        
+
+        // 新增：花名册校验
+        const validationResult = await validateRoster(name, gender);
+        if (!validationResult.valid) {
+            // 显示花名册警告模态框
+            showRosterWarningModal(validationResult.message);
+            // 不要清空数据，让用户可以选择继续注册
+            return; // 等待用户选择
+        }
+
         // Get current base URL from browser
         const currentBaseURL = `${window.location.protocol}//${window.location.host}`;
-        
+
         const response = await fetch('/api/users/register', {
             method: 'POST',
             headers: {
@@ -685,10 +694,19 @@ async function confirmGender() {
             localStorage.setItem(STORAGE_KEYS.USER_NAME, result.name);
             localStorage.setItem(STORAGE_KEYS.USER_GENDER, result.gender);
             localStorage.setItem(STORAGE_KEYS.REGISTRATION_TIME, new Date().toISOString());
-            
+
             // 保存数字ID
             if (result.numericId) {
                 localStorage.setItem(STORAGE_KEYS.NUMERIC_ID, result.numericId);
+            }
+
+            // 清空注册数据
+            currentRegistrationData = null;
+            if (currentSubmitBtn) {
+                currentSubmitBtn.disabled = false;
+                currentSubmitBtn.textContent = currentSubmitBtnText || '注册参与';
+                currentSubmitBtn = null;
+                currentSubmitBtnText = '';
             }
             
             // 新增：检查是否有待处理的返回URL
@@ -713,10 +731,10 @@ async function confirmGender() {
             
             // 默认行为：跳转到个人页面
             showMessage(`注册成功！您的数字ID是：${result.numericId}。正在跳转到个人页面...`, 'success');
-            
+
             // 显示投票按钮
             showVotingActions();
-            
+
             setTimeout(() => {
                 window.location.href = `/profile/${result.userId}`;
             }, 2000);
@@ -727,6 +745,15 @@ async function confirmGender() {
             } else {
                 showMessage(result.message || '注册失败，请重试', 'error');
             }
+
+            // 清空注册数据
+            currentRegistrationData = null;
+            if (currentSubmitBtn) {
+                currentSubmitBtn.disabled = false;
+                currentSubmitBtn.textContent = currentSubmitBtnText || '注册参与';
+                currentSubmitBtn = null;
+                currentSubmitBtnText = '';
+            }
         }
     } catch (error) {
         console.error('Registration error:', error);
@@ -735,16 +762,16 @@ async function confirmGender() {
             retryAction: () => confirmGender(),
             registrationData: currentRegistrationData
         });
-    } finally {
-        // 恢复提交按钮
+        // 发生错误时也要清空数据
+        currentRegistrationData = null;
         if (currentSubmitBtn) {
             currentSubmitBtn.disabled = false;
             currentSubmitBtn.textContent = currentSubmitBtnText || '注册参与';
             currentSubmitBtn = null;
             currentSubmitBtnText = '';
         }
-        currentRegistrationData = null;
     }
+    // 注意：校验失败时不执行 finally，保留 currentRegistrationData 供 proceedAsGuest 使用
 }
 
 // 姓名冲突处理函数
@@ -776,7 +803,7 @@ function closeNameConflictModal() {
     if (modal) {
         modal.classList.remove('active');
     }
-    
+
     // 聚焦到姓名输入框并选中内容，方便用户修改
     const nameInput = document.getElementById('name');
     if (nameInput) {
@@ -784,5 +811,183 @@ function closeNameConflictModal() {
             nameInput.focus();
             nameInput.select();
         }, 100);
+    }
+}
+
+// ==================== 花名册校验相关函数 ====================
+
+/**
+ * 校验姓名和性别是否在花名册中
+ * @param {string} name - 姓名
+ * @param {string} gender - 性别
+ * @returns {Promise<Object>} 校验结果
+ */
+async function validateRoster(name, gender) {
+    try {
+        const response = await fetch('/api/users/validate-registration', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, gender })
+        });
+
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error('Roster validation error:', error);
+        // 出错时默认允许注册
+        return { valid: true, canProceedAsGuest: false };
+    }
+}
+
+/**
+ * 显示花名册警告模态框
+ * @param {string} message - 警告消息
+ */
+function showRosterWarningModal(message) {
+    console.log('showRosterWarningModal called, currentRegistrationData:', currentRegistrationData);
+    const modal = document.getElementById('rosterWarningModal');
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
+/**
+ * 关闭花名册警告模态框，返回修改
+ */
+function closeRosterWarningModal() {
+    const modal = document.getElementById('rosterWarningModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+
+    // 恢复提交按钮状态
+    if (currentSubmitBtn) {
+        currentSubmitBtn.disabled = false;
+        currentSubmitBtn.textContent = currentSubmitBtnText || '注册参与';
+    }
+
+    // 聚焦到姓名输入框
+    const nameInput = document.getElementById('name');
+    if (nameInput) {
+        setTimeout(() => {
+            nameInput.focus();
+            nameInput.select();
+        }, 100);
+    }
+}
+
+/**
+ * 用户确认以嘉宾身份继续注册
+ */
+async function proceedAsGuest() {
+    console.log('proceedAsGuest called, currentRegistrationData:', currentRegistrationData);
+
+    // 检查数据是否存在
+    if (!currentRegistrationData) {
+        console.error('No registration data available');
+        showMessage('注册数据丢失，请重新填写', 'error');
+
+        // 恢复提交按钮状态
+        if (currentSubmitBtn) {
+            currentSubmitBtn.disabled = false;
+            currentSubmitBtn.textContent = currentSubmitBtnText || '注册参与';
+        }
+        return;
+    }
+
+    // 关闭警告模态框
+    const modal = document.getElementById('rosterWarningModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+
+    // 继续执行注册流程（跳过校验）
+    try {
+        const { name, gender } = currentRegistrationData;
+
+        // Get current base URL from browser
+        const currentBaseURL = `${window.location.protocol}//${window.location.host}`;
+
+        const response = await fetch('/api/users/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name,
+                gender,
+                baseURL: currentBaseURL
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // 保存注册信息到本地缓存
+            localStorage.setItem(STORAGE_KEYS.USER_ID, result.userId);
+            localStorage.setItem(STORAGE_KEYS.USER_NAME, result.name);
+            localStorage.setItem(STORAGE_KEYS.USER_GENDER, result.gender);
+            localStorage.setItem(STORAGE_KEYS.REGISTRATION_TIME, new Date().toISOString());
+
+            // 保存数字ID
+            if (result.numericId) {
+                localStorage.setItem(STORAGE_KEYS.NUMERIC_ID, result.numericId);
+            }
+
+            // 新增：检查是否有待处理的返回URL
+            const pendingReturnUrl = localStorage.getItem(STORAGE_KEYS.PENDING_RETURN_URL);
+            const voteIntentTimestamp = localStorage.getItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP);
+
+            if (pendingReturnUrl && isVoteIntentValid(voteIntentTimestamp)) {
+                // 清除待处理的返回URL
+                localStorage.removeItem(STORAGE_KEYS.PENDING_RETURN_URL);
+                localStorage.removeItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP);
+
+                showMessage(`注册成功！您的数字ID是：${result.numericId}。正在返回投票页面...`, 'success');
+
+                // 显示投票按钮
+                showVotingActions();
+
+                setTimeout(() => {
+                    window.location.href = pendingReturnUrl;
+                }, 1500);
+                return;
+            }
+
+            // 默认行为：跳转到个人页面
+            showMessage(`注册成功！您的数字ID是：${result.numericId}。正在跳转到个人页面...`, 'success');
+
+            // 显示投票按钮
+            showVotingActions();
+
+            setTimeout(() => {
+                window.location.href = `/profile/${result.userId}`;
+            }, 2000);
+        } else {
+            // 处理特定错误
+            if (result.errorCode === 'NAME_ALREADY_EXISTS') {
+                showNameConflictDialog(currentRegistrationData.name, currentRegistrationData.gender);
+            } else {
+                showMessage(result.message || '注册失败，请重试', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Guest registration error:', error);
+        ErrorHandler.handleNetworkError(error, {
+            context: 'Guest registration',
+            retryAction: () => proceedAsGuest(),
+            registrationData: currentRegistrationData
+        });
+    } finally {
+        // 恢复提交按钮
+        if (currentSubmitBtn) {
+            currentSubmitBtn.disabled = false;
+            currentSubmitBtn.textContent = currentSubmitBtnText || '注册参与';
+            currentSubmitBtn = null;
+            currentSubmitBtnText = '';
+        }
+        currentRegistrationData = null;
     }
 }
