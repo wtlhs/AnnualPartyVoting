@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统一投票页面测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .clear-button {
+            background: #dc3545;
+        }
+        .clear-button:hover {
+            background: #c82333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.registered {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.unregistered {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .expected-result {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .expected-result h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗳️ 统一投票页面测试</h1>
+    
+    <div class="test-section">
+        <h2>当前注册状态</h2>
+        <div id="registrationStatus" class="status">检查中...</div>
+        <button class="test-button clear-button" onclick="clearRegistration()">清除注册信息</button>
+        <button class="test-button" onclick="checkStatus()">刷新状态</button>
+        <a href="/" class="test-button">前往注册</a>
+    </div>
+
+    <div class="test-section">
+        <h2>投票入口测试</h2>
+        <p>测试所有投票入口是否都统一使用带注册验证的新投票页面：</p>
+        
+        <h3>1. 旧版投票链接 (应该重定向)</h3>
+        <p>这些链接应该自动重定向到新的投票页面格式：</p>
+        <a href="/vote/user_test_1" class="test-button" target="_blank">旧格式链接1</a>
+        <a href="/vote/user_test_2" class="test-button" target="_blank">旧格式链接2</a>
+        
+        <div class="expected-result">
+            <h4>预期结果：</h4>
+            <ul>
+                <li>URL自动重定向到 <code>/vote?candidate_id=xxx&source=legacy_redirect</code></li>
+                <li>未注册用户看到"需要登录"提示</li>
+                <li>已注册用户看到投票确认页面</li>
+            </ul>
+        </div>
+        
+        <h3>2. 新版投票链接</h3>
+        <p>直接使用新格式的投票链接：</p>
+        <a href="/vote?candidate_id=user_test_1&candidate_name=测试用户1&source=qrcode" class="test-button" target="_blank">新格式链接1</a>
+        <a href="/vote?candidate_id=user_test_2&candidate_name=测试用户2&source=qrcode" class="test-button" target="_blank">新格式链接2</a>
+        
+        <div class="expected-result">
+            <h4>预期结果：</h4>
+            <ul>
+                <li>直接显示新的投票页面</li>
+                <li>未注册用户看到"需要登录"提示</li>
+                <li>已注册用户看到投票确认页面</li>
+            </ul>
+        </div>
+        
+        <h3>3. 缺少候选人姓名的链接</h3>
+        <p>只有candidate_id没有candidate_name的情况：</p>
+        <a href="/vote?candidate_id=user_test_1&source=legacy_redirect" class="test-button" target="_blank">只有ID的链接</a>
+        
+        <div class="expected-result">
+            <h4>预期结果：</h4>
+            <ul>
+                <li>系统自动从API获取候选人姓名</li>
+                <li>如果用户不存在，显示错误信息</li>
+                <li>如果用户存在，正常显示投票页面</li>
+            </ul>
+        </div>
+        
+        <h3>4. 用户列表页面跳转</h3>
+        <p>从用户列表页面点击头像的跳转：</p>
+        <a href="/user-list" class="test-button" target="_blank">打开用户列表</a>
+        
+        <div class="expected-result">
+            <h4>预期结果：</h4>
+            <ul>
+                <li>点击任何用户头像都会跳转到 <code>/vote/userId</code></li>
+                <li>然后自动重定向到新的投票页面格式</li>
+                <li>未注册用户看到"需要登录"提示</li>
+            </ul>
+        </div>
+        
+        <h3>5. 扫码页面跳转</h3>
+        <p>从扫码页面扫描后的跳转：</p>
+        <a href="/scan" class="test-button" target="_blank">打开扫码页面</a>
+        
+        <div class="expected-result">
+            <h4>预期结果：</h4>
+            <ul>
+                <li>扫码成功后跳转到 <code>/vote/userId</code></li>
+                <li>然后自动重定向到新的投票页面格式</li>
+                <li>未注册用户看到"需要登录"提示</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>注册验证测试</h2>
+        <p>测试注册验证逻辑是否正常工作：</p>
+        
+        <h3>未注册状态测试</h3>
+        <ol>
+            <li>确保当前未注册（点击"清除注册信息"）</li>
+            <li>点击任何投票链接</li>
+            <li>应该看到"需要登录"提示</li>
+            <li>点击"登录"按钮应该跳转到首页并显示投票注册提示</li>
+        </ol>
+        
+        <h3>已注册状态测试</h3>
+        <ol>
+            <li>前往首页注册一个测试用户</li>
+            <li>返回此页面点击投票链接</li>
+            <li>应该直接看到投票确认页面</li>
+            <li>可以正常进行投票操作</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>测试结果验证</h2>
+        <p>所有投票入口应该满足以下条件：</p>
+        <ul>
+            <li>✅ 统一使用新的投票页面组件</li>
+            <li>✅ 包含注册验证逻辑</li>
+            <li>✅ 未注册用户无法直接投票</li>
+            <li>✅ 已注册用户可以正常投票</li>
+            <li>✅ 旧链接自动重定向到新格式</li>
+            <li>✅ 自动获取缺失的候选人信息</li>
+            <li>✅ 保持投票流程的连续性</li>
+        </ul>
+    </div>
+
+    <script>
+        function checkStatus() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            const userName = localStorage.getItem('annual_party_user_name');
+            const registrationTime = localStorage.getItem('annual_party_registration_time');
+            
+            const statusDiv = document.getElementById('registrationStatus');
+            
+            if (userId && userName && registrationTime) {
+                const regTime = new Date(registrationTime);
+                const now = new Date();
+                const hoursDiff = (now - regTime) / (1000 * 60 * 60);
+                
+                if (hoursDiff < 24) {
+                    statusDiv.className = 'status registered';
+                    statusDiv.innerHTML = `
+                        <strong>✅ 已注册</strong><br>
+                        用户ID: ${userId}<br>
+                        用户名: ${userName}<br>
+                        注册时间: ${regTime.toLocaleString('zh-CN')}<br>
+                        有效期: ${Math.round(24 - hoursDiff)} 小时后过期
+                    `;
+                } else {
+                    statusDiv.className = 'status unregistered';
+                    statusDiv.innerHTML = `
+                        <strong>❌ 注册已过期</strong><br>
+                        注册时间: ${regTime.toLocaleString('zh-CN')}<br>
+                        过期时间: ${Math.round(hoursDiff - 24)} 小时前
+                    `;
+                }
+            } else {
+                statusDiv.className = 'status unregistered';
+                statusDiv.innerHTML = '<strong>❌ 未注册</strong><br>没有找到有效的注册信息';
+            }
+        }
+        
+        function clearRegistration() {
+            const keys = [
+                'annual_party_user_id',
+                'annual_party_user_name',
+                'annual_party_user_gender',
+                'annual_party_numeric_id',
+                'annual_party_registration_time',
+                'pending_return_url',
+                'vote_intent_timestamp'
+            ];
+            
+            keys.forEach(key => {
+                localStorage.removeItem(key);
+            });
+            
+            alert('注册信息已清除');
+            checkStatus();
+        }
+        
+        // 页面加载时检查状态
+        document.addEventListener('DOMContentLoaded', checkStatus);
+        
+        // 每30秒自动刷新状态
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+</html>

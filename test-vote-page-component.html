@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票页面组件测试</title>
+    <link rel="stylesheet" href="src/components/vote-page.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        .test-controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .test-controls h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .test-controls button {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .test-controls button:hover {
+            background: #f5f5f5;
+        }
+        
+        .test-controls .status {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .test-controls .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .test-controls .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .test-controls .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        @media (max-width: 768px) {
+            .test-controls {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Test Controls -->
+    <div class="test-controls">
+        <h3>测试控制面板</h3>
+        <button onclick="testValidURL()">测试有效URL</button>
+        <button onclick="testInvalidURL()">测试无效URL</button>
+        <button onclick="testExpiredURL()">测试过期URL</button>
+        <button onclick="testQRCodeURL()">测试二维码URL</button>
+        <button onclick="testAuthRequired()">测试需要认证</button>
+        <button onclick="testLoggedInUser()">设置登录用户</button>
+        <button onclick="testSelfVote()">测试自投票</button>
+        <button onclick="clearStorage()">清除存储</button>
+        <div id="testStatus" class="status info">准备就绪</div>
+    </div>
+
+    <!-- Vote Page Container -->
+    <div class="vote-page-container">
+        <div class="vote-page-card">
+            <div class="vote-page-header">
+                <h1>投票页面</h1>
+                <div class="subtitle">Annual Party Voting</div>
+            </div>
+            <div class="vote-page-content" id="votePageContent">
+                <!-- Component will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="src/components/vote-page-component.js"></script>
+    <script>
+        let votePageComponent = null;
+        
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('testStatus');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function initComponent(url) {
+            if (votePageComponent) {
+                votePageComponent.destroy();
+            }
+            
+            const container = document.getElementById('votePageContent');
+            votePageComponent = createVotePageComponent();
+            votePageComponent.init(url, container);
+        }
+        
+        function testValidURL() {
+            const url = 'https://domain.com/vote?candidate_id=123&candidate_name=张三&category=最佳员工&source=qrcode&timestamp=' + Math.floor(Date.now() / 1000);
+            initComponent(url);
+            updateStatus('测试有效URL', 'success');
+        }
+        
+        function testInvalidURL() {
+            const url = 'https://domain.com/vote?candidate_id=&candidate_name=&source=invalid';
+            initComponent(url);
+            updateStatus('测试无效URL', 'error');
+        }
+        
+        function testExpiredURL() {
+            const expiredTimestamp = Math.floor((Date.now() - 25 * 60 * 60 * 1000) / 1000); // 25 hours ago
+            const url = `https://domain.com/vote?candidate_id=123&candidate_name=张三&source=qrcode&timestamp=${expiredTimestamp}`;
+            initComponent(url);
+            updateStatus('测试过期URL', 'error');
+        }
+        
+        function testQRCodeURL() {
+            const url = 'https://domain.com/vote?candidate_id=456&candidate_name=李四&category=最受欢迎奖&source=qrcode&timestamp=' + Math.floor(Date.now() / 1000);
+            initComponent(url);
+            updateStatus('测试二维码URL', 'success');
+        }
+        
+        function testAuthRequired() {
+            // Clear user data to simulate not logged in
+            localStorage.removeItem('annual_party_user_id');
+            localStorage.removeItem('annual_party_user_name');
+            
+            const url = 'https://domain.com/vote?candidate_id=789&candidate_name=王五&source=direct';
+            initComponent(url);
+            updateStatus('测试需要认证', 'info');
+        }
+        
+        function testLoggedInUser() {
+            // Set user data to simulate logged in
+            localStorage.setItem('annual_party_user_id', 'user_' + Date.now());
+            localStorage.setItem('annual_party_user_name', '测试用户');
+            
+            const url = 'https://domain.com/vote?candidate_id=999&candidate_name=赵六&category=创新奖&source=direct';
+            initComponent(url);
+            updateStatus('设置登录用户并测试', 'success');
+        }
+        
+        function testSelfVote() {
+            // Set user data where user tries to vote for themselves
+            const userId = 'self_vote_test';
+            localStorage.setItem('annual_party_user_id', userId);
+            localStorage.setItem('annual_party_user_name', '自投票测试用户');
+            
+            const url = `https://domain.com/vote?candidate_id=${userId}&candidate_name=自投票测试用户&source=direct`;
+            initComponent(url);
+            updateStatus('测试自投票限制', 'error');
+        }
+        
+        function clearStorage() {
+            localStorage.clear();
+            updateStatus('存储已清除', 'info');
+        }
+        
+        // Initialize with a default valid URL
+        document.addEventListener('DOMContentLoaded', function() {
+            testValidURL();
+        });
+        
+        // Handle URL changes for testing
+        function handleURLChange() {
+            const url = window.location.href;
+            if (url.includes('candidate_id')) {
+                initComponent(url);
+                updateStatus('从URL加载参数', 'info');
+            }
+        }
+        
+        // Listen for URL changes
+        window.addEventListener('popstate', handleURLChange);
+        
+        // Test URL parsing utility
+        function testURLParsing() {
+            const testURLs = [
+                'https://domain.com/vote?candidate_id=123&candidate_name=张三&source=qrcode',
+                '?candidate_id=456&candidate_name=李四&category=最佳员工&source=direct',
+                'candidate_id=789&candidate_name=王五&source=qrcode&timestamp=1640995200',
+                'invalid-url',
+                ''
+            ];
+            
+            console.log('URL解析测试结果:');
+            testURLs.forEach(url => {
+                const result = VotePageUtils.parseURL(url);
+                console.log(`URL: ${url}`);
+                console.log('解析结果:', result);
+                console.log('---');
+            });
+        }
+        
+        // Test parameter validation
+        function testParameterValidation() {
+            const testParams = [
+                {
+                    candidateId: '123',
+                    candidateName: '张三',
+                    source: 'qrcode'
+                },
+                {
+                    candidateId: '',
+                    candidateName: '李四',
+                    source: 'direct'
+                },
+                {
+                    candidateId: 'invalid@id',
+                    candidateName: '王五',
+                    source: 'qrcode'
+                },
+                {
+                    candidateId: '123',
+                    candidateName: 'a'.repeat(51), // Too long
+                    source: 'direct'
+                }
+            ];
+            
+            console.log('参数验证测试结果:');
+            testParams.forEach((params, index) => {
+                const result = VotePageUtils.validateParams(params);
+                console.log(`测试 ${index + 1}:`, params);
+                console.log('验证结果:', result);
+                console.log('---');
+            });
+        }
+        
+        // Expose test functions for console debugging
+        window.testURLParsing = testURLParsing;
+        window.testParameterValidation = testParameterValidation;
+        window.votePageComponent = votePageComponent;
+        
+        // Add keyboard shortcuts for testing
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        testValidURL();
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        testInvalidURL();
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        testAuthRequired();
+                        break;
+                    case '4':
+                        e.preventDefault();
+                        testLoggedInUser();
+                        break;
+                    case '0':
+                        e.preventDefault();
+                        clearStorage();
+                        break;
+                }
+            }
+        });
+        
+        console.log('投票页面组件测试已加载');
+        console.log('快捷键: Ctrl+1(有效URL), Ctrl+2(无效URL), Ctrl+3(需要认证), Ctrl+4(登录用户), Ctrl+0(清除存储)');
+        console.log('可用的测试函数: testURLParsing(), testParameterValidation()');
+    </script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新二维码生成测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #276749;
+        }
+        .error {
+            background: #fed7d7;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+        }
+        .qr-display {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .qr-display img {
+            max-width: 256px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .url-display {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .user-info {
+            background: #e6fffa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 新二维码生成功能测试</h1>
+        
+        <!-- 用户注册测试 -->
+        <div class="test-section">
+            <h3>1. 注册新用户并生成投票URL二维码</h3>
+            <div class="form-group">
+                <label>用户姓名:</label>
+                <input type="text" id="userName" value="测试用户" placeholder="输入用户姓名">
+            </div>
+            <div class="form-group">
+                <label>性别:</label>
+                <select id="userGender">
+                    <option value="male">男</option>
+                    <option value="female">女</option>
+                </select>
+            </div>
+            <button onclick="registerUser()">注册用户</button>
+            <div id="registerResult" class="result" style="display: none;"></div>
+            <div id="qrDisplay" class="qr-display" style="display: none;"></div>
+        </div>
+
+        <!-- 现有用户查询测试 -->
+        <div class="test-section">
+            <h3>2. 查询现有用户的二维码</h3>
+            <div class="form-group">
+                <label>用户ID:</label>
+                <input type="text" id="existingUserId" placeholder="输入用户ID">
+            </div>
+            <button onclick="getUserInfo()">查询用户</button>
+            <div id="userResult" class="result" style="display: none;"></div>
+            <div id="existingQrDisplay" class="qr-display" style="display: none;"></div>
+        </div>
+
+        <!-- 投票URL测试 -->
+        <div class="test-section">
+            <h3>3. 测试生成的投票URL</h3>
+            <div id="urlTestSection" style="display: none;">
+                <div class="user-info">
+                    <strong>当前用户信息:</strong>
+                    <div id="currentUserInfo"></div>
+                </div>
+                <button onclick="testVotingURL()">测试投票URL（未登录）</button>
+                <button onclick="testVotingURLWithAuth()">测试投票URL（模拟登录）</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let currentVotingURL = null;
+
+        // 注册用户
+        async function registerUser() {
+            const name = document.getElementById('userName').value.trim();
+            const gender = document.getElementById('userGender').value;
+            
+            if (!name) {
+                alert('请输入用户姓名');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/users/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, gender })
+                });
+
+                const result = await response.json();
+                const resultDiv = document.getElementById('registerResult');
+                
+                if (result.success) {
+                    currentUser = result;
+                    
+                    // 解析二维码数据以获取投票URL
+                    currentVotingURL = result.qrData;
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ 用户注册成功！
+                    
+用户ID: ${result.userId}
+数字ID: ${result.numericId}
+姓名: ${result.name}
+性别: ${result.gender}
+头像: ${result.avatarUrl}
+
+生成的投票URL:
+${currentVotingURL}`;
+                    
+                    // 显示二维码
+                    const qrDisplay = document.getElementById('qrDisplay');
+                    qrDisplay.style.display = 'block';
+                    qrDisplay.innerHTML = `
+                        <h4>生成的二维码（投票URL）:</h4>
+                        <img src="${result.qrCode}" alt="QR Code" />
+                        <div class="url-display">${currentVotingURL}</div>
+                    `;
+                    
+                    // 显示URL测试区域
+                    document.getElementById('urlTestSection').style.display = 'block';
+                    document.getElementById('currentUserInfo').innerHTML = `
+                        ID: ${result.userId}<br>
+                        姓名: ${result.name}<br>
+                        投票URL: ${currentVotingURL}
+                    `;
+                    
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ 注册失败: ${result.message}`;
+                }
+                
+                resultDiv.style.display = 'block';
+                
+            } catch (error) {
+                const resultDiv = document.getElementById('registerResult');
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = `❌ 请求失败: ${error.message}`;
+            }
+        }
+
+        // 查询用户信息
+        async function getUserInfo() {
+            const userId = document.getElementById('existingUserId').value.trim();
+            
+            if (!userId) {
+                alert('请输入用户ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/${userId}`);
+                const result = await response.json();
+                const resultDiv = document.getElementById('userResult');
+                
+                if (result.success) {
+                    currentUser = result;
+                    currentVotingURL = result.qrData;
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ 用户查询成功！
+                    
+用户ID: ${result.userId}
+数字ID: ${result.numericId}
+姓名: ${result.name}
+性别: ${result.gender}
+投票数: ${result.voteCount}
+
+二维码数据类型: ${result.qrData.startsWith('http') ? 'URL格式（新）' : 'JSON格式（旧）'}
+二维码数据:
+${result.qrData}`;
+                    
+                    // 显示二维码
+                    if (result.qrCode) {
+                        const qrDisplay = document.getElementById('existingQrDisplay');
+                        qrDisplay.style.display = 'block';
+                        qrDisplay.innerHTML = `
+                            <h4>用户二维码:</h4>
+                            <img src="${result.qrCode}" alt="QR Code" />
+                            <div class="url-display">${result.qrData}</div>
+                        `;
+                    }
+                    
+                    // 如果是新的URL格式，显示测试区域
+                    if (result.qrData.startsWith('http')) {
+                        document.getElementById('urlTestSection').style.display = 'block';
+                        document.getElementById('currentUserInfo').innerHTML = `
+                            ID: ${result.userId}<br>
+                            姓名: ${result.name}<br>
+                            投票URL: ${result.qrData}
+                        `;
+                    }
+                    
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ 查询失败: ${result.message}`;
+                }
+                
+                resultDiv.style.display = 'block';
+                
+            } catch (error) {
+                const resultDiv = document.getElementById('userResult');
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = `❌ 请求失败: ${error.message}`;
+            }
+        }
+
+        // 测试投票URL（未登录）
+        function testVotingURL() {
+            if (!currentVotingURL) {
+                alert('请先注册用户或查询现有用户');
+                return;
+            }
+            
+            // 清除登录状态
+            localStorage.removeItem('annual_party_user_id');
+            localStorage.removeItem('annual_party_user_name');
+            
+            window.open(currentVotingURL, '_blank');
+        }
+
+        // 测试投票URL（模拟登录）
+        function testVotingURLWithAuth() {
+            if (!currentVotingURL) {
+                alert('请先注册用户或查询现有用户');
+                return;
+            }
+            
+            // 模拟登录状态
+            localStorage.setItem('annual_party_user_id', 'test_voter_001');
+            localStorage.setItem('annual_party_user_name', '测试投票者');
+            
+            window.open(currentVotingURL, '_blank');
+        }
+    </script>
+</body>
+</html>

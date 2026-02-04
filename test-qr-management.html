@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR码管理 - 动态域名/IP地址</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .button.danger {
+            background: #dc3545;
+        }
+        .button.danger:hover {
+            background: #c82333;
+        }
+        .button.success {
+            background: #28a745;
+        }
+        .button.success:hover {
+            background: #218838;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .current-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .current-info strong {
+            color: #495057;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 2px 0;
+        }
+        .log-entry.success {
+            color: #28a745;
+        }
+        .log-entry.error {
+            color: #dc3545;
+        }
+        .log-entry.info {
+            color: #17a2b8;
+        }
+        .statistics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 QR码管理 - 动态域名/IP地址</h1>
+        
+        <div class="section">
+            <h2>当前环境信息</h2>
+            <div class="current-info">
+                <div><strong>当前域名/IP:</strong> <span id="currentHost"></span></div>
+                <div><strong>当前协议:</strong> <span id="currentProtocol"></span></div>
+                <div><strong>完整URL:</strong> <span id="currentBaseURL"></span></div>
+                <div><strong>时间:</strong> <span id="currentTime"></span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>新用户注册测试</h2>
+            <p>测试新用户注册时QR码是否使用当前域名/IP地址：</p>
+            
+            <div class="input-group">
+                <label for="testName">测试用户姓名:</label>
+                <input type="text" id="testName" placeholder="输入测试用户姓名" value="测试用户">
+            </div>
+            
+            <div class="input-group">
+                <label for="testGender">性别:</label>
+                <select id="testGender" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="male">男</option>
+                    <option value="female">女</option>
+                </select>
+            </div>
+            
+            <button class="button" onclick="testRegistration()">测试注册</button>
+            <button class="button" onclick="clearTestUsers()">清理测试用户</button>
+        </div>
+
+        <div class="section">
+            <h2>批量更新现有QR码</h2>
+            <p>将所有现有用户的QR码更新为当前域名/IP地址：</p>
+            
+            <div class="input-group">
+                <label for="customBaseURL">自定义Base URL (可选):</label>
+                <input type="text" id="customBaseURL" placeholder="留空使用当前地址，或输入如: http://192.168.1.100:3000">
+            </div>
+            
+            <button class="button success" onclick="batchUpdateQRCodes()">批量更新所有QR码</button>
+            <button class="button" onclick="getCurrentUsers()">查看当前用户</button>
+        </div>
+
+        <div id="statusMessage"></div>
+        
+        <div id="statisticsSection" style="display: none;">
+            <h3>更新统计</h3>
+            <div class="statistics" id="statistics"></div>
+        </div>
+
+        <div id="logSection" style="display: none;">
+            <h3>操作日志</h3>
+            <div class="log" id="operationLog"></div>
+        </div>
+
+        <div class="section">
+            <h2>使用说明</h2>
+            <ul>
+                <li><strong>新用户注册:</strong> 现在会自动使用当前浏览器地址栏中的域名/IP地址生成QR码</li>
+                <li><strong>批量更新:</strong> 可以将所有现有用户的QR码更新为新的域名/IP地址</li>
+                <li><strong>自定义URL:</strong> 可以指定特定的Base URL，或留空使用当前地址</li>
+                <li><strong>安全验证:</strong> 只允许http和https协议，防止恶意URL</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 更新当前环境信息
+        function updateCurrentInfo() {
+            document.getElementById('currentHost').textContent = window.location.host;
+            document.getElementById('currentProtocol').textContent = window.location.protocol;
+            document.getElementById('currentBaseURL').textContent = `${window.location.protocol}//${window.location.host}`;
+            document.getElementById('currentTime').textContent = new Date().toLocaleString('zh-CN');
+        }
+
+        // 显示状态消息
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+        }
+
+        // 添加日志条目
+        function addLog(message, type = 'info') {
+            const logDiv = document.getElementById('operationLog');
+            const logSection = document.getElementById('logSection');
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            logSection.style.display = 'block';
+        }
+
+        // 显示统计信息
+        function showStatistics(stats) {
+            const statsDiv = document.getElementById('statistics');
+            const statsSection = document.getElementById('statisticsSection');
+            
+            statsDiv.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${stats.total}</div>
+                    <div class="stat-label">总用户数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.updated}</div>
+                    <div class="stat-label">成功更新</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.skipped}</div>
+                    <div class="stat-label">跳过</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.errors}</div>
+                    <div class="stat-label">失败</div>
+                </div>
+            `;
+            
+            statsSection.style.display = 'block';
+        }
+
+        // 测试用户注册
+        async function testRegistration() {
+            const name = document.getElementById('testName').value.trim();
+            const gender = document.getElementById('testGender').value;
+            
+            if (!name) {
+                showStatus('请输入用户姓名', 'error');
+                return;
+            }
+            
+            try {
+                showStatus('正在注册测试用户...', 'info');
+                addLog(`开始注册测试用户: ${name} (${gender})`, 'info');
+                
+                const currentBaseURL = `${window.location.protocol}//${window.location.host}`;
+                
+                const response = await fetch('/api/users/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        gender: gender,
+                        baseURL: currentBaseURL
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus(`注册成功！用户ID: ${result.userId}, 数字ID: ${result.numericId}`, 'success');
+                    addLog(`注册成功: ${result.name} (ID: ${result.userId})`, 'success');
+                    addLog(`QR码URL: ${result.qrData}`, 'info');
+                    addLog(`使用的Base URL: ${result.baseURL || currentBaseURL}`, 'info');
+                    
+                    // 清空输入框
+                    document.getElementById('testName').value = '';
+                } else {
+                    showStatus(`注册失败: ${result.message}`, 'error');
+                    addLog(`注册失败: ${result.message}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                showStatus('注册请求失败，请检查网络连接', 'error');
+                addLog(`注册请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 批量更新QR码
+        async function batchUpdateQRCodes() {
+            const customURL = document.getElementById('customBaseURL').value.trim();
+            const baseURL = customURL || `${window.location.protocol}//${window.location.host}`;
+            
+            if (!confirm(`确定要将所有用户的QR码更新为: ${baseURL} 吗？`)) {
+                return;
+            }
+            
+            try {
+                showStatus('正在批量更新QR码...', 'info');
+                addLog(`开始批量更新QR码，目标URL: ${baseURL}`, 'info');
+                
+                const response = await fetch('/api/users/batch-update-qr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        baseURL: baseURL
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('QR码批量更新完成！', 'success');
+                    addLog('QR码批量更新完成', 'success');
+                    addLog(`使用的Base URL: ${result.baseURL}`, 'info');
+                    
+                    // 显示统计信息
+                    showStatistics(result.statistics);
+                    
+                    // 显示错误详情（如果有）
+                    if (result.errors && result.errors.length > 0) {
+                        addLog(`发现 ${result.errors.length} 个错误:`, 'error');
+                        result.errors.forEach(error => {
+                            addLog(`- ${error.userName}: ${error.error}`, 'error');
+                        });
+                    }
+                    
+                } else {
+                    showStatus(`批量更新失败: ${result.message}`, 'error');
+                    addLog(`批量更新失败: ${result.message}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Batch update error:', error);
+                showStatus('批量更新请求失败，请检查网络连接', 'error');
+                addLog(`批量更新请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取当前用户列表
+        async function getCurrentUsers() {
+            try {
+                showStatus('正在获取用户列表...', 'info');
+                
+                const response = await fetch('/api/users');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const users = result.users;
+                    showStatus(`当前共有 ${users.length} 个用户`, 'success');
+                    addLog(`获取到 ${users.length} 个用户`, 'info');
+                    
+                    // 分析QR码URL
+                    const urlAnalysis = {};
+                    users.forEach(user => {
+                        if (user.qrCode) {
+                            try {
+                                const url = new URL(user.qrCode);
+                                const baseUrl = `${url.protocol}//${url.host}`;
+                                urlAnalysis[baseUrl] = (urlAnalysis[baseUrl] || 0) + 1;
+                            } catch (e) {
+                                urlAnalysis['无效URL'] = (urlAnalysis['无效URL'] || 0) + 1;
+                            }
+                        } else {
+                            urlAnalysis['无QR码'] = (urlAnalysis['无QR码'] || 0) + 1;
+                        }
+                    });
+                    
+                    addLog('QR码URL分布:', 'info');
+                    Object.entries(urlAnalysis).forEach(([url, count]) => {
+                        addLog(`  ${url}: ${count} 个用户`, 'info');
+                    });
+                    
+                } else {
+                    showStatus('获取用户列表失败', 'error');
+                    addLog('获取用户列表失败', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Get users error:', error);
+                showStatus('获取用户列表请求失败', 'error');
+                addLog(`获取用户列表失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 清理测试用户
+        async function clearTestUsers() {
+            if (!confirm('确定要删除所有名称包含"测试"的用户吗？')) {
+                return;
+            }
+            
+            try {
+                showStatus('正在清理测试用户...', 'info');
+                addLog('开始清理测试用户', 'info');
+                
+                // 先获取所有用户
+                const response = await fetch('/api/users');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const testUsers = result.users.filter(user => 
+                        user.name.includes('测试') || user.name.includes('test')
+                    );
+                    
+                    if (testUsers.length === 0) {
+                        showStatus('没有找到测试用户', 'info');
+                        addLog('没有找到测试用户', 'info');
+                        return;
+                    }
+                    
+                    let deletedCount = 0;
+                    for (const user of testUsers) {
+                        try {
+                            const deleteResponse = await fetch(`/api/users/${user.id}`, {
+                                method: 'DELETE'
+                            });
+                            
+                            const deleteResult = await deleteResponse.json();
+                            if (deleteResult.success) {
+                                deletedCount++;
+                                addLog(`删除测试用户: ${user.name}`, 'success');
+                            } else {
+                                addLog(`删除失败: ${user.name} - ${deleteResult.message}`, 'error');
+                            }
+                        } catch (error) {
+                            addLog(`删除失败: ${user.name} - ${error.message}`, 'error');
+                        }
+                    }
+                    
+                    showStatus(`清理完成，删除了 ${deletedCount} 个测试用户`, 'success');
+                    addLog(`清理完成，删除了 ${deletedCount}/${testUsers.length} 个测试用户`, 'success');
+                }
+                
+            } catch (error) {
+                console.error('Clear test users error:', error);
+                showStatus('清理测试用户失败', 'error');
+                addLog(`清理测试用户失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentInfo();
+            
+            // 每30秒更新一次时间
+            setInterval(updateCurrentInfo, 30000);
+            
+            // 自动获取当前用户信息
+            getCurrentUsers();
+        });
+    </script>
+</body>
+</html>

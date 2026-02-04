@@ -3,9 +3,9 @@
 ## 🚨 问题描述
 浏览器显示以下错误：
 ```
-GET https://172.18.0.250:3000/static/css/style.css net::ERR_SSL_PROTOCOL_ERROR
-GET https://172.18.0.250:3000/static/js/app.js net::ERR_SSL_PROTOCOL_ERROR
-GET https://172.18.0.250:3000/favicon.ico net::ERR_SSL_PROTOCOL_ERROR
+GET https://192.168.0.97:3000/static/css/style.css net::ERR_SSL_PROTOCOL_ERROR
+GET https://192.168.0.97:3000/static/js/app.js net::ERR_SSL_PROTOCOL_ERROR
+GET https://192.168.0.97:3000/favicon.ico net::ERR_SSL_PROTOCOL_ERROR
 ```
 
 ## 🎯 根本原因
@@ -52,12 +52,12 @@ app.use((req, res, next) => {
 
 2. **删除域名安全策略**
    - 在 "Delete domain security policies" 部分
-   - 输入：`172.18.0.250`
+   - 输入：`192.168.0.97`
    - 点击 "Delete" 按钮
 
 3. **重新访问网站**
    ```
-   http://172.18.0.250:3000
+   http://192.168.0.97:3000
    ```
 
 ### 方案二：使用隐身模式
@@ -69,7 +69,7 @@ app.use((req, res, next) => {
 
 2. **在隐身窗口中访问**
    ```
-   http://172.18.0.250:3000
+   http://192.168.0.97:3000
    ```
 
 ### 方案三：完全清除浏览器数据

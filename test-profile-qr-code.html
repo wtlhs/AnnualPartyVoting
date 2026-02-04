@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人信息页面QR码测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .info-box {
+            background: #e6fffa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #38b2ac;
+        }
+        .user-list {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .user-item:last-child {
+            border-bottom: none;
+        }
+        .user-info {
+            flex: 1;
+        }
+        .user-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .user-id {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 个人信息页面QR码测试</h1>
+        
+        <div class="info-box">
+            <strong>测试说明：</strong><br>
+            验证个人信息页面显示的QR码是否使用了正确的原有投票确认页面格式
+        </div>
+        
+        <div class="test-section">
+            <h3>1. 获取用户列表</h3>
+            <p>获取所有用户，选择要测试的用户</p>
+            <button onclick="loadUsers()">获取用户列表</button>
+            <div id="userList" class="user-list" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. 测试用户API</h3>
+            <p>测试用户API返回的QR码数据</p>
+            <button onclick="testUserAPI()" id="testAPIBtn" disabled>测试用户API</button>
+            <div id="apiResult" style="display: none; margin-top: 15px;">
+                <h4>API返回结果：</h4>
+                <pre id="apiData" style="background: #f7fafc; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px;"></pre>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 打开个人信息页面</h3>
+            <p>打开个人信息页面，验证QR码显示</p>
+            <button onclick="openProfilePage()" id="openProfileBtn" disabled>打开个人信息页面</button>
+            <div id="profileInfo" style="display: none; margin-top: 15px;">
+                <p><strong>预期行为：</strong></p>
+                <ul>
+                    <li>页面显示用户基本信息</li>
+                    <li>QR码正确显示</li>
+                    <li>QR码指向原有投票确认页面格式: /vote/:userId</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 验证QR码URL</h3>
+            <p>验证QR码URL格式是否正确</p>
+            <div id="qrValidation" style="display: none;">
+                <div class="info-box">
+                    <h4>QR码验证结果：</h4>
+                    <p id="qrValidationResult"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. 快速访问</h3>
+            <a href="http://192.168.0.97:3000" target="_blank" class="btn">打开首页</a>
+            <a href="http://192.168.0.97:3000/admin" target="_blank" class="btn">管理后台</a>
+        </div>
+    </div>
+
+    <script>
+        let selectedUserId = null;
+        let selectedUserName = '';
+
+        // 获取用户列表
+        async function loadUsers() {
+            try {
+                const response = await fetch('http://192.168.0.97:3000/api/users');
+                const result = await response.json();
+                
+                if (result.success && result.users) {
+                    displayUsers(result.users);
+                } else {
+                    alert('获取用户列表失败: ' + (result.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('获取用户列表错误:', error);
+                alert('网络错误: ' + error.message);
+            }
+        }
+
+        // 显示用户列表
+        function displayUsers(users) {
+            const userList = document.getElementById('userList');
+            userList.innerHTML = '';
+            
+            users.forEach(user => {
+                const userItem = document.createElement('div');
+                userItem.className = 'user-item';
+                userItem.innerHTML = `
+                    <div class="user-info">
+                        <div class="user-name">${user.name}</div>
+                        <div class="user-id">ID: ${user.userId}</div>
+                        <div class="user-id">性别: ${user.gender === 'male' ? '男' : '女'}</div>
+                    </div>
+                    <button onclick="selectUser('${user.userId}', '${user.name}')">选择</button>
+                `;
+                userList.appendChild(userItem);
+            });
+            
+            userList.style.display = 'block';
+        }
+
+        // 选择用户
+        function selectUser(userId, userName) {
+            selectedUserId = userId;
+            selectedUserName = userName;
+            
+            // 更新按钮状态
+            document.getElementById('testAPIBtn').disabled = false;
+            document.getElementById('openProfileBtn').disabled = false;
+            
+            // 高亮选中的用户
+            const userItems = document.querySelectorAll('.user-item');
+            userItems.forEach(item => {
+                item.style.backgroundColor = '';
+                if (item.querySelector('.user-id').textContent.includes(userId)) {
+                    item.style.backgroundColor = '#e6fffa';
+                }
+            });
+            
+            console.log('选中用户:', userName, userId);
+        }
+
+        // 测试用户API
+        async function testUserAPI() {
+            if (!selectedUserId) {
+                alert('请先选择一个用户');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://192.168.0.97:3000/api/users/${selectedUserId}`);
+                const result = await response.json();
+                
+                // 显示API结果
+                document.getElementById('apiData').textContent = JSON.stringify(result, null, 2);
+                document.getElementById('apiResult').style.display = 'block';
+                
+                // 验证QR码数据
+                if (result.success && result.qrData) {
+                    validateQRCode(result.qrData, result.userId);
+                }
+                
+            } catch (error) {
+                console.error('测试用户API错误:', error);
+                alert('API测试失败: ' + error.message);
+            }
+        }
+
+        // 验证QR码
+        function validateQRCode(qrData, userId) {
+            const validation = document.getElementById('qrValidation');
+            const result = document.getElementById('qrValidationResult');
+            
+            let isValid = false;
+            let message = '';
+            
+            try {
+                // 检查是否是URL格式
+                if (qrData.startsWith('http')) {
+                    const url = new URL(qrData);
+                    
+                    // 检查是否是原有投票确认页面格式
+                    if (url.pathname.startsWith('/vote/')) {
+                        const pathUserId = url.pathname.split('/')[2];
+                        if (pathUserId === userId) {
+                            isValid = true;
+                            message = `✅ QR码格式正确！\n格式: 原有投票确认页面\nURL: ${qrData}\n用户ID匹配: 是`;
+                        } else {
+                            message = `❌ 用户ID不匹配\n期望: ${userId}\n实际: ${pathUserId}`;
+                        }
+                    } else if (url.pathname === '/vote' && url.search) {
+                        message = `⚠️ 仍然是新参数格式\nURL: ${qrData}\n需要迁移到原有格式`;
+                    } else {
+                        message = `❌ 未知的URL格式\nURL: ${qrData}`;
+                    }
+                } else {
+                    message = `❌ 不是URL格式\n数据: ${qrData}`;
+                }
+            } catch (error) {
+                message = `❌ QR码验证失败\n错误: ${error.message}`;
+            }
+            
+            result.textContent = message;
+            validation.style.display = 'block';
+            
+            return isValid;
+        }
+
+        // 打开个人信息页面
+        function openProfilePage() {
+            if (!selectedUserId) {
+                alert('请先选择一个用户');
+                return;
+            }
+            
+            const profileURL = `http://192.168.0.97:3000/profile/${selectedUserId}`;
+            window.open(profileURL, '_blank');
+            
+            // 显示预期行为信息
+            document.getElementById('profileInfo').style.display = 'block';
+        }
+
+        // 页面加载时自动获取用户列表
+        window.addEventListener('load', function() {
+            setTimeout(loadUsers, 500);
+        });
+    </script>
+</body>
+</html>

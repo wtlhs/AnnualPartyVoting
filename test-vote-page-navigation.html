@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试投票页面导航</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.8;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .code {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <h1>投票页面导航测试</h1>
+    
+    <div class="test-section">
+        <h2>1. 基础导航测试</h2>
+        <p>测试不同的返回首页方式：</p>
+        
+        <a href="/" class="btn btn-primary">标准链接返回首页</a>
+        <button onclick="window.location.href = '/'" class="btn btn-secondary">JavaScript跳转</button>
+        <button onclick="window.location.replace('/')" class="btn btn-success">Replace跳转</button>
+        <button onclick="window.location.assign('/')" class="btn btn-danger">Assign跳转</button>
+        
+        <div id="basicResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 投票页面模拟测试</h2>
+        <p>模拟投票确认页面的返回首页功能：</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; border: 2px solid #667eea;">
+            <h3>投票确认页面模拟</h3>
+            <p>候选人：测试用户</p>
+            <p>ID: 123456</p>
+            
+            <div class="actions" style="margin-top: 20px;">
+                <a href="/mobile-stats" class="btn btn-primary">查看结果</a>
+                <a href="/" class="btn btn-secondary">返回首页</a>
+            </div>
+        </div>
+        
+        <div id="voteResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 网络连接测试</h2>
+        <p>测试服务器连接和路由：</p>
+        
+        <button onclick="testServerConnection()" class="btn btn-primary">测试服务器连接</button>
+        <button onclick="testRoutes()" class="btn btn-secondary">测试路由</button>
+        
+        <div id="networkResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 错误处理测试</h2>
+        <p>测试可能的错误情况：</p>
+        
+        <button onclick="testErrorHandling()" class="btn btn-primary">测试错误处理</button>
+        <button onclick="testJavaScriptErrors()" class="btn btn-secondary">测试JS错误</button>
+        
+        <div id="errorResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. 页面信息</h2>
+        <button onclick="showPageInfo()" class="btn btn-primary">显示页面信息</button>
+        <div id="pageInfo" class="result" style="display: none;"></div>
+    </div>
+    
+    <script>
+        // 测试服务器连接
+        async function testServerConnection() {
+            const resultDiv = document.getElementById('networkResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在测试服务器连接...';
+            
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    const text = await response.text();
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ 服务器连接正常</h4>
+                        <p>状态码: ${response.status}</p>
+                        <p>内容类型: ${response.headers.get('content-type')}</p>
+                        <p>响应大小: ${text.length} 字符</p>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>❌ 服务器连接失败</h4>
+                    <p>错误: ${error.message}</p>
+                `;
+            }
+        }
+        
+        // 测试路由
+        async function testRoutes() {
+            const routes = ['/', '/scan', '/user-list', '/mobile-stats'];
+            const resultDiv = document.getElementById('networkResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在测试路由...';
+            
+            const results = [];
+            
+            for (const route of routes) {
+                try {
+                    const response = await fetch(route);
+                    results.push({
+                        route: route,
+                        status: response.status,
+                        ok: response.ok
+                    });
+                } catch (error) {
+                    results.push({
+                        route: route,
+                        status: 'ERROR',
+                        error: error.message
+                    });
+                }
+            }
+            
+            const successCount = results.filter(r => r.ok).length;
+            const resultClass = successCount === routes.length ? 'success' : 'error';
+            
+            resultDiv.className = `result ${resultClass}`;
+            resultDiv.innerHTML = `
+                <h4>路由测试结果 (${successCount}/${routes.length} 成功)</h4>
+                <div class="code">
+                    ${results.map(r => 
+                        `${r.route}: ${r.status} ${r.ok ? '✅' : '❌'} ${r.error || ''}`
+                    ).join('<br>')}
+                </div>
+            `;
+        }
+        
+        // 测试错误处理
+        function testErrorHandling() {
+            const resultDiv = document.getElementById('errorResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            
+            // 检查是否加载了错误处理器
+            const hasErrorHandler = typeof window.ErrorHandler !== 'undefined';
+            const hasURLUtils = typeof window.URLUtils !== 'undefined';
+            
+            resultDiv.innerHTML = `
+                <h4>错误处理组件检查</h4>
+                <p>ErrorHandler: ${hasErrorHandler ? '✅ 已加载' : '❌ 未加载'}</p>
+                <p>URLUtils: ${hasURLUtils ? '✅ 已加载' : '❌ 未加载'}</p>
+                <p>全局错误监听器: ${window.onerror ? '✅ 已设置' : '❌ 未设置'}</p>
+            `;
+        }
+        
+        // 测试JavaScript错误
+        function testJavaScriptErrors() {
+            const resultDiv = document.getElementById('errorResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在测试JavaScript错误处理...';
+            
+            // 模拟一个非致命错误
+            try {
+                // 尝试访问不存在的对象属性
+                const test = window.nonExistentObject.someProperty;
+            } catch (error) {
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `
+                    <h4>✅ JavaScript错误处理正常</h4>
+                    <p>捕获到错误: ${error.message}</p>
+                    <p>错误类型: ${error.name}</p>
+                `;
+            }
+        }
+        
+        // 显示页面信息
+        function showPageInfo() {
+            const resultDiv = document.getElementById('pageInfo');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            
+            const info = {
+                url: window.location.href,
+                pathname: window.location.pathname,
+                hostname: window.location.hostname,
+                port: window.location.port,
+                protocol: window.location.protocol,
+                origin: window.location.origin,
+                userAgent: navigator.userAgent.substring(0, 100) + '...',
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                language: navigator.language
+            };
+            
+            resultDiv.innerHTML = `
+                <h4>页面信息</h4>
+                <div class="code">
+                    ${Object.entries(info).map(([key, value]) => 
+                        `<strong>${key}:</strong> ${value}`
+                    ).join('<br>')}
+                </div>
+            `;
+        }
+        
+        // 页面加载完成后自动运行基础测试
+        window.addEventListener('load', function() {
+            console.log('测试页面加载完成');
+            testServerConnection();
+        });
+        
+        // 监听导航事件
+        window.addEventListener('beforeunload', function(e) {
+            console.log('页面即将离开:', window.location.href);
+        });
+        
+        // 监听错误事件
+        window.addEventListener('error', function(e) {
+            console.error('页面错误:', e.error);
+        });
+    </script>
+</body>
+</html>

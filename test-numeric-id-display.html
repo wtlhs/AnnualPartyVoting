@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试6位数字ID显示 - 年会投票系统</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .user-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .user-info strong {
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <h1>测试6位数字ID显示功能</h1>
+    
+    <div class="test-section">
+        <h2>功能说明</h2>
+        <p>投票确认页面现在会优先显示用户的6位数字ID，而不是字符串ID。</p>
+        
+        <h3>显示逻辑：</h3>
+        <ul>
+            <li>如果用户有6位数字ID（numericId），则显示数字ID</li>
+            <li>如果没有数字ID，则显示字符串ID作为后备</li>
+            <li>如果都没有，则显示"未知"</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>当前用户信息</h2>
+        <div id="currentUserInfo" class="user-info">
+            <p>正在检查当前用户信息...</p>
+        </div>
+        
+        <button class="test-button" onclick="checkCurrentUser()">刷新用户信息</button>
+        <button class="test-button" onclick="testVotePage()">测试投票页面显示</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试步骤</h2>
+        <ol>
+            <li><strong>检查当前用户：</strong>点击"刷新用户信息"查看当前登录用户的ID信息</li>
+            <li><strong>测试投票页面：</strong>点击"测试投票页面显示"打开投票确认页面</li>
+            <li><strong>验证显示：</strong>在投票页面中，候选人ID应该显示为6位数字格式</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>API测试</h2>
+        <button class="test-button" onclick="testUserAPI()">测试用户API</button>
+        <button class="test-button" onclick="testAllUsersAPI()">测试所有用户API</button>
+        
+        <div id="apiTestResult" class="status info" style="display: none;"></div>
+    </div>
+
+    <script>
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('apiTestResult');
+            status.innerHTML = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function checkCurrentUser() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            const userName = localStorage.getItem('annual_party_user_name');
+            const userGender = localStorage.getItem('annual_party_user_gender');
+            const numericId = localStorage.getItem('annual_party_numeric_id');
+            
+            const userInfoEl = document.getElementById('currentUserInfo');
+            
+            if (userId && userName) {
+                userInfoEl.innerHTML = `
+                    <p><strong>用户名：</strong>${userName}</p>
+                    <p><strong>字符串ID：</strong>${userId}</p>
+                    <p><strong>6位数字ID：</strong>${numericId || '未设置'}</p>
+                    <p><strong>性别：</strong>${userGender || '未知'}</p>
+                `;
+            } else {
+                userInfoEl.innerHTML = `
+                    <p style="color: #dc3545;">未找到用户信息，请先在首页注册</p>
+                `;
+            }
+        }
+
+        async function testUserAPI() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            if (!userId) {
+                showStatus('请先注册用户', 'error');
+                return;
+            }
+
+            try {
+                showStatus('正在测试用户API...', 'info');
+                const response = await fetch(`/api/users/${userId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus(`
+                        <strong>API返回数据：</strong><br>
+                        用户名: ${result.name}<br>
+                        字符串ID: ${result.userId}<br>
+                        6位数字ID: ${result.numericId || '未设置'}<br>
+                        性别: ${result.gender}
+                    `, 'success');
+                } else {
+                    showStatus(`API错误: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAllUsersAPI() {
+            try {
+                showStatus('正在获取所有用户信息...', 'info');
+                const response = await fetch('/api/users');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const users = result.users.slice(0, 3); // 只显示前3个用户
+                    const userList = users.map(user => 
+                        `${user.name} (字符串ID: ${user.userId}, 数字ID: ${user.numericId || '未设置'})`
+                    ).join('<br>');
+                    
+                    showStatus(`
+                        <strong>用户列表（前3个）：</strong><br>
+                        ${userList}
+                    `, 'success');
+                } else {
+                    showStatus(`API错误: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        function testVotePage() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            if (!userId) {
+                showStatus('请先注册用户', 'error');
+                return;
+            }
+            
+            // 打开投票页面测试显示
+            window.open(`/vote/${userId}`, '_blank');
+        }
+
+        // 页面加载时自动检查用户信息
+        window.addEventListener('load', checkCurrentUser);
+    </script>
+</body>
+</html>

@@ -4,46 +4,402 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>投票确认 - 年会最佳服装评选</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.3">
+    <script src="/static/js/urlUtils.js"></script>
+    <script src="/static/js/errorHandler.js"></script>
+    <style>
+        /* 候选人信息卡片 */
+        .candidate-card {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f5e8 100%);
+            border: 2px solid #667eea;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+        }
+
+        .candidate-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            border: 4px solid #fff;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            object-fit: cover;
+            display: block;
+        }
+
+        .candidate-avatar.error {
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 48px;
+        }
+
+        .candidate-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .candidate-id {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .candidate-category {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* 投票状态标识 */
+        .vote-source {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        .vote-source.qrcode {
+            background: #e6fffa;
+            color: #234e52;
+        }
+
+        .vote-source.direct {
+            background: #fef5e7;
+            color: #744210;
+        }
+
+        .vote-source.search {
+            background: #f0f8ff;
+            color: #1e3a8a;
+        }
+
+        /* 投票按钮 */
+        .vote-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-vote {
+            background: linear-gradient(135deg, #20bf55 0%, #01baef 100%);
+            color: white;
+            border: none;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(32, 191, 85, 0.3);
+        }
+
+        .btn-vote:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(32, 191, 85, 0.4);
+        }
+
+        .btn-vote:active {
+            transform: translateY(0);
+        }
+
+        .btn-vote:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 加载状态 */
+        .loading-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        /* 错误状态 */
+        .error-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .error-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #e53e3e;
+            margin-bottom: 12px;
+        }
+
+        .error-message {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .error-details {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .error-detail-item {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .error-detail-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .error-actions {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .suggestions-title {
+            font-weight: 600;
+            color: #2d5a2d;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .suggestions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .allowed-action {
+            padding: 6px 0;
+            color: #2d5a2d;
+            font-size: 14px;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .allowed-action:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        /* 认证提示 */
+        .auth-prompt {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .auth-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .auth-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+
+        .auth-message {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        /* 成功状态 */
+        .success-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .success-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .success-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #38a169;
+            margin-bottom: 12px;
+        }
+
+        .success-message {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+
+            main {
+                padding: 20px;
+            }
+
+            .candidate-card {
+                padding: 20px;
+            }
+
+            .candidate-avatar {
+                width: 100px;
+                height: 100px;
+            }
+
+            .candidate-name {
+                font-size: 20px;
+            }
+
+            .btn-vote {
+                padding: 14px 20px;
+                font-size: 16px;
+            }
+        }
+
+        /* 图片预览模态框 */
+        #imagePreviewModal {
+            background: rgba(0, 0, 0, 0.9);
+            cursor: zoom-out;
+        }
+
+        #previewImage {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+<link rel="icon" href="data:,">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>投票确认</h1>
+            <p>Annual Party Voting</p>
         </header>
         
         <main>
-            <div class="vote-confirmation">
-                <div class="candidate-info">
-                    <img id="candidateAvatar" src="" alt="候选人头像" class="avatar large">
-                    <h2 id="candidateName">加载中...</h2>
-                    <p id="candidateGender">性别: 加载中...</p>
-                    <p id="candidateVotes">当前票数: 加载中...</p>
+            <!-- 加载状态 -->
+            <div id="loadingState" class="loading-state">
+                <div class="loading-spinner"></div>
+                <div>正在加载候选人信息...</div>
+            </div>
+
+            <!-- 错误状态 -->
+            <div id="errorState" class="error-state" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <div class="error-title">加载失败</div>
+                <div class="error-message" id="errorMessage"></div>
+                <div class="error-details" id="errorDetails" style="display: none;"></div>
+                <div class="error-actions" id="errorActions" style="display: none;"></div>
+                <div class="actions">
+                    <button onclick="location.reload()" class="btn-primary">重试</button>
+                    <a href="/" class="btn-secondary" onclick="safeNavigateHome(); return false;">返回首页</a>
                 </div>
-                
-                <div class="vote-action">
-                    <p class="vote-question">确认要为此参与者投票吗？</p>
-                    <div class="vote-buttons">
-                        <button id="confirmVoteBtn" class="btn-primary">确认投票</button>
-                        <button id="cancelVoteBtn" class="btn-secondary">取消</button>
-                    </div>
+            </div>
+
+            <!-- 认证提示 -->
+            <div id="authPrompt" class="auth-prompt" style="display: none;">
+                <div class="auth-icon">🔐</div>
+                <div class="auth-title">需要登录</div>
+                <div class="auth-message">请先登录或注册以获得投票权限</div>
+                <div class="actions">
+                    <a href="/" class="btn-primary" id="loginBtn">登录/注册</a>
+                    <a href="/" class="btn-secondary" onclick="safeNavigateHome(); return false;">返回首页</a>
                 </div>
+            </div>
+
+            <!-- 投票界面 -->
+            <div id="voteInterface" class="vote-interface" style="display: none;">
+                <div class="vote-source" id="voteSource"></div>
                 
-                <div id="voteResult" class="vote-result" style="display: none;">
-                    <div class="result-message">
-                        <h3 id="resultTitle">投票结果</h3>
-                        <p id="resultMessage">处理中...</p>
+                <div class="candidate-card">
+                    <img id="candidateAvatar" class="candidate-avatar" alt="候选人头像">
+                    <div class="candidate-name" id="candidateName"></div>
+                    <div class="candidate-id" id="candidateId"></div>
+                    <div class="candidate-category" id="candidateCategory"></div>
+                </div>
+
+                <div class="vote-actions">
+                    <button class="btn-vote" id="voteBtn">
+                        🗳️ 投票支持
+                    </button>
+                    <div class="actions">
+                        <a href="/user-list" class="btn-secondary">选择其他候选人</a>
+                        <a href="/" class="btn-secondary" onclick="safeNavigateHome(); return false;">返回首页</a>
                     </div>
                 </div>
             </div>
-            
-            <div class="actions">
-                <a href="/scan" class="btn-secondary">继续扫码</a>
-                <a href="/" class="btn-secondary">返回首页</a>
+
+            <!-- 成功状态 -->
+            <div id="successState" class="success-state" style="display: none;">
+                <div class="success-icon">✅</div>
+                <div class="success-title">投票成功</div>
+                <div class="success-message" id="successMessage"></div>
+                <div class="actions">
+                    <a href="/mobile-stats" class="btn-primary">查看结果</a>
+                    <a href="/" class="btn-secondary" onclick="safeNavigateHome(); return false;">返回首页</a>
+                </div>
             </div>
         </main>
     </div>
-    
-    <script src="/static/js/vote.js"></script>
+
+    <!-- 图片预览模态框 -->
+    <div id="imagePreviewModal" class="modal-overlay" onclick="closeImagePreview()">
+        <div class="preview-content">
+            <img id="previewImage" src="" alt="预览图片">
+        </div>
+    </div>
+
+    <script src="/static/js/vote.js?v=2.4"></script>
 </body>
 </html>

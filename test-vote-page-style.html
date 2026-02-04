@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票页面样式测试</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+        }
+
+        .test-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .test-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .test-link {
+            display: block;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .test-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .test-info {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-success {
+            background: #38a169;
+        }
+
+        .status-warning {
+            background: #f39c12;
+        }
+
+        .status-info {
+            background: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>投票页面样式测试</h1>
+            <p>测试新的 /vote/:userId 投票页面样式和功能</p>
+        </header>
+        
+        <div class="test-container">
+            <div class="test-info">
+                <h4><span class="status-indicator status-info"></span>测试说明</h4>
+                <p>这个页面用于测试新的投票页面样式和注册验证功能。新的投票页面使用 <code>/vote/:userId</code> 格式，保持了与现有系统的兼容性，同时包含完整的注册验证逻辑。</p>
+            </div>
+
+            <div class="test-section">
+                <h3>🎯 投票页面测试</h3>
+                <p>测试不同候选人的投票页面，验证页面样式和功能是否正常。</p>
+                <div class="test-links">
+                    <a href="/vote/test1" class="test-link">测试候选人 1</a>
+                    <a href="/vote/test2" class="test-link">测试候选人 2</a>
+                    <a href="/vote/nonexistent" class="test-link">不存在的候选人</a>
+                    <a href="/vote/invalid-id" class="test-link">无效ID测试</a>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>🔐 注册验证测试</h3>
+                <p>测试注册验证逻辑，确保未注册用户无法直接投票。</p>
+                <div class="test-info">
+                    <strong>测试步骤：</strong>
+                    <ol>
+                        <li>清除浏览器本地存储（模拟未注册状态）</li>
+                        <li>点击下方链接访问投票页面</li>
+                        <li>应该看到"需要登录"提示</li>
+                        <li>点击"登录/注册"应该跳转到首页</li>
+                    </ol>
+                </div>
+                <div class="test-links">
+                    <button onclick="clearStorage()" class="test-link" style="background: #e53e3e;">清除本地存储</button>
+                    <a href="/vote/test1" class="test-link">测试未注册访问</a>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>🔄 路由兼容性测试</h3>
+                <p>测试不同入口的投票页面访问，确保所有路径都能正常工作。</p>
+                <div class="test-links">
+                    <a href="/user-list" class="test-link">用户列表页面</a>
+                    <a href="/scan" class="test-link">扫码投票页面</a>
+                    <a href="/vote?candidate_id=test1&source=legacy_redirect" class="test-link">备用投票页面</a>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>📱 响应式设计测试</h3>
+                <p>测试投票页面在不同设备上的显示效果。</p>
+                <div class="test-info">
+                    <strong>测试方法：</strong>
+                    <ul>
+                        <li>使用浏览器开发者工具切换到移动设备视图</li>
+                        <li>测试不同屏幕尺寸下的页面布局</li>
+                        <li>验证触摸交互是否正常</li>
+                    </ul>
+                </div>
+                <div class="test-links">
+                    <a href="/vote/test1" class="test-link" target="_blank">在新窗口打开测试</a>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>🎨 样式对比测试</h3>
+                <p>对比新旧投票页面的样式差异。</p>
+                <div class="test-links">
+                    <a href="/vote/test1" class="test-link">新投票页面 (/vote/:userId)</a>
+                    <a href="/vote?candidate_id=test1&candidate_name=测试用户1&source=qrcode" class="test-link">备用投票页面 (/vote)</a>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>🔧 功能测试</h3>
+                <p>测试投票页面的各项功能是否正常。</p>
+                <div class="test-info">
+                    <strong>功能清单：</strong>
+                    <ul>
+                        <li><span class="status-indicator status-success"></span>候选人信息显示</li>
+                        <li><span class="status-indicator status-success"></span>头像加载和错误处理</li>
+                        <li><span class="status-indicator status-success"></span>注册状态检查</li>
+                        <li><span class="status-indicator status-success"></span>投票资格验证</li>
+                        <li><span class="status-indicator status-warning"></span>投票提交处理</li>
+                        <li><span class="status-indicator status-info"></span>错误状态显示</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>📊 测试结果</h3>
+                <div id="testResults">
+                    <p>请执行上述测试并记录结果...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function clearStorage() {
+            // 清除所有相关的本地存储
+            const keysToRemove = [
+                'annual_party_user_id',
+                'annual_party_user_name',
+                'annual_party_user_gender',
+                'annual_party_numeric_id',
+                'annual_party_registration_time',
+                'pending_return_url',
+                'vote_intent_data',
+                'vote_intent_timestamp'
+            ];
+            
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+            });
+            
+            // 清除会话存储
+            sessionStorage.clear();
+            
+            alert('✅ 本地存储已清除！\n现在可以测试未注册用户的访问情况。');
+        }
+
+        // 页面加载时显示当前注册状态
+        document.addEventListener('DOMContentLoaded', function() {
+            const userId = localStorage.getItem('annual_party_user_id');
+            const userName = localStorage.getItem('annual_party_user_name');
+            const registrationTime = localStorage.getItem('annual_party_registration_time');
+            
+            const resultsDiv = document.getElementById('testResults');
+            
+            if (userId && userName && registrationTime) {
+                resultsDiv.innerHTML = `
+                    <div class="test-info">
+                        <h4><span class="status-indicator status-success"></span>当前注册状态</h4>
+                        <p><strong>用户ID:</strong> ${userId}</p>
+                        <p><strong>用户名:</strong> ${userName}</p>
+                        <p><strong>注册时间:</strong> ${new Date(registrationTime).toLocaleString()}</p>
+                        <p><strong>状态:</strong> 已注册 - 可以正常访问投票页面</p>
+                    </div>
+                `;
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="test-info">
+                        <h4><span class="status-indicator status-warning"></span>当前注册状态</h4>
+                        <p><strong>状态:</strong> 未注册 - 访问投票页面将显示登录提示</p>
+                        <p>请先注册或点击"清除本地存储"按钮来测试未注册状态。</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

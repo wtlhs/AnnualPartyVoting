@@ -68,9 +68,9 @@ ehthumbs.db
 Thumbs.db
 
 # IDE files
+.claude/
 .vscode/
 .idea/
-.kiro/
 *.swp
 *.swo
 *~
@@ -78,3 +78,6 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Invalid windows files
+nul

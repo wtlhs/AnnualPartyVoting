@@ -12,8 +12,10 @@ const {
   getRecentVotes,
   getVotingProgress
 } = require('../database/operations');
+const VotingSettingsManager = require('../database/VotingSettingsManager');
 
 const router = express.Router();
+const votingSettings = new VotingSettingsManager();
 
 // Simple in-memory cache for performance optimization
 const cache = {
@@ -49,6 +51,21 @@ router.post('/', async (req, res) => {
       });
     }
     
+    // Check voting status first
+    const votingStatus = await votingSettings.getVotingStatus();
+    if (!votingStatus.canVote) {
+      return res.status(403).json({
+        success: false,
+        errorCode: 'VOTING_DISABLED',
+        message: votingStatus.message,
+        details: {
+          votingEnabled: votingStatus.enabled,
+          withinTimeRange: votingStatus.withinTimeRange,
+          reason: votingStatus.enabled ? 'TIME_RESTRICTION' : 'VOTING_DISABLED'
+        }
+      });
+    }
+    
     // Check for self-voting
     if (voterId === targetUserId) {
       return res.status(400).json({
@@ -80,6 +97,26 @@ router.post('/', async (req, res) => {
       const votedUser = targetUser.gender === 'male' ? 
         restrictions.maleVotedName : restrictions.femaleVotedName;
       
+      // Determine allowed actions based on remaining votes
+      const allowedActions = [];
+      
+      // Check if they can vote for the OTHER gender
+      if (targetUser.gender === 'male') {
+          // If they tried to vote for male (and failed), check if they can vote for female
+          if (!restrictions.femaleVoted) {
+              allowedActions.push('为女士参与者投票');
+          }
+      } else {
+          // If they tried to vote for female (and failed), check if they can vote for male
+          if (!restrictions.maleVoted) {
+              allowedActions.push('为男士参与者投票');
+          }
+      }
+      
+      // Always allowed actions
+      allowedActions.push('查看结果');
+      allowedActions.push('返回首页');
+      
       return res.status(400).json({
         success: false,
         errorCode: 'DUPLICATE_VOTE',
@@ -87,7 +124,7 @@ router.post('/', async (req, res) => {
         details: {
           votedUser: votedUser,
           targetGender: targetUser.gender === 'male' ? '男士' : '女士',
-          allowedActions: ['查看结果', `为${targetUser.gender === 'male' ? '女士' : '男士'}参与者投票`]
+          allowedActions: allowedActions
         }
       });
     }
@@ -103,8 +140,8 @@ router.post('/', async (req, res) => {
       ipAddress
     });
     
-    // Update vote restrictions
-    await updateVoteRestrictions(voterId, targetUserId, targetUser.gender);
+    // Update vote restrictions and get updated status
+    const userVotingStatus = await updateVoteRestrictions(voterId, targetUserId, targetUser.gender);
     
     // Clear cache after vote to ensure real-time updates
     clearCache();
@@ -123,6 +160,14 @@ router.post('/', async (req, res) => {
           voteCount: updatedTargetUser.voteCount
         },
         voteTime: vote.voteTime
+      },
+      votingStatus: {
+        maleVoted: userVotingStatus.maleVoted,
+        femaleVoted: userVotingStatus.femaleVoted,
+        remainingVotes: {
+          male: userVotingStatus.maleVoted ? 0 : 1,
+          female: userVotingStatus.femaleVoted ? 0 : 1
+        }
       }
     });
     
@@ -283,11 +328,18 @@ router.post('/check-eligibility', async (req, res) => {
     
     // Check for self-voting
     if (voterId === targetUserId) {
+      // Still fetch voter status to provide better context
+      const restrictions = await checkVoteRestrictions(voterId);
+      
       return res.json({
         success: true,
         canVote: false,
         targetUser: null,
-        voterStatus: null,
+        voterStatus: {
+          maleVoted: restrictions.maleVoted,
+          femaleVoted: restrictions.femaleVoted,
+          votedUsers: restrictions.votedUsers
+        },
         reason: '不能为自己投票',
         errorCode: 'SELF_VOTE_NOT_ALLOWED'
       });

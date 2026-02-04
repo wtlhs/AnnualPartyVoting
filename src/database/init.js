@@ -119,8 +119,13 @@ async function initializeDatabase() {
         }
         console.log('Database initialization completed');
         
-        // Run migration after database is closed
-        runMigrations()
+        // Run migrations after database is closed
+        runLegacyMigrations()
+          .then(() => {
+            // Run new migration system
+            const { runMigrations } = require('./migrationRunner');
+            return runMigrations();
+          })
           .then(() => resolve())
           .catch(reject);
       });
@@ -128,8 +133,8 @@ async function initializeDatabase() {
   });
 }
 
-// Run database migrations
-async function runMigrations() {
+// Run database migrations (legacy - for numeric_id column)
+async function runLegacyMigrations() {
   return new Promise((resolve, reject) => {
     const db = createConnection();
     
@@ -192,7 +197,7 @@ function getDatabase() {
 
 module.exports = {
   initializeDatabase,
-  runMigrations,
+  runLegacyMigrations,
   getDatabase,
   DB_PATH
 };

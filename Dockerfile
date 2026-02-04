@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 # 设置工作目录
 WORKDIR /app
@@ -19,4 +19,4 @@ RUN mkdir -p data uploads
 EXPOSE 3000
 
 # 启动应用
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

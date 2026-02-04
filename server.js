@@ -9,11 +9,15 @@ const fs = require('fs');
 // Import database initialization
 const { initializeDatabase } = require('./src/database/init');
 
+// Import cleanup service
+const { exportCleanupService } = require('./src/utils/exportCleanupService');
+
 // Import routes
 const userRoutes = require('./src/routes/users');
 const voteRoutes = require('./src/routes/votes');
 const adminRoutes = require('./src/routes/admin');
 const pageRoutes = require('./src/routes/pages');
+const votingSettingsRoutes = require('./src/routes/voting-settings');
 
 const app = express();
 
@@ -76,16 +80,14 @@ app.use((req, res, next) => {
   res.setHeader('X-Forwarded-SSL', 'off');
   res.setHeader('X-Forwarded-Port', '3000');
   
-  // 添加内容安全策略，强制使用HTTP
+  // 添加内容安全策略，确保使用HTTP
   res.setHeader('Content-Security-Policy', 
     "default-src 'self' http:; " +
     "script-src 'self' 'unsafe-inline' http:; " +
     "style-src 'self' 'unsafe-inline' http:; " +
     "img-src 'self' data: blob: http:; " +
     "connect-src 'self' http:; " +
-    "font-src 'self' http:; " +
-    "upgrade-insecure-requests; " +
-    "block-all-mixed-content"
+    "font-src 'self' http:"
   );
   
   next();
@@ -206,6 +208,7 @@ app.locals.upload = upload;
 app.use('/api/users', userRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/voting-settings', votingSettingsRoutes);
 
 // Page Routes (serve HTML pages)
 app.use('/', pageRoutes);
@@ -254,6 +257,10 @@ async function startServer() {
     await initializeDatabase();
     console.log('Database initialized successfully');
     
+    // Start export cleanup service
+    exportCleanupService.start(6, 24); // Clean every 6 hours, keep files for 24 hours
+    console.log('Export cleanup service started');
+    
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Access the application at: http://localhost:${PORT}`);
@@ -265,5 +272,18 @@ async function startServer() {
 }
 
 startServer();
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  exportCleanupService.stop();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  exportCleanupService.stop();
+  process.exit(0);
+});
 
 module.exports = app;

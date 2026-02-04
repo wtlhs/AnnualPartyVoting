@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票控制功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn:hover {
+            opacity: 0.8;
+            transform: translateY(-1px);
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .code {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+            white-space: pre-wrap;
+        }
+        .status-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-enabled {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-disabled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>投票控制功能测试</h1>
+    
+    <div class="test-section">
+        <h2>🎯 功能概述</h2>
+        <p>这个测试页面用于验证投票开关功能的各个方面：</p>
+        <ul>
+            <li>✅ 管理员可以开启/关闭投票</li>
+            <li>✅ 用户在投票关闭时看到友好提示</li>
+            <li>✅ 支持自定义关闭消息</li>
+            <li>✅ 支持时间控制（可选）</li>
+            <li>✅ 实时状态更新</li>
+        </ul>
+    </div>
+    
+    <div class="grid">
+        <div class="test-section">
+            <h2>📊 投票状态检查</h2>
+            <p>检查当前投票状态和设置：</p>
+            
+            <button onclick="checkVotingStatus()" class="btn btn-primary">检查投票状态</button>
+            <button onclick="getAllSettings()" class="btn btn-primary">获取所有设置</button>
+            
+            <div id="statusResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎛️ 投票控制测试</h2>
+            <p>测试投票开关功能（需要管理员权限）：</p>
+            
+            <button onclick="enableVoting()" class="btn btn-success">开启投票</button>
+            <button onclick="disableVoting()" class="btn btn-danger">关闭投票</button>
+            <button onclick="toggleVoting()" class="btn btn-warning">切换状态</button>
+            
+            <div id="controlResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>💬 自定义消息测试</h2>
+        <p>测试自定义投票关闭消息：</p>
+        
+        <div style="margin-bottom: 15px;">
+            <label for="customMessage">自定义消息：</label><br>
+            <textarea id="customMessage" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;" 
+                      placeholder="请输入投票关闭时显示的消息...">投票活动暂时关闭，请等待主持人通知开启时间</textarea>
+        </div>
+        
+        <button onclick="disableVotingWithMessage()" class="btn btn-danger">关闭投票并设置消息</button>
+        
+        <div id="messageResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🧪 用户端体验测试</h2>
+        <p>模拟用户在不同投票状态下的体验：</p>
+        
+        <button onclick="simulateUserVote()" class="btn btn-primary">模拟用户投票</button>
+        <button onclick="testVoteEligibility()" class="btn btn-primary">测试投票资格检查</button>
+        
+        <div id="userTestResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>⚙️ 高级设置测试</h2>
+        <p>测试时间控制和其他高级设置：</p>
+        
+        <div style="margin-bottom: 15px;">
+            <label>投票开始时间：</label>
+            <input type="datetime-local" id="startTime" style="margin-left: 10px; padding: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label>投票结束时间：</label>
+            <input type="datetime-local" id="endTime" style="margin-left: 10px; padding: 5px;">
+        </div>
+        
+        <button onclick="updateTimeSettings()" class="btn btn-warning">更新时间设置</button>
+        <button onclick="clearTimeSettings()" class="btn btn-warning">清除时间限制</button>
+        
+        <div id="advancedResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔄 实时状态监控</h2>
+        <p>实时监控投票状态变化：</p>
+        
+        <button onclick="startMonitoring()" class="btn btn-success">开始监控</button>
+        <button onclick="stopMonitoring()" class="btn btn-danger">停止监控</button>
+        
+        <div id="monitoringResult" class="result info" style="display: none;">
+            <h4>监控状态：</h4>
+            <div id="monitoringLog"></div>
+        </div>
+    </div>
+    
+    <script>
+        let monitoringInterval = null;
+        
+        // 检查投票状态
+        async function checkVotingStatus() {
+            const resultDiv = document.getElementById('statusResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在检查投票状态...';
+            
+            try {
+                const response = await fetch('/api/voting-settings/status');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const status = result.status;
+                    const statusClass = status.canVote ? 'success' : 'warning';
+                    
+                    resultDiv.className = `result ${statusClass}`;
+                    resultDiv.innerHTML = `
+                        <h4>投票状态检查结果</h4>
+                        <p><strong>可以投票：</strong> ${status.canVote ? '✅ 是' : '❌ 否'}</p>
+                        <p><strong>投票开启：</strong> ${status.enabled ? '✅ 是' : '❌ 否'}</p>
+                        <p><strong>时间范围内：</strong> ${status.withinTimeRange ? '✅ 是' : '❌ 否'}</p>
+                        ${status.message ? `<p><strong>提示消息：</strong> ${status.message}</p>` : ''}
+                        <div class="code">${JSON.stringify(status, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<h4>❌ 检查失败</h4><p>${result.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h4>❌ 网络错误</h4><p>${error.message}</p>`;
+            }
+        }
+        
+        // 获取所有设置
+        async function getAllSettings() {
+            const resultDiv = document.getElementById('statusResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在获取设置...';
+            
+            try {
+                const response = await fetch('/api/voting-settings');
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ 投票设置</h4>
+                        <div class="code">${JSON.stringify(result.settings, null, 2)}</div>
+                        <h4>统计信息</h4>
+                        <div class="code">${JSON.stringify(result.stats, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<h4>❌ 获取失败</h4><p>${result.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h4>❌ 网络错误</h4><p>${error.message}</p>`;
+            }
+        }
+        
+        // 开启投票
+        async function enableVoting() {
+            await controlVoting('/api/voting-settings/enable', 'POST', '开启投票');
+        }
+        
+        // 关闭投票
+        async function disableVoting() {
+            await controlVoting('/api/voting-settings/disable', 'POST', '关闭投票');
+        }
+        
+        // 切换投票状态
+        async function toggleVoting() {
+            await controlVoting('/api/voting-settings/toggle', 'POST', '切换投票状态');
+        }
+        
+        // 投票控制通用函数
+        async function controlVoting(endpoint, method, action) {
+            const resultDiv = document.getElementById('controlResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = `正在${action}...`;
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ ${action}成功</h4>
+                        <p>${result.message}</p>
+                        <div class="code">${JSON.stringify(result.status, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<h4>❌ ${action}失败</h4><p>${result.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h4>❌ 网络错误</h4><p>${error.message}</p>`;
+            }
+        }
+        
+        // 关闭投票并设置消息
+        async function disableVotingWithMessage() {
+            const message = document.getElementById('customMessage').value.trim();
+            const resultDiv = document.getElementById('messageResult');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在关闭投票并设置消息...';
+            
+            try {
+                const response = await fetch('/api/voting-settings/disable', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ 投票已关闭并设置消息</h4>
+                        <p><strong>设置的消息：</strong> ${message}</p>
+                        <p><strong>服务器响应：</strong> ${result.message}</p>
+                        <div class="code">${JSON.stringify(result.status, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<h4>❌ 操作失败</h4><p>${result.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h4>❌ 网络错误</h4><p>${error.message}</p>`;
+            }
+        }
+        
+        // 模拟用户投票
+        async function simulateUserVote() {
+            const resultDiv = document.getElementById('userTestResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在模拟用户投票...';
+            
+            try {
+                // 模拟投票请求
+                const response = await fetch('/api/votes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        voterId: 'test-voter-123',
+                        targetUserId: 'test-candidate-456'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ 投票成功</h4>
+                        <p>${result.message}</p>
+                        <div class="code">${JSON.stringify(result, null, 2)}</div>
+                    `;
+                } else {
+                    const resultClass = result.errorCode === 'VOTING_DISABLED' ? 'warning' : 'error';
+                    resultDiv.className = `result ${resultClass}`;
+                    resultDiv.innerHTML = `
+                        <h4>${result.errorCode === 'VOTING_DISABLED' ? '⚠️ 投票已关闭' : '❌ 投票失败'}</h4>
+                        <p><strong>错误代码：</strong> ${result.errorCode}</p>
+                        <p><strong>错误消息：</strong> ${result.message}</p>
+                        ${result.details ? `<div class="code">${JSON.stringify(result.details, null, 2)}</div>` : ''}
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h4>❌ 网络错误</h4><p>${error.message}</p>`;
+            }
+        }
+        
+        // 测试投票资格检查
+        async function testVoteEligibility() {
+            const resultDiv = document.getElementById('userTestResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在检查投票资格...';
+            
+            try {
+                const response = await fetch('/api/votes/check-eligibility', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        voterId: 'test-voter-123',
+                        targetUserId: 'test-candidate-456'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const canVote = result.canVote;
+                    resultDiv.className = `result ${canVote ? 'success' : 'warning'}`;
+                    resultDiv.innerHTML = `
+                        <h4>${canVote ? '✅ 可以投票' : '⚠️ 不能投票'}</h4>
+                        <p><strong>投票资格：</strong> ${canVote ? '通过' : '不通过'}</p>
+                        ${result.reason ? `<p><strong>原因：</strong> ${result.reason}</p>` : ''}
+                        <div class="code">${JSON.stringify(result, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<h4>❌ 检查失败</h4><p>${result.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h4>❌ 网络错误</h4><p>${error.message}</p>`;
+            }
+        }
+        
+        // 更新时间设置
+        async function updateTimeSettings() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const resultDiv = document.getElementById('advancedResult');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在更新时间设置...';
+            
+            try {
+                const settings = {
+                    voting_start_time: startTime,
+                    voting_end_time: endTime
+                };
+                
+                const response = await fetch('/api/voting-settings', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ settings })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ 时间设置更新成功</h4>
+                        <p><strong>开始时间：</strong> ${startTime || '无限制'}</p>
+                        <p><strong>结束时间：</strong> ${endTime || '无限制'}</p>
+                        <div class="code">${JSON.stringify(result.status, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<h4>❌ 更新失败</h4><p>${result.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h4>❌ 网络错误</h4><p>${error.message}</p>`;
+            }
+        }
+        
+        // 清除时间设置
+        async function clearTimeSettings() {
+            document.getElementById('startTime').value = '';
+            document.getElementById('endTime').value = '';
+            await updateTimeSettings();
+        }
+        
+        // 开始监控
+        function startMonitoring() {
+            const resultDiv = document.getElementById('monitoringResult');
+            const logDiv = document.getElementById('monitoringLog');
+            
+            resultDiv.style.display = 'block';
+            logDiv.innerHTML = '<p>开始监控投票状态变化...</p>';
+            
+            monitoringInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/voting-settings/status');
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        const timestamp = new Date().toLocaleTimeString();
+                        const status = result.status;
+                        const statusText = status.canVote ? '✅ 开启' : '❌ 关闭';
+                        
+                        logDiv.innerHTML += `
+                            <p><strong>${timestamp}:</strong> 投票状态 ${statusText} 
+                            ${status.message ? `- ${status.message}` : ''}</p>
+                        `;
+                        
+                        // 保持最新的10条记录
+                        const logs = logDiv.querySelectorAll('p');
+                        if (logs.length > 10) {
+                            logs[0].remove();
+                        }
+                        
+                        // 滚动到底部
+                        logDiv.scrollTop = logDiv.scrollHeight;
+                    }
+                } catch (error) {
+                    console.error('Monitoring error:', error);
+                }
+            }, 3000); // 每3秒检查一次
+        }
+        
+        // 停止监控
+        function stopMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+                
+                const logDiv = document.getElementById('monitoringLog');
+                logDiv.innerHTML += '<p><strong>监控已停止</strong></p>';
+            }
+        }
+        
+        // 页面加载时自动检查状态
+        window.addEventListener('load', () => {
+            checkVotingStatus();
+        });
+        
+        // 页面卸载时停止监控
+        window.addEventListener('beforeunload', () => {
+            stopMonitoring();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试扫码投票功能优化</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .test-link {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .test-link:hover {
+            background: #0056b3;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        .removed {
+            color: #dc3545;
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 扫码投票功能优化测试</h1>
+    
+    <div class="test-section">
+        <h2>✅ 功能调整完成</h2>
+        <ul>
+            <li class="success">✓ 保留了二维码扫描功能</li>
+            <li class="removed">✗ 移除了手动输入二维码内容功能</li>
+            <li class="success">✓ 保留了6位数字ID输入功能（作为备选）</li>
+            <li class="success">✓ 优化了功能层次和用户体验</li>
+            <li class="success">✓ 恢复了所有导航链接文本</li>
+            <li class="success">✓ 保持了完整的扫码功能</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔗 测试链接</h2>
+        <p>点击以下链接测试修改后的页面：</p>
+        <a href="/scan" class="test-link" target="_blank">扫码投票页面</a>
+        <a href="/" class="test-link" target="_blank">首页</a>
+        <a href="/user-list" class="test-link" target="_blank">用户列表</a>
+        <a href="/mobile-stats" class="test-link" target="_blank">统计页面</a>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 功能说明</h2>
+        <h3>主要投票流程（扫码）：</h3>
+        <ol>
+            <li><strong>访问扫码页面</strong> - 点击"扫码投票"按钮</li>
+            <li><strong>启动摄像头</strong> - 点击"开始扫描"按钮</li>
+            <li><strong>扫描二维码</strong> - 将摄像头对准参与者的二维码</li>
+            <li><strong>自动验证</strong> - 系统自动验证二维码并跳转投票页面</li>
+        </ol>
+        
+        <h3>备选投票流程（手动输入）：</h3>
+        <ol>
+            <li><strong>显示手动输入</strong> - 点击"手动输入ID"按钮</li>
+            <li><strong>输入6位数字ID</strong> - 在输入框中输入参与者的6位数字ID</li>
+            <li><strong>确认投票</strong> - 点击"确认投票"按钮或按回车键</li>
+            <li><strong>验证跳转</strong> - 系统验证ID并跳转投票页面</li>
+        </ol>
+        
+        <h3>智能降级机制：</h3>
+        <ul>
+            <li>🎥 摄像头可用时：优先显示扫码功能</li>
+            <li>📱 摄像头不可用时：自动显示手动输入选项</li>
+            <li>🔄 用户可以在两种方式之间自由切换</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎯 测试步骤</h2>
+        <ol>
+            <li class="info">访问首页，注册一个测试用户</li>
+            <li class="info">记下注册后显示的6位数字ID</li>
+            <li class="info">点击"扫码投票"进入投票页面</li>
+            <li class="info">测试摄像头扫码功能（如果有二维码）</li>
+            <li class="info">点击"手动输入ID"测试备选功能</li>
+            <li class="info">输入其他用户的6位数字ID</li>
+            <li class="info">验证输入验证和跳转功能</li>
+            <li class="info">检查所有页面的导航链接是否正确</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 功能对比</h2>
+        <h3>移除的功能：</h3>
+        <ul>
+            <li class="removed">❌ 手动输入二维码内容的文本框</li>
+            <li class="removed">❌ 二维码内容粘贴和解析功能</li>
+            <li class="removed">❌ 二维码内容格式验证</li>
+        </ul>
+        
+        <h3>保留的功能：</h3>
+        <ul>
+            <li class="success">✅ 摄像头二维码扫描</li>
+            <li class="success">✅ 多摄像头支持和切换</li>
+            <li class="success">✅ 6位数字ID手动输入</li>
+            <li class="success">✅ 所有验证和跳转逻辑</li>
+            <li class="success">✅ 错误处理和用户反馈</li>
+        </ul>
+        
+        <h3>优化的功能：</h3>
+        <ul>
+            <li class="info">✨ 更清晰的功能层次（扫码为主，手动输入为辅）</li>
+            <li class="info">✨ 更好的视觉设计和用户引导</li>
+            <li class="info">✨ 更智能的功能降级和错误处理</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔧 技术特点</h2>
+        <ul>
+            <li><strong>主次分明</strong> - 扫码作为主要功能，手动输入作为备选</li>
+            <li><strong>智能适配</strong> - 根据设备能力自动选择最佳输入方式</li>
+            <li><strong>功能完整</strong> - 保留所有核心功能和可靠的备选方案</li>
+            <li><strong>用户友好</strong> - 清晰的操作指引和及时的反馈</li>
+            <li><strong>代码优化</strong> - 移除不必要的复杂功能，保持代码清晰</li>
+        </ul>
+    </div>
+    
+    <div style="text-align: center; margin-top: 40px;">
+        <p><strong>🎉 扫码投票功能优化完成！</strong></p>
+        <p>现在用户可以优先使用扫码功能，当扫码不可用时可以使用6位数字ID输入作为备选方案。</p>
+        <p>功能层次更清晰，用户体验更友好！</p>
+    </div>
+</body>
+</html>

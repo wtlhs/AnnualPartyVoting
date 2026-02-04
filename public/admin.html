@@ -7,9 +7,16 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/admin.css">
     <link rel="stylesheet" href="/static/libs/fontawesome.min.css">
+    
+    <!-- 管理员认证脚本 -->
+    <script src="/static/js/admin-auth.js"></script>
+<link rel="icon" href="data:,">
 </head>
 <body>
     <div class="admin-layout">
+        <!-- 移动端侧边栏遮罩层 -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
         <!-- 侧边栏导航 -->
         <aside class="admin-sidebar">
             <div class="sidebar-header">
@@ -25,6 +32,10 @@
                 <a href="#participants" class="nav-item" data-section="participants">
                     <i class="fas fa-users"></i>
                     <span>参与者管理</span>
+                </a>
+                <a href="#guests" class="nav-item" data-section="guests">
+                    <i class="fas fa-user-plus"></i>
+                    <span>嘉宾管理</span>
                 </a>
                 <a href="#voting" class="nav-item" data-section="voting">
                     <i class="fas fa-vote-yea"></i>

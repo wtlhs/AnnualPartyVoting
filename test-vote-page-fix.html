@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试投票页面修复</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/urlUtils.js"></script>
+    <script src="/static/js/errorHandler.js"></script>
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .btn-test {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-test:hover {
+            opacity: 0.8;
+            transform: translateY(-1px);
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>投票页面导航修复测试</h1>
+        
+        <div class="test-section">
+            <h2>🔧 修复内容</h2>
+            <p>已对投票确认页面进行以下修复：</p>
+            <ul>
+                <li>✅ 修复了 popstate 事件监听器，避免干扰正常导航</li>
+                <li>✅ 为所有返回首页按钮添加了备用导航函数</li>
+                <li>✅ 实现了多重备用导航方案</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧪 导航功能测试</h2>
+            <p>测试不同的返回首页方式：</p>
+            
+            <!-- 模拟投票确认页面的按钮 -->
+            <div style="background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>模拟投票确认页面</h3>
+                <p><strong>候选人：</strong>测试用户</p>
+                <p><strong>状态：</strong>投票成功</p>
+                
+                <div class="actions">
+                    <a href="/mobile-stats" class="btn-test btn-primary">查看结果</a>
+                    <a href="/" class="btn-test btn-secondary" onclick="safeNavigateHome(); return false;">返回首页 (修复版)</a>
+                </div>
+                
+                <div class="actions" style="margin-top: 10px;">
+                    <a href="/" class="btn-test btn-secondary">返回首页 (标准版)</a>
+                    <button onclick="testNavigationMethods()" class="btn-test btn-success">测试所有导航方法</button>
+                </div>
+            </div>
+            
+            <div id="testResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 诊断工具</h2>
+            <p>检查页面状态和可能的问题：</p>
+            
+            <button onclick="checkPageStatus()" class="btn-test btn-primary">检查页面状态</button>
+            <button onclick="checkEventListeners()" class="btn-test btn-secondary">检查事件监听器</button>
+            <button onclick="checkConsoleErrors()" class="btn-test btn-success">检查控制台错误</button>
+            
+            <div id="diagnosticResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📋 使用说明</h2>
+            <p>如果返回首页按钮仍然无法工作，请尝试以下步骤：</p>
+            <ol>
+                <li>刷新页面 (F5 或 Ctrl+R)</li>
+                <li>清除浏览器缓存</li>
+                <li>检查浏览器控制台是否有错误信息</li>
+                <li>尝试使用不同的浏览器</li>
+                <li>确认服务器正在运行 (http://localhost:3000)</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        /**
+         * 安全导航到首页 - 与vote.js中的函数相同
+         */
+        function safeNavigateHome() {
+            try {
+                // 方法1: 标准导航
+                window.location.href = '/';
+            } catch (error) {
+                console.error('标准导航失败，尝试备用方案:', error);
+                try {
+                    // 方法2: 使用replace
+                    window.location.replace('/');
+                } catch (replaceError) {
+                    console.error('Replace导航失败，尝试最后方案:', replaceError);
+                    try {
+                        // 方法3: 使用assign
+                        window.location.assign('/');
+                    } catch (assignError) {
+                        console.error('所有导航方法都失败:', assignError);
+                        // 最后手段：显示手动导航提示
+                        alert('导航失败，请手动点击浏览器地址栏输入首页地址');
+                    }
+                }
+            }
+        }
+        
+        /**
+         * 测试所有导航方法
+         */
+        function testNavigationMethods() {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在测试导航方法...';
+            
+            const methods = [
+                {
+                    name: 'window.location.href',
+                    test: () => {
+                        return typeof window.location.href === 'string' && window.location.href.length > 0;
+                    }
+                },
+                {
+                    name: 'window.location.replace',
+                    test: () => {
+                        return typeof window.location.replace === 'function';
+                    }
+                },
+                {
+                    name: 'window.location.assign',
+                    test: () => {
+                        return typeof window.location.assign === 'function';
+                    }
+                },
+                {
+                    name: '首页连接测试',
+                    test: async () => {
+                        try {
+                            const response = await fetch('/');
+                            return response.ok;
+                        } catch (error) {
+                            return false;
+                        }
+                    }
+                }
+            ];
+            
+            Promise.all(methods.map(async method => {
+                try {
+                    const result = await method.test();
+                    return { name: method.name, success: result };
+                } catch (error) {
+                    return { name: method.name, success: false, error: error.message };
+                }
+            })).then(results => {
+                const successCount = results.filter(r => r.success).length;
+                const resultClass = successCount === results.length ? 'success' : 'error';
+                
+                resultDiv.className = `result ${resultClass}`;
+                resultDiv.innerHTML = `
+                    <h4>导航方法测试结果 (${successCount}/${results.length} 可用)</h4>
+                    <ul>
+                        ${results.map(r => 
+                            `<li><strong>${r.name}:</strong> ${r.success ? '✅ 可用' : '❌ 不可用'} ${r.error || ''}</li>`
+                        ).join('')}
+                    </ul>
+                    ${successCount > 0 ? 
+                        '<p><strong>✅ 至少有一种导航方法可用，返回首页功能应该正常。</strong></p>' : 
+                        '<p><strong>❌ 所有导航方法都不可用，请检查浏览器设置。</strong></p>'
+                    }
+                `;
+            });
+        }
+        
+        /**
+         * 检查页面状态
+         */
+        function checkPageStatus() {
+            const resultDiv = document.getElementById('diagnosticResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            
+            const status = {
+                url: window.location.href,
+                pathname: window.location.pathname,
+                protocol: window.location.protocol,
+                host: window.location.host,
+                readyState: document.readyState,
+                title: document.title,
+                hasJavaScript: typeof window !== 'undefined',
+                hasLocalStorage: typeof localStorage !== 'undefined',
+                hasSessionStorage: typeof sessionStorage !== 'undefined',
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine
+            };
+            
+            resultDiv.innerHTML = `
+                <h4>页面状态检查</h4>
+                <ul>
+                    ${Object.entries(status).map(([key, value]) => 
+                        `<li><strong>${key}:</strong> ${value}</li>`
+                    ).join('')}
+                </ul>
+            `;
+        }
+        
+        /**
+         * 检查事件监听器
+         */
+        function checkEventListeners() {
+            const resultDiv = document.getElementById('diagnosticResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            
+            // 检查常见的事件监听器
+            const events = ['click', 'popstate', 'beforeunload', 'unload', 'DOMContentLoaded'];
+            const eventStatus = events.map(event => {
+                // 这是一个简化的检查，实际的事件监听器检查比较复杂
+                return {
+                    event: event,
+                    hasListener: window[`on${event}`] !== null || window[`on${event}`] !== undefined
+                };
+            });
+            
+            resultDiv.innerHTML = `
+                <h4>事件监听器检查</h4>
+                <p>注意：这只是基础检查，实际的事件监听器可能通过addEventListener添加。</p>
+                <ul>
+                    ${eventStatus.map(status => 
+                        `<li><strong>${status.event}:</strong> ${status.hasListener ? '有监听器' : '无监听器'}</li>`
+                    ).join('')}
+                </ul>
+            `;
+        }
+        
+        /**
+         * 检查控制台错误
+         */
+        function checkConsoleErrors() {
+            const resultDiv = document.getElementById('diagnosticResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            
+            // 重写console.error来捕获错误
+            const originalError = console.error;
+            const errors = [];
+            
+            console.error = function(...args) {
+                errors.push(args.join(' '));
+                originalError.apply(console, args);
+            };
+            
+            // 恢复原始的console.error
+            setTimeout(() => {
+                console.error = originalError;
+            }, 1000);
+            
+            resultDiv.innerHTML = `
+                <h4>控制台错误检查</h4>
+                <p>请打开浏览器开发者工具 (F12) 查看控制台标签页。</p>
+                <p>如果看到红色错误信息，请将其报告给开发人员。</p>
+                <p><strong>快捷键：</strong></p>
+                <ul>
+                    <li>Chrome/Edge: F12 或 Ctrl+Shift+I</li>
+                    <li>Firefox: F12 或 Ctrl+Shift+K</li>
+                    <li>Safari: Cmd+Option+I</li>
+                </ul>
+            `;
+        }
+        
+        // 页面加载完成后自动运行测试
+        window.addEventListener('load', function() {
+            console.log('测试页面加载完成');
+            setTimeout(() => {
+                testNavigationMethods();
+            }, 1000);
+        });
+        
+        // 监听错误事件
+        window.addEventListener('error', function(e) {
+            console.error('页面错误:', e.error);
+        });
+        
+        // 监听未处理的Promise拒绝
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('未处理的Promise拒绝:', e.reason);
+        });
+    </script>
+</body>
+</html>

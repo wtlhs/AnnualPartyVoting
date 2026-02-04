@@ -1127,6 +1127,24 @@ async function clearAllData() {
     db.serialize(() => {
       db.run('BEGIN TRANSACTION');
       
+      // Clear audit_logs first (has foreign key to votes)
+      db.run('DELETE FROM audit_logs', [], (err) => {
+        if (err && !err.message.includes('no such table')) {
+          db.run('ROLLBACK');
+          db.close();
+          return reject(err);
+        }
+      });
+      
+      // Clear export_tasks
+      db.run('DELETE FROM export_tasks', [], (err) => {
+        if (err && !err.message.includes('no such table')) {
+          db.run('ROLLBACK');
+          db.close();
+          return reject(err);
+        }
+      });
+      
       db.run('DELETE FROM vote_restrictions', [], (err) => {
         if (err) {
           db.run('ROLLBACK');

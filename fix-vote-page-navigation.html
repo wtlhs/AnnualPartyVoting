@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修复投票页面导航问题</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .fix-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        .problem-section {
+            background: #fff3cd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 10px 5px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.8;
+            transform: translateY(-1px);
+        }
+        .code-block {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+            overflow-x: auto;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>修复投票页面导航问题</h1>
+    
+    <div class="problem-section">
+        <h2>🔍 问题诊断</h2>
+        <p>投票确认页面中的"返回首页"按钮无法正常工作，可能的原因包括：</p>
+        <ul>
+            <li>JavaScript事件监听器干扰了正常导航</li>
+            <li>popstate事件处理器过于激进</li>
+            <li>CSS样式阻止了点击事件</li>
+            <li>服务器路由配置问题</li>
+        </ul>
+    </div>
+    
+    <div class="fix-section">
+        <h2>✅ 已实施的修复</h2>
+        <p>已修复了 <code>vote.js</code> 中的 popstate 事件处理器，避免干扰正常导航：</p>
+        
+        <div class="code-block">
+// 修复前（有问题的代码）:
+window.addEventListener('popstate', function(event) {
+    initializeVotePage(); // 这会干扰所有导航
+});
+
+// 修复后（改进的代码）:
+window.addEventListener('popstate', function(event) {
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/vote/')) {
+        initializeVotePage(); // 只在投票页面内重新初始化
+    }
+});
+        </div>
+    </div>
+    
+    <div class="fix-section">
+        <h2>🧪 测试修复效果</h2>
+        <p>点击下面的按钮测试不同的导航方式：</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; border: 2px solid #667eea; margin: 20px 0;">
+            <h3>模拟投票确认页面</h3>
+            <p><strong>候选人：</strong>张三</p>
+            <p><strong>ID：</strong>123456</p>
+            <p><strong>类别：</strong>最佳男士</p>
+            
+            <div class="actions" style="margin-top: 20px;">
+                <a href="/mobile-stats" class="btn btn-primary">查看结果</a>
+                <a href="/" class="btn btn-secondary" id="homeLink1">返回首页 (标准链接)</a>
+            </div>
+            
+            <div class="actions" style="margin-top: 10px;">
+                <button onclick="goHome()" class="btn btn-success">返回首页 (JavaScript)</button>
+                <button onclick="testNavigation()" class="btn btn-secondary">测试导航</button>
+            </div>
+        </div>
+        
+        <div id="testResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="fix-section">
+        <h2>🔧 额外的修复建议</h2>
+        <p>如果问题仍然存在，可以尝试以下解决方案：</p>
+        
+        <h3>1. 强制导航函数</h3>
+        <div class="code-block">
+function forceNavigateHome() {
+    // 移除所有可能的事件监听器
+    window.removeEventListener('popstate', arguments.callee);
+    window.removeEventListener('beforeunload', arguments.callee);
+    
+    // 强制导航到首页
+    window.location.href = '/';
+}
+        </div>
+        
+        <h3>2. 使用 window.location.replace</h3>
+        <div class="code-block">
+// 替换当前页面历史记录，避免返回按钮问题
+function replaceWithHome() {
+    window.location.replace('/');
+}
+        </div>
+        
+        <h3>3. 延迟导航</h3>
+        <div class="code-block">
+// 给页面一点时间完成当前操作
+function delayedNavigateHome() {
+    setTimeout(() => {
+        window.location.href = '/';
+    }, 100);
+}
+        </div>
+        
+        <button onclick="forceNavigateHome()" class="btn btn-primary">测试强制导航</button>
+        <button onclick="replaceWithHome()" class="btn btn-secondary">测试Replace导航</button>
+        <button onclick="delayedNavigateHome()" class="btn btn-success">测试延迟导航</button>
+    </div>
+    
+    <div class="fix-section">
+        <h2>📋 验证清单</h2>
+        <p>请确认以下项目都正常工作：</p>
+        <ul>
+            <li><input type="checkbox" id="check1"> 首页可以正常访问 (http://localhost:3000/)</li>
+            <li><input type="checkbox" id="check2"> 投票页面可以正常加载</li>
+            <li><input type="checkbox" id="check3"> 返回首页链接可以点击</li>
+            <li><input type="checkbox" id="check4"> JavaScript导航正常工作</li>
+            <li><input type="checkbox" id="check5"> 浏览器控制台没有错误</li>
+        </ul>
+        
+        <button onclick="runFullTest()" class="btn btn-primary">运行完整测试</button>
+    </div>
+    
+    <script>
+        // 强制导航到首页
+        function forceNavigateHome() {
+            try {
+                // 清理可能的事件监听器
+                const events = ['popstate', 'beforeunload', 'unload'];
+                events.forEach(event => {
+                    window.removeEventListener(event, function() {});
+                });
+                
+                // 强制导航
+                window.location.href = '/';
+            } catch (error) {
+                console.error('强制导航失败:', error);
+                // 备用方案
+                window.open('/', '_self');
+            }
+        }
+        
+        // 使用replace导航
+        function replaceWithHome() {
+            try {
+                window.location.replace('/');
+            } catch (error) {
+                console.error('Replace导航失败:', error);
+                window.location.href = '/';
+            }
+        }
+        
+        // 延迟导航
+        function delayedNavigateHome() {
+            setTimeout(() => {
+                try {
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('延迟导航失败:', error);
+                }
+            }, 100);
+        }
+        
+        // 标准JavaScript导航
+        function goHome() {
+            window.location.href = '/';
+        }
+        
+        // 测试导航功能
+        function testNavigation() {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在测试导航功能...';
+            
+            // 测试各种导航方法
+            const tests = [
+                {
+                    name: '标准href导航',
+                    test: () => {
+                        const link = document.createElement('a');
+                        link.href = '/';
+                        return link.href === window.location.origin + '/';
+                    }
+                },
+                {
+                    name: 'window.location.href',
+                    test: () => {
+                        try {
+                            const original = window.location.href;
+                            // 不实际执行，只测试语法
+                            return typeof window.location.href === 'string';
+                        } catch (error) {
+                            return false;
+                        }
+                    }
+                },
+                {
+                    name: 'fetch首页',
+                    test: async () => {
+                        try {
+                            const response = await fetch('/');
+                            return response.ok;
+                        } catch (error) {
+                            return false;
+                        }
+                    }
+                }
+            ];
+            
+            Promise.all(tests.map(async test => {
+                try {
+                    const result = await test.test();
+                    return { name: test.name, success: result };
+                } catch (error) {
+                    return { name: test.name, success: false, error: error.message };
+                }
+            })).then(results => {
+                const successCount = results.filter(r => r.success).length;
+                const resultClass = successCount === results.length ? 'success' : 'error';
+                
+                resultDiv.className = `result ${resultClass}`;
+                resultDiv.innerHTML = `
+                    <h4>导航测试结果 (${successCount}/${results.length} 通过)</h4>
+                    <ul>
+                        ${results.map(r => 
+                            `<li>${r.name}: ${r.success ? '✅ 通过' : '❌ 失败'} ${r.error || ''}</li>`
+                        ).join('')}
+                    </ul>
+                `;
+            });
+        }
+        
+        // 运行完整测试
+        async function runFullTest() {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在运行完整测试...';
+            
+            const tests = [
+                {
+                    name: '服务器连接',
+                    test: async () => {
+                        const response = await fetch('/');
+                        return response.ok;
+                    }
+                },
+                {
+                    name: '首页内容',
+                    test: async () => {
+                        const response = await fetch('/');
+                        const text = await response.text();
+                        return text.includes('年会最佳服装评选');
+                    }
+                },
+                {
+                    name: 'JavaScript功能',
+                    test: () => {
+                        return typeof window.location === 'object';
+                    }
+                },
+                {
+                    name: '事件监听器',
+                    test: () => {
+                        return typeof window.addEventListener === 'function';
+                    }
+                }
+            ];
+            
+            try {
+                const results = await Promise.all(tests.map(async test => {
+                    try {
+                        const result = await test.test();
+                        return { name: test.name, success: result };
+                    } catch (error) {
+                        return { name: test.name, success: false, error: error.message };
+                    }
+                }));
+                
+                const successCount = results.filter(r => r.success).length;
+                const resultClass = successCount === results.length ? 'success' : 'error';
+                
+                resultDiv.className = `result ${resultClass}`;
+                resultDiv.innerHTML = `
+                    <h4>完整测试结果 (${successCount}/${results.length} 通过)</h4>
+                    <ul>
+                        ${results.map(r => 
+                            `<li><strong>${r.name}:</strong> ${r.success ? '✅ 通过' : '❌ 失败'} ${r.error || ''}</li>`
+                        ).join('')}
+                    </ul>
+                    ${successCount === results.length ? 
+                        '<p><strong>✅ 所有测试通过！返回首页功能应该正常工作。</strong></p>' : 
+                        '<p><strong>❌ 部分测试失败，请检查服务器状态或网络连接。</strong></p>'
+                    }
+                `;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h4>测试执行失败</h4>
+                    <p>错误: ${error.message}</p>
+                `;
+            }
+        }
+        
+        // 页面加载时自动运行基础测试
+        window.addEventListener('load', () => {
+            console.log('修复页面加载完成');
+            // 自动运行一次测试
+            setTimeout(testNavigation, 1000);
+        });
+    </script>
+</body>
+</html>

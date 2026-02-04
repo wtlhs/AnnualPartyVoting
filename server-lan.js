@@ -209,9 +209,9 @@ async function startServer() {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 年会投票系统已启动`);
       console.log(`📱 本地访问: http://localhost:${PORT}`);
-      console.log(`🌐 局域网访问: http://172.18.0.250:${PORT}`);
-      console.log(`👑 管理后台: http://172.18.0.250:${PORT}/admin`);
-      console.log(`📺 大屏展示: http://172.18.0.250:${PORT}/ranking-display`);
+      console.log(`🌐 局域网访问: http://192.168.0.97:${PORT}`);
+      console.log(`👑 管理后台: http://192.168.0.97:${PORT}/admin`);
+      console.log(`📺 大屏展示: http://192.168.0.97:${PORT}/ranking-display`);
       console.log(`💡 提示: 其他设备请使用局域网地址访问`);
     });
   } catch (error) {

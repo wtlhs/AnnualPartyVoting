@@ -7,11 +7,48 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
         /* 用户网格布局 */
+        .user-grid-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            margin-top: 20px;
+            /* 添加平滑滚动 */
+            scroll-behavior: smooth;
+            /* 优化滚动性能 */
+            -webkit-overflow-scrolling: touch;
+            will-change: scroll-position;
+        }
+
+        /* 自定义滚动条样式 */
+        .user-grid-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .user-grid-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .user-grid-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .user-grid-container::-webkit-scrollbar-thumb:hover {
+            background: #5568d3;
+        }
+
+        /* Firefox 滚动条样式 */
+        .user-grid-container {
+            scrollbar-width: thin;
+            scrollbar-color: #667eea #f1f1f1;
+        }
+
         .user-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 16px;
-            margin-top: 20px;
+            padding-right: 8px; /* 为滚动条留出空间 */
         }
         
         /* 用户卡片样式 */
@@ -380,6 +417,7 @@
             margin: 0;
         }
     </style>
+<link rel="icon" href="data:,">
 </head>
 <body>
     <div class="container">
@@ -406,54 +444,6 @@
                     <span class="icon">🔄</span>
                     刷新列表
                 </button>
-                <button class="refresh-btn" id="debugBtn" style="background: #28a745; margin-left: 8px;">
-                    <span class="icon">🔍</span>
-                    调试信息
-                </button>
-                <div style="text-align: center; margin-top: 8px;">
-                    <button class="help-btn" id="helpBtn" style="
-                        background: none;
-                        border: none;
-                        color: #999;
-                        font-size: 12px;
-                        cursor: pointer;
-                        text-decoration: underline;
-                    ">键盘快捷键</button>
-                </div>
-            </div>
-            
-            <!-- 帮助提示 -->
-            <div id="helpTooltip" style="
-                display: none;
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(0, 0, 0, 0.9);
-                color: white;
-                padding: 20px;
-                border-radius: 12px;
-                z-index: 1000;
-                max-width: 300px;
-                text-align: left;
-                font-size: 14px;
-                line-height: 1.5;
-            ">
-                <h4 style="margin: 0 0 12px 0; color: #fff;">键盘快捷键</h4>
-                <div style="margin-bottom: 8px;"><kbd style="background: #333; padding: 2px 6px; border-radius: 3px;">Ctrl+F</kbd> 聚焦搜索框</div>
-                <div style="margin-bottom: 8px;"><kbd style="background: #333; padding: 2px 6px; border-radius: 3px;">↑↓←→</kbd> 选择用户</div>
-                <div style="margin-bottom: 8px;"><kbd style="background: #333; padding: 2px 6px; border-radius: 3px;">Enter</kbd> 确认投票</div>
-                <div style="margin-bottom: 8px;"><kbd style="background: #333; padding: 2px 6px; border-radius: 3px;">Esc</kbd> 清除搜索</div>
-                <div style="text-align: center; margin-top: 16px;">
-                    <button onclick="document.getElementById('helpTooltip').style.display='none'" style="
-                        background: #667eea;
-                        color: white;
-                        border: none;
-                        padding: 6px 12px;
-                        border-radius: 6px;
-                        cursor: pointer;
-                    ">知道了</button>
-                </div>
             </div>
             
             <!-- 加载状态 -->
@@ -462,9 +452,12 @@
                 <p>正在加载用户列表...</p>
             </div>
             
-            <!-- 用户网格 -->
-            <div id="userGrid" class="user-grid" style="display: none;">
-                <!-- 用户列表将在这里动态生成 -->
+            <!-- 用户网格容器（带滚动） -->
+            <div id="userGridContainer" class="user-grid-container" style="display: none;">
+                <!-- 用户网格 -->
+                <div id="userGrid" class="user-grid">
+                    <!-- 用户列表将在这里动态生成 -->
+                </div>
             </div>
             
             <!-- 空状态 -->
@@ -494,7 +487,7 @@
             </div>
             
             <div class="actions">
-                <a href="/scan" class="btn-secondary">返回扫码</a>
+                <a href="/scan" class="btn-secondary">输入ID投票</a>
                 <a href="/" class="btn-secondary">返回首页</a>
             </div>
         </main>
@@ -522,6 +515,7 @@
         const resultCount = document.getElementById('resultCount');
         const refreshBtn = document.getElementById('refreshBtn');
         const loadingEl = document.getElementById('loading');
+        const userGridContainer = document.getElementById('userGridContainer');
         const userGrid = document.getElementById('userGrid');
         const emptyState = document.getElementById('emptyState');
         const noResultsState = document.getElementById('noResultsState');
@@ -536,7 +530,6 @@
             }
             
             setupEventListeners();
-            debugCurrentUser(); // 调试当前用户信息
             loadUsers();
         });
         
@@ -600,37 +593,6 @@
             
             clearSearchBtn.addEventListener('click', clearSearch);
             refreshBtn.addEventListener('click', refreshUsers);
-            
-            // 调试按钮
-            const debugBtn = document.getElementById('debugBtn');
-            if (debugBtn) {
-                debugBtn.addEventListener('click', function() {
-                    debugCurrentUser();
-                    console.log('=== Debug Info ===');
-                    console.log('localStorage contents:');
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key.includes('annual_party') || key.includes('user') || key.includes('voter')) {
-                            console.log(`${key}: ${localStorage.getItem(key)}`);
-                        }
-                    }
-                    console.log('Current allUsers:', allUsers);
-                    console.log('Current filteredUsers:', filteredUsers);
-                    console.log('==================');
-                });
-            }
-            
-            // 帮助按钮
-            document.getElementById('helpBtn').addEventListener('click', function() {
-                document.getElementById('helpTooltip').style.display = 'block';
-            });
-            
-            // 点击帮助提示外部关闭
-            document.getElementById('helpTooltip').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.style.display = 'none';
-                }
-            });
         }
         
         // 加载用户列表
@@ -646,7 +608,6 @@
                 
                 if (result.success) {
                     allUsers = result.users || [];
-                    console.log('All users loaded:', allUsers.length);
                     
                     // 过滤掉当前用户自己（如果已登录）
                     const currentUserId = getCurrentUserId();
@@ -655,14 +616,8 @@
                         allUsers = allUsers.filter(user => {
                             // 注意：API返回的用户对象中ID字段名为userId，不是id
                             const isCurrentUser = user.userId === currentUserId;
-                            if (isCurrentUser) {
-                                console.log('Filtering out current user:', user);
-                            }
                             return !isCurrentUser;
                         });
-                        console.log(`Filtered users: ${originalCount} -> ${allUsers.length} (removed current user: ${currentUserId})`);
-                    } else {
-                        console.log('No current user ID found, showing all users');
                     }
                     
                     filteredUsers = [...allUsers];
@@ -684,40 +639,7 @@
         function getCurrentUserId() {
             // 从localStorage获取当前用户ID
             const userId = localStorage.getItem('annual_party_user_id');
-            console.log('Current user ID from localStorage:', userId);
             return userId;
-        }
-        
-        // 调试函数：显示当前用户信息
-        function debugCurrentUser() {
-            const userId = getCurrentUserId();
-            const userName = localStorage.getItem('annual_party_user_name');
-            console.log('Debug - Current user info:', { userId, userName });
-            
-            if (userId) {
-                // 在页面上显示当前用户信息
-                const debugInfo = document.createElement('div');
-                debugInfo.style.cssText = `
-                    position: fixed;
-                    top: 10px;
-                    right: 10px;
-                    background: #007bff;
-                    color: white;
-                    padding: 8px 12px;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    z-index: 1000;
-                `;
-                debugInfo.textContent = `当前用户: ${userName || userId}`;
-                document.body.appendChild(debugInfo);
-                
-                // 5秒后移除
-                setTimeout(() => {
-                    if (debugInfo.parentNode) {
-                        debugInfo.remove();
-                    }
-                }, 5000);
-            }
         }
         
         // 刷新用户列表
@@ -733,20 +655,21 @@
         function renderUsers() {
             hideAllStates();
             resetKeyboardNavigation(); // 重置键盘导航状态
-            
+
             if (allUsers.length === 0) {
                 emptyState.style.display = 'block';
                 return;
             }
-            
+
             if (filteredUsers.length === 0) {
                 showNoResultsWithSuggestions();
                 return;
             }
-            
+
             userGrid.innerHTML = '';
+            userGridContainer.style.display = 'block';
             userGrid.style.display = 'grid';
-            
+
             filteredUsers.forEach(user => {
                 const card = createUserCard(user);
                 userGrid.appendChild(card);
@@ -883,10 +806,22 @@
                 }
             `;
             
+            // 检查头像URL是否有效，避免加载 "null" 导致 404 错误
+            const hasAvatar = user.avatarUrl && user.avatarUrl !== 'null' && user.avatarUrl !== 'undefined';
+            
+            let avatarHtml = '';
+            let fallbackStyle = 'display: none;';
+            
+            if (hasAvatar) {
+                avatarHtml = `<img src="${user.avatarUrl}" alt="${user.name}" class="avatar" 
+                     onerror="${handleAvatarError.replace(/\n/g, ' ')}">`;
+            } else {
+                fallbackStyle = 'display: flex;';
+            }
+            
             card.innerHTML = `
-                <img src="${user.avatarUrl}" alt="${user.name}" class="avatar" 
-                     onerror="${handleAvatarError.replace(/\n/g, ' ')}">
-                <div class="avatar error" style="display: none;">${genderIcon}</div>
+                ${avatarHtml}
+                <div class="avatar error" style="${fallbackStyle}">${genderIcon}</div>
                 <div class="user-info">
                     <div class="name" title="${user.name}">${highlightedName}</div>
                     <div class="details">
@@ -1117,6 +1052,7 @@
         // 隐藏所有状态
         function hideAllStates() {
             loadingEl.style.display = 'none';
+            userGridContainer.style.display = 'none';
             userGrid.style.display = 'none';
             emptyState.style.display = 'none';
             noResultsState.style.display = 'none';
