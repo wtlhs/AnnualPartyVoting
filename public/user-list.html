@@ -7,11 +7,48 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
         /* 用户网格布局 */
+        .user-grid-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            margin-top: 20px;
+            /* 添加平滑滚动 */
+            scroll-behavior: smooth;
+            /* 优化滚动性能 */
+            -webkit-overflow-scrolling: touch;
+            will-change: scroll-position;
+        }
+
+        /* 自定义滚动条样式 */
+        .user-grid-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .user-grid-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .user-grid-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .user-grid-container::-webkit-scrollbar-thumb:hover {
+            background: #5568d3;
+        }
+
+        /* Firefox 滚动条样式 */
+        .user-grid-container {
+            scrollbar-width: thin;
+            scrollbar-color: #667eea #f1f1f1;
+        }
+
         .user-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 16px;
-            margin-top: 20px;
+            padding-right: 8px; /* 为滚动条留出空间 */
         }
         
         /* 用户卡片样式 */
@@ -415,9 +452,12 @@
                 <p>正在加载用户列表...</p>
             </div>
             
-            <!-- 用户网格 -->
-            <div id="userGrid" class="user-grid" style="display: none;">
-                <!-- 用户列表将在这里动态生成 -->
+            <!-- 用户网格容器（带滚动） -->
+            <div id="userGridContainer" class="user-grid-container" style="display: none;">
+                <!-- 用户网格 -->
+                <div id="userGrid" class="user-grid">
+                    <!-- 用户列表将在这里动态生成 -->
+                </div>
             </div>
             
             <!-- 空状态 -->
@@ -475,6 +515,7 @@
         const resultCount = document.getElementById('resultCount');
         const refreshBtn = document.getElementById('refreshBtn');
         const loadingEl = document.getElementById('loading');
+        const userGridContainer = document.getElementById('userGridContainer');
         const userGrid = document.getElementById('userGrid');
         const emptyState = document.getElementById('emptyState');
         const noResultsState = document.getElementById('noResultsState');
@@ -614,20 +655,21 @@
         function renderUsers() {
             hideAllStates();
             resetKeyboardNavigation(); // 重置键盘导航状态
-            
+
             if (allUsers.length === 0) {
                 emptyState.style.display = 'block';
                 return;
             }
-            
+
             if (filteredUsers.length === 0) {
                 showNoResultsWithSuggestions();
                 return;
             }
-            
+
             userGrid.innerHTML = '';
+            userGridContainer.style.display = 'block';
             userGrid.style.display = 'grid';
-            
+
             filteredUsers.forEach(user => {
                 const card = createUserCard(user);
                 userGrid.appendChild(card);
@@ -1010,6 +1052,7 @@
         // 隐藏所有状态
         function hideAllStates() {
             loadingEl.style.display = 'none';
+            userGridContainer.style.display = 'none';
             userGrid.style.display = 'none';
             emptyState.style.display = 'none';
             noResultsState.style.display = 'none';

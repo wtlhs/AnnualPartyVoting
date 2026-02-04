@@ -213,12 +213,16 @@ function setupQRCodeReregisterTrigger(userId) {
             // 达到5次点击，触发重新注册确认
             clickCount = 0;
             showReregisterConfirmDialog(userId);
-        }
+        } else if (clickCount > 0) {
+            // 显示点击次数提示（可选，为了用户体验）
+            const remaining = requiredClicks - clickCount;
+            showMessage(`再点击 ${remaining} 次可触发重新注册`, 'info');
 
-        // 2秒后重置点击计数
-        setTimeout(() => {
-            clickCount = 0;
-        }, clickTimeout);
+            // 2秒后重置点击计数
+            setTimeout(() => {
+                clickCount = 0;
+            }, clickTimeout);
+        }
     });
 }
 
