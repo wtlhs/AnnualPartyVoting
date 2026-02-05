@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+# 安装构建依赖
+RUN apk add --no-cache python3 make g++
+
 # 设置工作目录
 WORKDIR /app
 

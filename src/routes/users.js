@@ -1,9 +1,11 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const { createUser, getUserById, getUserByName, getUserByNumericId, getUserByDeviceFingerprint, updateUser, updateUserLoginInfo, deleteUser, getAllUsers } = require('../database/operations');
 const { generateCompleteQRCode, validateQRData, generateQRCodeImage, getServerBaseURL } = require('../utils/qrcode');
 const { generateDeviceFingerprint, getClientIP } = require('../utils/deviceFingerprint');
 const rosterValidationService = require('../services/RosterValidationService');
+const { compressAvatar, createCompressedFilename } = require('../utils/imageCompressor');
 
 const router = express.Router();
 
@@ -14,13 +16,28 @@ const DEFAULT_AVATARS = {
 };
 
 /**
+ * 检查是否为默认头像路径
+ */
+function isDefaultAvatarUrl(url) {
+  if (!url) return false;
+  const defaultPaths = Object.values(DEFAULT_AVATARS);
+  return defaultPaths.some(path => url === path || url.endsWith(path));
+}
+
+/**
  * Helper function to ensure avatar URL is relative or uses correct host
+ * 如果是默认头像路径，返回 null，让前端处理
  * @param {string} url - The avatar URL
- * @returns {string} Sanitized URL
+ * @returns {string|null} Sanitized URL or null if default avatar
  */
 function sanitizeAvatarUrl(url) {
   if (!url) return null;
-  
+
+  // 如果是默认头像路径，返回 null
+  if (isDefaultAvatarUrl(url)) {
+    return null;
+  }
+
   // If it's a full URL containing localhost or other host info, make it relative
   try {
     if (url.startsWith('http')) {
@@ -30,7 +47,7 @@ function sanitizeAvatarUrl(url) {
   } catch (e) {
     // If URL parsing fails, return as is
   }
-  
+
   return url;
 }
 
@@ -356,11 +373,11 @@ router.get('/:userId', async (req, res) => {
 // Upload avatar
 router.post('/upload-avatar', (req, res) => {
   const upload = req.app.locals.upload;
-  
+
   upload.single('avatar')(req, res, async (err) => {
     if (err) {
       console.error('Upload error:', err);
-      
+
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
           success: false,
@@ -368,7 +385,7 @@ router.post('/upload-avatar', (req, res) => {
           message: '文件大小超过限制（最大10MB）'
         });
       }
-      
+
       if (err.message === 'Only JPG and PNG files are allowed') {
         return res.status(400).json({
           success: false,
@@ -376,14 +393,14 @@ router.post('/upload-avatar', (req, res) => {
           message: '只支持JPG和PNG格式的图片文件'
         });
       }
-      
+
       return res.status(400).json({
         success: false,
         errorCode: 'UPLOAD_FAILED',
         message: '文件上传失败'
       });
     }
-    
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -391,10 +408,10 @@ router.post('/upload-avatar', (req, res) => {
         message: '请选择要上传的文件'
       });
     }
-    
+
     try {
       const { userId } = req.body;
-      
+
       if (!userId) {
         return res.status(400).json({
           success: false,
@@ -402,7 +419,7 @@ router.post('/upload-avatar', (req, res) => {
           message: '用户ID不能为空'
         });
       }
-      
+
       // Check if user exists
       const user = await getUserById(userId);
       if (!user) {
@@ -412,17 +429,37 @@ router.post('/upload-avatar', (req, res) => {
           message: '用户不存在'
         });
       }
-      
+
+      // Compress the uploaded image with high quality for clear large view
+      const compressedBuffer = await compressAvatar(req.file.buffer);
+
+      // Generate filename and save compressed image
+      const filename = createCompressedFilename(req.file.originalname, 'jpg');
+      const uploadPath = path.join(__dirname, '..', '..', 'data', 'uploads', filename);
+
+      // Save the compressed image to disk
+      fs.writeFileSync(uploadPath, compressedBuffer);
+
+      // Delete old avatar if exists (and not default)
+      if (user.avatarUrl && !isDefaultAvatarUrl(user.avatarUrl)) {
+        const oldFilename = user.avatarUrl.replace('/uploads/', '');
+        const oldPath = path.join(__dirname, '..', '..', 'data', 'uploads', oldFilename);
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+          console.log(`[Avatar Upload] Deleted old avatar: ${oldFilename}`);
+        }
+      }
+
       // Update user avatar URL
-      const avatarUrl = `/uploads/${req.file.filename}`;
+      const avatarUrl = `/uploads/${filename}`;
       const updatedUser = await updateUser(userId, { avatarUrl });
-      
+
       res.json({
         success: true,
         avatarUrl: sanitizeAvatarUrl(updatedUser.avatarUrl),
         message: '头像上传成功'
       });
-      
+
     } catch (error) {
       console.error('Avatar upload error:', error);
       res.status(500).json({

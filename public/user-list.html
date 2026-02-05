@@ -127,11 +127,55 @@
             overflow: hidden;
         }
 
+        /* 男性用户卡片 - 淡蓝色 */
+        .user-card.male {
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.06) 0%, rgba(33, 150, 243, 0.03) 100%);
+            border-color: rgba(33, 150, 243, 0.2);
+        }
+
+        .user-card.male::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, rgba(33, 150, 243, 0.3), rgba(100, 181, 246, 0.5));
+        }
+
+        /* 女性用户卡片 - 淡粉色 */
+        .user-card.female {
+            background: linear-gradient(135deg, rgba(233, 30, 99, 0.06) 0%, rgba(233, 30, 99, 0.03) 100%);
+            border-color: rgba(233, 30, 99, 0.2);
+        }
+
+        .user-card.female::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, rgba(233, 30, 99, 0.3), rgba(244, 143, 177, 0.5));
+        }
+
         .user-card:hover {
             border-color: #667eea;
             background: #fff;
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+        }
+
+        /* 男性卡片悬停效果 */
+        .user-card.male:hover {
+            border-color: rgba(33, 150, 243, 0.5);
+            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.25);
+        }
+
+        /* 女性卡片悬停效果 */
+        .user-card.female:hover {
+            border-color: rgba(233, 30, 99, 0.5);
+            box-shadow: 0 8px 25px rgba(233, 30, 99, 0.25);
         }
 
         .user-card:active {
@@ -149,15 +193,121 @@
             border-radius: 50%;
             object-fit: cover;
             display: block;
+            transition: all 0.3s ease;
+        }
+
+        /* 男性头像边框 */
+        .user-card.male .avatar {
+            border-color: rgba(33, 150, 243, 0.3);
+        }
+
+        .user-card.male:hover .avatar {
+            border-color: rgba(33, 150, 243, 0.6);
+        }
+
+        /* 女性头像边框 */
+        .user-card.female .avatar {
+            border-color: rgba(233, 30, 99, 0.3);
+        }
+
+        .user-card.female:hover .avatar {
+            border-color: rgba(233, 30, 99, 0.6);
+        }
+
+        /* 懒加载占位符 */
+        .user-card .avatar.lazy {
+            opacity: 0;
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .user-card .avatar.loaded {
+            opacity: 1;
+            position: static;
+            pointer-events: auto;
+        }
+
+        /* 骨架屏占位 */
+        .user-card .avatar-skeleton {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 12px;
+            border: 3px solid #e1e5e9;
+            border-radius: 50%;
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 男性骨架屏 */
+        .user-card.male .avatar-skeleton {
+            border-color: rgba(33, 150, 243, 0.25);
+            background: linear-gradient(90deg, rgba(33, 150, 243, 0.08) 25%, rgba(33, 150, 243, 0.15) 50%, rgba(33, 150, 243, 0.08) 75%);
+        }
+
+        /* 女性骨架屏 */
+        .user-card.female .avatar-skeleton {
+            border-color: rgba(233, 30, 99, 0.25);
+            background: linear-gradient(90deg, rgba(233, 30, 99, 0.08) 25%, rgba(233, 30, 99, 0.15) 50%, rgba(233, 30, 99, 0.08) 75%);
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* 默认头像 - 使用原始 SVG 文件，通过预加载复用缓存 */
+        .user-card .avatar-placeholder {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 12px;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* 男性默认头像占位符边框 */
+        .user-card.male .avatar-placeholder {
+            border-color: rgba(33, 150, 243, 0.3);
+        }
+
+        /* 女性默认头像占位符边框 */
+        .user-card.female .avatar-placeholder {
+            border-color: rgba(233, 30, 99, 0.3);
+        }
+
+        /* 男性默认头像 - 使用 SVG 文件 */
+        .user-card .avatar-placeholder.male {
+            background-image: url('/static/images/default-male-avatar.svg');
+        }
+
+        /* 女性默认头像 - 使用 SVG 文件 */
+        .user-card .avatar-placeholder.female {
+            background-image: url('/static/images/default-female-avatar.svg');
         }
 
         .user-card .avatar.error {
             background: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6c757d;
-            font-size: 24px;
+            display: none; /* 隐藏旧的错误占位符 */
+        }
+
+        /* 预加载图片隐藏在页面底部 */
+        .preload-images {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
         }
 
         /* 用户信息 */
@@ -782,6 +932,97 @@
                 const card = createUserCard(user);
                 userGrid.appendChild(card);
             });
+
+            // 设置懒加载
+            setupLazyLoading();
+        }
+
+        // 懒加载设置
+        function setupLazyLoading() {
+            // 停止之前的观察器
+            if (window.avatarObserver) {
+                window.avatarObserver.disconnect();
+            }
+
+            // 检查浏览器支持
+            if (!('IntersectionObserver' in window)) {
+                // 不支持 IntersectionObserver，直接加载所有图片
+                loadAllImages();
+                return;
+            }
+
+            // 创建 Intersection Observer
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        const skeleton = img.previousElementSibling;
+
+                        // 加载图片
+                        loadImage(img, skeleton);
+
+                        // 加载后停止观察
+                        observer.unobserve(img);
+                    }
+                });
+            }, {
+                // 提前加载 - 在图片进入视野前100px就开始加载
+                rootMargin: '100px',
+                // 图片至少有10%可见时触发
+                threshold: 0.1
+            });
+
+            // 观察所有懒加载的图片
+            const lazyImages = document.querySelectorAll('img.avatar.lazy');
+            lazyImages.forEach(img => {
+                imageObserver.observe(img);
+            });
+
+            window.avatarObserver = imageObserver;
+        }
+
+        // 加载单个图片
+        function loadImage(img, skeleton) {
+            const src = img.getAttribute('data-src');
+            if (!src) return;
+
+            img.onload = function() {
+                // 图片加载完成
+                img.classList.add('loaded');
+                img.classList.remove('lazy');
+                // 隐藏骨架屏
+                if (skeleton && skeleton.classList.contains('avatar-skeleton')) {
+                    skeleton.style.display = 'none';
+                }
+            };
+
+            img.onerror = function() {
+                // 图片加载失败，显示默认头像占位符
+                console.warn('Failed to load avatar:', src);
+                // 隐藏骨架屏
+                if (skeleton && skeleton.classList.contains('avatar-skeleton')) {
+                    skeleton.style.display = 'none';
+                }
+                // 显示默认头像占位符（使用 CSS 背景，无需额外请求）
+                const placeholderDiv = this.nextElementSibling;
+                if (placeholderDiv && placeholderDiv.classList.contains('avatar-placeholder')) {
+                    placeholderDiv.style.display = 'flex';
+                }
+                // 移除加载失败的图片
+                this.remove();
+            };
+
+            // 触发加载
+            img.src = src;
+        }
+
+        // 加载所有图片（用于不支持 IntersectionObserver 的浏览器）
+        function loadAllImages() {
+            const lazyImages = document.querySelectorAll('img.avatar.lazy');
+            lazyImages.forEach(img => {
+                const skeleton = img.previousElementSibling;
+                loadImage(img, skeleton);
+            });
         }
         
         // 显示无结果状态并提供搜索建议
@@ -881,55 +1122,40 @@
         // 创建用户卡片
         function createUserCard(user) {
             const card = document.createElement('div');
-            card.className = 'user-card';
+            // 根据性别添加对应的 class
+            const genderClass = user.gender === 'male' ? 'male' : 'female';
+            card.className = `user-card ${genderClass}`;
             card.onclick = () => navigateToVote(user.userId);
-            
+
             // 性别图标和文本
             const genderIcon = user.gender === 'male' ? '👨' : '👩';
             const genderText = user.gender === 'male' ? '男' : '女';
-            
+
             // 高亮搜索关键词
             const query = searchInput.value.trim();
             const highlightedName = highlightSearchTerm(user.name, query);
-            
-            // 头像错误处理逻辑
-            const handleAvatarError = `
-                const img = this;
-                const avatarUrl = img.src;
-                if (avatarUrl && avatarUrl.startsWith('http')) {
-                    try {
-                        const url = new URL(avatarUrl);
-                        img.src = url.pathname;
-                        img.onerror = function() {
-                            this.style.display='none'; 
-                            this.nextElementSibling.style.display='flex';
-                        };
-                    } catch (e) {
-                        this.style.display='none'; 
-                        this.nextElementSibling.style.display='flex';
-                    }
-                } else {
-                    this.style.display='none'; 
-                    this.nextElementSibling.style.display='flex';
-                }
-            `;
-            
-            // 检查头像URL是否有效，避免加载 "null" 导致 404 错误
+
+            // 检查头像URL是否有效
             const hasAvatar = user.avatarUrl && user.avatarUrl !== 'null' && user.avatarUrl !== 'undefined';
-            
+
             let avatarHtml = '';
-            let fallbackStyle = 'display: none;';
-            
+
             if (hasAvatar) {
-                avatarHtml = `<img src="${user.avatarUrl}" alt="${user.name}" class="avatar" 
-                     onerror="${handleAvatarError.replace(/\n/g, ' ')}">`;
+                // 有自定义头像：使用懒加载 + 骨架屏 + 失败时显示默认头像
+                avatarHtml = `
+                    <div class="avatar-skeleton"></div>
+                    <img data-src="${user.avatarUrl}" alt="${user.name}" class="avatar lazy">
+                    <div class="avatar-placeholder ${genderClass}" style="display: none;"></div>
+                `;
             } else {
-                fallbackStyle = 'display: flex;';
+                // 无自定义头像：直接显示默认头像（使用 CSS 背景，只加载一次）
+                avatarHtml = `
+                    <div class="avatar-placeholder ${genderClass}"></div>
+                `;
             }
-            
+
             card.innerHTML = `
                 ${avatarHtml}
-                <div class="avatar error" style="${fallbackStyle}">${genderIcon}</div>
                 <div class="user-info">
                     <div class="name" title="${user.name}">${highlightedName}</div>
                     <div class="details">
@@ -941,7 +1167,7 @@
                     </div>
                 </div>
             `;
-            
+
             return card;
         }
         
@@ -1293,5 +1519,11 @@
             }
         });
     </script>
+
+    <!-- 预加载默认头像 - 只加载一次，浏览器缓存后复用 -->
+    <div class="preload-images">
+        <img src="/static/images/default-male-avatar.svg" alt="" width="1" height="1">
+        <img src="/static/images/default-female-avatar.svg" alt="" width="1" height="1">
+    </div>
 </body>
 </html>

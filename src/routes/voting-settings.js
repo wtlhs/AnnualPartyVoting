@@ -88,18 +88,21 @@ router.put('/', requireAdmin, async (req, res) => {
         const success = await votingSettings.updateSettings(settings);
         
         if (success) {
-            // 记录审计日志
-            await auditLog.log({
+            // 记录审计日志（非阻塞，失败不影响操作）
+            auditLog.log({
+                voteId: null,  // 系统操作，没有关联的投票
                 action: 'UPDATE_VOTING_SETTINGS',
-                userId: req.user?.id || 'admin',
+                adminId: null,  // 系统操作，admin_id 设为 null
                 details: {
                     updatedSettings: Object.keys(settings),
                     newValues: settings
                 },
                 ipAddress: req.ip,
                 userAgent: req.get('User-Agent')
+            }).catch(err => {
+                console.warn('Audit log warning (non-blocking):', err.message);
             });
-            
+
             // 获取更新后的状态
             const newStatus = await votingSettings.getVotingStatus();
             
@@ -134,18 +137,21 @@ router.post('/enable', requireAdmin, async (req, res) => {
         const success = await votingSettings.enableVoting();
         
         if (success) {
-            // 记录审计日志
-            await auditLog.log({
+            // 记录审计日志（非阻塞，失败不影响操作）
+            auditLog.log({
+                voteId: null,  // 系统操作，没有关联的投票
                 action: 'ENABLE_VOTING',
-                userId: req.user?.id || 'admin',
+                adminId: null,  // 系统操作，admin_id 设为 null
                 details: {
                     action: 'enable_voting',
                     timestamp: new Date().toISOString()
                 },
                 ipAddress: req.ip,
                 userAgent: req.get('User-Agent')
+            }).catch(err => {
+                console.warn('Audit log warning (non-blocking):', err.message);
             });
-            
+
             const status = await votingSettings.getVotingStatus();
             
             res.json({
@@ -186,10 +192,11 @@ router.post('/disable', requireAdmin, async (req, res) => {
         const success = await votingSettings.disableVoting();
         
         if (success) {
-            // 记录审计日志
-            await auditLog.log({
+            // 记录审计日志（非阻塞，失败不影响操作）
+            auditLog.log({
+                voteId: null,  // 系统操作，没有关联的投票
                 action: 'DISABLE_VOTING',
-                userId: req.user?.id || 'admin',
+                adminId: null,  // 系统操作，admin_id 设为 null
                 details: {
                     action: 'disable_voting',
                     customMessage: message || null,
@@ -197,8 +204,10 @@ router.post('/disable', requireAdmin, async (req, res) => {
                 },
                 ipAddress: req.ip,
                 userAgent: req.get('User-Agent')
+            }).catch(err => {
+                console.warn('Audit log warning (non-blocking):', err.message);
             });
-            
+
             const status = await votingSettings.getVotingStatus();
             
             res.json({
@@ -249,10 +258,11 @@ router.post('/toggle', requireAdmin, async (req, res) => {
         }
         
         if (success) {
-            // 记录审计日志
-            await auditLog.log({
+            // 记录审计日志（非阻塞，失败不影响操作）
+            auditLog.log({
+                voteId: null,  // 系统操作，没有关联的投票
                 action: action,
-                userId: req.user?.id || 'admin',
+                adminId: null,  // 系统操作，admin_id 设为 null
                 details: {
                     action: 'toggle_voting',
                     previousState: currentStatus,
@@ -262,8 +272,10 @@ router.post('/toggle', requireAdmin, async (req, res) => {
                 },
                 ipAddress: req.ip,
                 userAgent: req.get('User-Agent')
+            }).catch(err => {
+                console.warn('Audit log warning (non-blocking):', err.message);
             });
-            
+
             const newStatus = await votingSettings.getVotingStatus();
             
             res.json({
@@ -299,18 +311,21 @@ router.post('/reset', requireAdmin, async (req, res) => {
         const success = await votingSettings.resetToDefaults();
         
         if (success) {
-            // 记录审计日志
-            await auditLog.log({
+            // 记录审计日志（非阻塞，失败不影响操作）
+            auditLog.log({
+                voteId: null,  // 系统操作，没有关联的投票
                 action: 'RESET_VOTING_SETTINGS',
-                userId: req.user?.id || 'admin',
+                adminId: null,  // 系统操作，admin_id 设为 null
                 details: {
                     action: 'reset_to_defaults',
                     timestamp: new Date().toISOString()
                 },
                 ipAddress: req.ip,
                 userAgent: req.get('User-Agent')
+            }).catch(err => {
+                console.warn('Audit log warning (non-blocking):', err.message);
             });
-            
+
             const status = await votingSettings.getVotingStatus();
             
             res.json({
