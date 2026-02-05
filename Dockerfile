@@ -13,7 +13,7 @@ RUN npm install --production
 COPY . .
 
 # 创建必要的目录
-RUN mkdir -p data uploads
+RUN mkdir -p data/uploads
 
 # 暴露端口
 EXPOSE 3000

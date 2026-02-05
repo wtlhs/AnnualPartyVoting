@@ -44,28 +44,8 @@ async function initializeVotePage() {
         currentCandidate = candidate;
         console.log('Current candidate set:', currentCandidate);
 
-        // 检查投票资格
-        const eligibility = await checkVotingEligibility(candidate.id);
-        console.log('Initial eligibility check:', eligibility);
-
-        if (eligibility.eligible) {
-            showVoteInterface();
-        } else {
-            // 如果不可投票，检查是否已完成所有投票
-            if (eligibility.voterStatus && 
-                eligibility.voterStatus.maleVoted && 
-                eligibility.voterStatus.femaleVoted) {
-                
-                // 已完成所有投票
-                const votingStatus = {
-                    remainingVotes: { male: 0, female: 0 }
-                };
-                showSuccess('您已完成所有投票任务，感谢您的参与！', votingStatus, '投票已完成');
-            } else {
-                // 其他限制（如重复投票同一性别，或自己给自己投票）
-                showVotingRestrictionError(eligibility.reason, eligibility.details);
-            }
-        }
+        // 直接显示投票界面（无论投票状态如何，都允许查看用户信息）
+        showVoteInterface();
         
     } catch (error) {
         console.error('Vote page initialization error:', error);
@@ -89,32 +69,22 @@ function extractCandidateIdFromPath() {
  */
 async function checkAuthStatus() {
     try {
-        // 检查本地存储中的注册信息
-        const userId = localStorage.getItem('annual_party_user_id');
-        const userName = localStorage.getItem('annual_party_user_name');
-        const userGender = localStorage.getItem('annual_party_user_gender');
-        const registrationTime = localStorage.getItem('annual_party_registration_time');
-        
+        // 使用SessionManager恢复会话
+        const session = await sessionManager.restoreSession();
+
         // 验证注册信息的完整性
-        if (userId && userName && registrationTime) {
-            // 验证注册信息的有效性（24小时时间窗口）
-            if (isRegistrationValid(registrationTime)) {
-                return {
-                    isLoggedIn: true,
-                    user: {
-                        id: userId,
-                        username: userName,
-                        gender: userGender,
-                        registrationTime: registrationTime
-                    }
-                };
-            } else {
-                // 注册信息已过期，清理本地存储
-                clearExpiredRegistration();
-                console.warn('Registration expired, cleared local storage');
-            }
+        if (session && session.userId && session.name) {
+            return {
+                isLoggedIn: true,
+                user: {
+                    id: session.userId,
+                    username: session.name,
+                    gender: session.gender,
+                    registrationTime: session.registrationTime
+                }
+            };
         }
-        
+
         return {
             isLoggedIn: false
         };
@@ -128,55 +98,12 @@ async function checkAuthStatus() {
 }
 
 /**
- * 验证注册信息的有效性（24小时时间窗口）
- * @param {string} registrationTime - 注册时间字符串
- * @returns {boolean} 注册是否有效
- */
-function isRegistrationValid(registrationTime) {
-    try {
-        if (!registrationTime) return false;
-        
-        const regTime = new Date(registrationTime);
-        const now = new Date();
-        
-        // 检查时间格式是否有效
-        if (isNaN(regTime.getTime())) {
-            console.warn('Invalid registration time format:', registrationTime);
-            return false;
-        }
-        
-        // 计算时间差（小时）
-        const hoursDiff = (now - regTime) / (1000 * 60 * 60);
-        
-        // 24小时内的注册被认为是有效的
-        return hoursDiff < 24 && hoursDiff >= 0;
-    } catch (error) {
-        console.error('Error validating registration time:', error);
-        return false;
-    }
-}
-
-/**
- * 清理过期的注册信息
+ * 清理过期的注册信息 (已废弃,使用SessionManager代替)
  */
 function clearExpiredRegistration() {
-    try {
-        const keysToRemove = [
-            'annual_party_user_id',
-            'annual_party_user_name',
-            'annual_party_user_gender',
-            'annual_party_numeric_id',
-            'annual_party_registration_time'
-        ];
-        
-        keysToRemove.forEach(key => {
-            localStorage.removeItem(key);
-        });
-        
-        console.log('Expired registration data cleared');
-    } catch (error) {
-        console.error('Error clearing expired registration:', error);
-    }
+    // 使用SessionManager清理
+    sessionManager.clearSession();
+    console.log('Expired registration data cleared via SessionManager');
 }
 
 /**
@@ -545,9 +472,28 @@ async function submitVote() {
         // 在提交前检查投票资格
         const eligibility = await checkVotingEligibility(currentCandidate.id);
         console.log('Voting eligibility check:', eligibility);
-        
+
         if (!eligibility.eligible) {
-            // 显示详细的投票限制信息
+            // 检查是否已完成所有投票
+            if (eligibility.voterStatus &&
+                eligibility.voterStatus.maleVoted &&
+                eligibility.voterStatus.femaleVoted) {
+
+                // 已完成所有投票 - 明确告知此次投票未成功
+                const voteBtn = document.getElementById('voteBtn');
+                voteBtn.innerHTML = '✅ 已完成投票';
+                voteBtn.disabled = true;
+
+                // 显示投票未成功的提示
+                const details = {
+                    voterStatus: eligibility.voterStatus,
+                    message: '您已完成男、女各1票的投票任务，无需继续投票。您可以继续浏览其他候选人的信息。'
+                };
+                showVotingRestrictionError('您已完成所有投票任务', details);
+                return;
+            }
+
+            // 其他限制（如重复投票同一性别，或自己给自己投票）
             showVotingRestrictionError(eligibility.reason, eligibility.details);
             return;
         }
@@ -579,7 +525,12 @@ async function submitVote() {
         
     } catch (error) {
         console.error('Vote submission error:', error);
-        
+
+        // 如果是因为已完成投票而返回，不恢复按钮状态
+        if (error.message && error.message.includes('已完成投票')) {
+            return;
+        }
+
         // 恢复按钮状态
         voteBtn.innerHTML = originalText;
         voteBtn.disabled = false;
@@ -608,20 +559,30 @@ async function submitVote() {
  */
 function showVotingRestrictionError(reason, details = null) {
     const voteBtn = document.getElementById('voteBtn');
-    voteBtn.innerHTML = '🗳️ 投票支持';
-    voteBtn.disabled = false;
-    
+
+    // 检查是否是"已完成投票"的情况
+    const isVotingCompleted = reason && reason.includes('已完成所有投票任务');
+
+    // 如果不是已完成投票，才恢复按钮状态
+    if (!isVotingCompleted) {
+        voteBtn.innerHTML = '🗳️ 投票支持';
+        voteBtn.disabled = false;
+    }
+
     let title = '投票受限';
     let message = reason || '您暂时无法为该候选人投票';
-    
+
     if (reason && reason.includes('不能为自己投票')) {
         title = '无法投票';
         message = '系统不允许为自己投票';
     } else if (reason && (reason.includes('男士') || reason.includes('女士'))) {
         title = '重复投票';
         message = reason;
+    } else if (reason && reason.includes('已完成所有投票任务')) {
+        title = '投票未成功';
+        message = details?.message || '您已完成所有投票任务，此次投票未成功。';
     }
-    
+
     showError(title, message, details);
 }
 

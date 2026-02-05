@@ -135,26 +135,28 @@ class PageLoadOptimizer {
 // 初始化页面加载优化器
 const pageOptimizer = new PageLoadOptimizer();
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // 添加渐入动画
     const elements = document.querySelectorAll('header, main, .actions');
     elements.forEach((el, index) => {
         el.classList.add('fade-in', `delay-${index + 1}`);
     });
-    
+
     const registerForm = document.getElementById('registerForm');
-    
+
     if (registerForm) {
         // 显示加载条
         pageOptimizer.showLoadingBar();
-        
+
         // 新增：检查return参数
         checkReturnParameter();
-        
-        // 检查是否已经注册过
-        checkExistingRegistration();
-        registerForm.addEventListener('submit', handleRegistration);
-        
+
+        // 检查是否已经注册过 - 使用新的SessionManager
+        const hasExistingRegistration = await checkExistingRegistration();
+        if (!hasExistingRegistration) {
+            registerForm.addEventListener('submit', handleRegistration);
+        }
+
         // 隐藏加载条
         setTimeout(() => {
             pageOptimizer.hideLoadingBar();
@@ -162,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// 本地缓存键名
+// 本地缓存键名 (保留用于向后兼容,已废弃)
 const STORAGE_KEYS = {
     USER_ID: 'annual_party_user_id',
     USER_NAME: 'annual_party_user_name',
@@ -174,43 +176,42 @@ const STORAGE_KEYS = {
     VOTE_INTENT_TIMESTAMP: 'vote_intent_timestamp'
 };
 
-function checkExistingRegistration() {
-    const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
-    const userName = localStorage.getItem(STORAGE_KEYS.USER_NAME);
-    const registrationTime = localStorage.getItem(STORAGE_KEYS.REGISTRATION_TIME);
-    
-    if (userId && userName && registrationTime) {
-        // 使用统一的注册验证函数
-        if (isRegistrationValid(registrationTime)) {
-            showExistingRegistrationMessage(userName, userId);
-            return true;
-        } else {
-            // 清除过期的缓存
-            clearRegistrationCache();
-        }
+async function checkExistingRegistration() {
+    // 使用新的SessionManager恢复会话
+    const session = await sessionManager.restoreSession();
+
+    console.log('checkExistingRegistration - session:', session);
+
+    if (session) {
+        showExistingRegistrationMessage(session.name, session.userId);
+        return true;
     }
-    
+
     return false;
 }
 
 function showExistingRegistrationMessage(userName, userId) {
     const form = document.getElementById('registerForm');
     const container = form.parentNode;
-    
+
     // 隐藏注册表单
     form.style.display = 'none';
-    
+
     // 隐藏性别选择重要提醒
     const genderWarning = document.querySelector('.gender-selection-warning');
     if (genderWarning) {
         genderWarning.style.display = 'none';
     }
-    
+
     // 显示投票按钮
     showVotingActions();
-    
-    // 显示已注册信息
-    const numericId = localStorage.getItem(STORAGE_KEYS.NUMERIC_ID);
+
+    // 显示已注册信息 - 从sessionManager获取数据
+    const session = sessionManager.getSessionFromLocalStorage() ||
+                   sessionManager.getSessionFromSessionStorage() ||
+                   sessionManager.getSessionFromCookie();
+    const numericId = session ? session.numericId : null;
+
     const existingDiv = document.createElement('div');
     existingDiv.className = 'existing-registration';
     existingDiv.innerHTML = `
@@ -218,7 +219,7 @@ function showExistingRegistrationMessage(userName, userId) {
             <h3>您已经注册过了</h3>
             <p>姓名: <strong>${userName}</strong></p>
             ${numericId ? `<p>数字ID: <strong>${numericId}</strong></p>` : ''}
-            <p>注册时间: ${new Date(localStorage.getItem(STORAGE_KEYS.REGISTRATION_TIME)).toLocaleString('zh-CN')}</p>
+            <p>注册时间: ${session ? new Date(session.registrationTime).toLocaleString('zh-CN') : '-'}</p>
             <div class="existing-actions">
                 <a href="/profile/${userId}" class="btn-primary">查看我的资料</a>
             </div>
@@ -230,11 +231,15 @@ function showExistingRegistrationMessage(userName, userId) {
 
 function clearRegistrationAndReload() {
     if (confirm('确定要清除当前注册信息并重新注册吗？这将删除您的所有账号数据（包括投票记录）。')) {
-        const userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
-        
-        // 立即清除本地缓存，防止页面跳转后仍然显示已注册状态
-        clearRegistrationCache();
-        
+        // 获取userId前先保存,因为clearSession会清除所有存储
+        const session = sessionManager.getSessionFromLocalStorage() ||
+                       sessionManager.getSessionFromSessionStorage() ||
+                       sessionManager.getSessionFromCookie();
+        const userId = session ? session.userId : null;
+
+        // 立即清除所有缓存并设置重新注册标记,防止页面跳转后仍然显示已注册状态
+        sessionManager.clearSession(true); // true = 正在重新注册
+
         if (userId) {
             // 调用后端API删除用户数据
             deleteUserAccount(userId);
@@ -503,9 +508,10 @@ function showVotingActions() {
 
 async function handleRegistration(event) {
     event.preventDefault();
-    
+
     // 再次检查是否已注册（防止并发注册）
-    if (checkExistingRegistration()) {
+    const hasExisting = await checkExistingRegistration();
+    if (hasExisting) {
         return;
     }
     
@@ -682,16 +688,16 @@ async function confirmGender() {
         const result = await response.json();
         
         if (result.success) {
-            // 保存注册信息到本地缓存
-            localStorage.setItem(STORAGE_KEYS.USER_ID, result.userId);
-            localStorage.setItem(STORAGE_KEYS.USER_NAME, result.name);
-            localStorage.setItem(STORAGE_KEYS.USER_GENDER, result.gender);
-            localStorage.setItem(STORAGE_KEYS.REGISTRATION_TIME, new Date().toISOString());
+            // 使用SessionManager保存到所有存储层
+            sessionManager.saveSession({
+                userId: result.userId,
+                name: result.name,
+                gender: result.gender,
+                numericId: result.numericId
+            });
 
-            // 保存数字ID
-            if (result.numericId) {
-                localStorage.setItem(STORAGE_KEYS.NUMERIC_ID, result.numericId);
-            }
+            // 清除重新注册标记（如果存在）
+            sessionManager.clearReregisterFlag();
 
             // 清空注册数据
             currentRegistrationData = null;
@@ -701,27 +707,25 @@ async function confirmGender() {
                 currentSubmitBtn = null;
                 currentSubmitBtnText = '';
             }
-            
+
             // 新增：检查是否有待处理的返回URL
-            const pendingReturnUrl = localStorage.getItem(STORAGE_KEYS.PENDING_RETURN_URL);
-            const voteIntentTimestamp = localStorage.getItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP);
-            
-            if (pendingReturnUrl && isVoteIntentValid(voteIntentTimestamp)) {
+            const pendingReturnInfo = sessionManager.getPendingReturnUrl();
+
+            if (pendingReturnInfo) {
                 // 清除待处理的返回URL
-                localStorage.removeItem(STORAGE_KEYS.PENDING_RETURN_URL);
-                localStorage.removeItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP);
-                
+                sessionManager.clearPendingReturnUrl();
+
                 showMessage(`注册成功！您的数字ID是：${result.numericId}。正在返回投票页面...`, 'success');
-                
+
                 // 显示投票按钮
                 showVotingActions();
-                
+
                 setTimeout(() => {
-                    window.location.href = pendingReturnUrl;
+                    window.location.href = pendingReturnInfo.returnUrl;
                 }, 1500);
                 return;
             }
-            
+
             // 默认行为：跳转到个人页面
             showMessage(`注册成功！您的数字ID是：${result.numericId}。正在跳转到个人页面...`, 'success');
 
@@ -918,25 +922,23 @@ async function proceedAsGuest() {
         const result = await response.json();
 
         if (result.success) {
-            // 保存注册信息到本地缓存
-            localStorage.setItem(STORAGE_KEYS.USER_ID, result.userId);
-            localStorage.setItem(STORAGE_KEYS.USER_NAME, result.name);
-            localStorage.setItem(STORAGE_KEYS.USER_GENDER, result.gender);
-            localStorage.setItem(STORAGE_KEYS.REGISTRATION_TIME, new Date().toISOString());
+            // 使用SessionManager保存到所有存储层
+            sessionManager.saveSession({
+                userId: result.userId,
+                name: result.name,
+                gender: result.gender,
+                numericId: result.numericId
+            });
 
-            // 保存数字ID
-            if (result.numericId) {
-                localStorage.setItem(STORAGE_KEYS.NUMERIC_ID, result.numericId);
-            }
+            // 清除重新注册标记（如果存在）
+            sessionManager.clearReregisterFlag();
 
             // 新增：检查是否有待处理的返回URL
-            const pendingReturnUrl = localStorage.getItem(STORAGE_KEYS.PENDING_RETURN_URL);
-            const voteIntentTimestamp = localStorage.getItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP);
+            const pendingReturnInfo = sessionManager.getPendingReturnUrl();
 
-            if (pendingReturnUrl && isVoteIntentValid(voteIntentTimestamp)) {
+            if (pendingReturnInfo) {
                 // 清除待处理的返回URL
-                localStorage.removeItem(STORAGE_KEYS.PENDING_RETURN_URL);
-                localStorage.removeItem(STORAGE_KEYS.VOTE_INTENT_TIMESTAMP);
+                sessionManager.clearPendingReturnUrl();
 
                 showMessage(`注册成功！您的数字ID是：${result.numericId}。正在返回投票页面...`, 'success');
 
@@ -944,7 +946,7 @@ async function proceedAsGuest() {
                 showVotingActions();
 
                 setTimeout(() => {
-                    window.location.href = pendingReturnUrl;
+                    window.location.href = pendingReturnInfo.returnUrl;
                 }, 1500);
                 return;
             }

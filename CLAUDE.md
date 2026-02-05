@@ -12,6 +12,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Remove outdated information when features are deprecated
 - This ensures future Claude Code instances can work productively without confusion
 
+### 📝 Problem-Solving Documentation Rule
+
+**EVERY TIME you encounter and solve a problem or bug, you MUST document it in this file.**
+
+Add problem-solution entries to the "Troubleshooting & Common Issues" section below with:
+
+- **Problem**: Clear description of the issue
+- **Root Cause**: What caused the problem
+- **Solution**: How it was fixed
+- **Prevention**: How to avoid it in the future
+- **Related Files**: Files involved in the fix
+
+This creates a knowledge base of resolved issues for faster debugging in the future.
+
 ## Project Overview
 
 Annual Party Voting (年会最佳服装评选) is an H5 mobile web application for voting at annual parties. Users can register participants, scan QR codes to vote, and view real-time rankings. The application supports both LAN and HTTPS deployment modes with SQLite database persistence.
@@ -210,12 +224,12 @@ Static HTML pages with responsive mobile-first design:
 
 ```
 AnnualPartyVoting/
-├── config/                    # Configuration files (NEW)
+├── config/                    # Configuration files
 │   └── employee-roster.json   # Employee roster config (111 employees)
-├── data/                      # Database directory (auto-created)
-│   └── voting.db             # SQLite database file
+├── data/                      # Data directory (persistent, auto-created)
+│   ├── voting.db             # SQLite database file
+│   └── uploads/              # User avatar uploads (persistent storage)
 ├── exports/                   # Exported data files
-├── uploads/                   # User avatar uploads
 ├── public/                    # Static frontend files
 │   ├── index.html            # Landing page with roster validation modal
 │   ├── vote.html             # Voting page
@@ -229,7 +243,7 @@ AnnualPartyVoting/
 │   │   ├── VoteRecordManager.js
 │   │   ├── DataExportManager.js
 │   │   ├── AuditLogManager.js
-│   │   ├── GuestManager.js   # Guest CRUD operations (NEW)
+│   │   ├── GuestManager.js   # Guest CRUD operations
 │   │   ├── migrationRunner.js
 │   │   └── migrations/       # Migration files 001-006
 │   ├── services/             # Service layer (NEW)
@@ -257,7 +271,10 @@ AnnualPartyVoting/
 
 - **Docker**: Uses `node:18-alpine` base image with sqlite3 native dependencies
 - **Database**: SQLite with WAL mode enabled for better concurrency
-- **File Persistence**: Database in `data/voting.db`, uploads in `uploads/`, exports in `exports/`
+- **File Persistence**:
+  - Database: `data/voting.db`
+  - Avatar uploads: `data/uploads/` (persistent storage in data directory)
+  - Export files: `exports/`
 - **Protocol Handling**: Special middleware handles HTTPS-to-HTTP redirect issues on LAN access
 - **Cleanup**: Export cleanup service runs on startup to remove old export files
 
@@ -267,3 +284,86 @@ AnnualPartyVoting/
 - **Transactions**: Used in `atomicVote()` for concurrent voting safety
 - **Indexes**: Created on voter_id, target_user_id, numeric_id for query performance
 - **Migration Tracking**: All migrations tracked in `migrations` table to prevent re-runs
+
+---
+
+## 📚 Troubleshooting & Common Issues
+
+### Issue #1: Avatar Uploads Lost on Container Restart
+
+**Problem**: User avatar uploads disappeared when the Docker container was restarted or redeployed.
+
+**Root Cause**: Avatar files were stored in `uploads/` directory in the container's filesystem, which is not persisted. When containers restart, this data is lost.
+
+**Solution**: Moved avatar storage from `uploads/` to `data/uploads/` to persist alongside the database. Updated all server configurations:
+
+- **Static file serving**: Changed from `express.static(path.join(__dirname, 'uploads'))` to `express.static(path.join(__dirname, 'data', 'uploads'))`
+- **Multer storage**: Changed destination from `'uploads/'` to `path.join('data', 'uploads')`
+- **File manager utilities**: Added helper functions `getDataDir()` and `getUploadsDir()` for consistent path handling
+
+**Prevention**: Always store user-generated data in the `data/` directory for persistence. When using Docker, mount the `data/` directory as a volume:
+
+```yaml
+volumes:
+  - ./data:/app/data
+```
+
+**Related Files**:
+- `server.js`, `server-lan.js`, `server-https.js`, `server-https-simple.js`, `server-https-optimized.js` (lines ~120-180)
+- `src/utils/fileManager.js` (added helper functions)
+- `Dockerfile` (line 16: updated directory creation)
+- `CLAUDE.md` (updated deployment notes)
+
+**Date**: 2026-02-05
+
+---
+
+### Issue #2: Re-registration Not Clearing Session Properly
+
+**Problem**: After triggering re-registration (clicking QR code 5 times), the user data was not fully cleared and the page still showed registered state when returning to homepage.
+
+**Root Cause**: The `clearRegistrationAndReload()` function in `profile.js` was only clearing localStorage directly without using the `sessionManager.clearSession()` method. This caused several issues:
+
+1. **Re-register flag not set**: Without calling `sessionManager.clearSession(true)`, the `REREGISTER_FLAG` was not set, so `sessionManager.restoreSession()` didn't skip auto-login
+2. **sessionStorage not cleared**: Only localStorage was cleared, sessionStorage remained
+3. **Cookie not cleared**: The session cookie with backup data was not deleted
+4. **Incorrect API call order**: Local storage was cleared before API call, creating race conditions
+
+**Solution**: Updated `profile.js` line 232-274 to properly use session manager:
+
+```javascript
+// Before (BROKEN):
+localStorage.removeItem('user_id');
+localStorage.removeItem('user_name');
+// ... more direct localStorage removal
+
+// After (FIXED):
+// 1. Call backend API first to delete user data
+const response = await fetch(`/api/users/${userId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' }
+});
+
+// 2. Then clear all storage layers using sessionManager
+sessionManager.clearSession(true); // true = sets REREGISTER_FLAG
+```
+
+**Prevention**: Always use `sessionManager.clearSession(isReregistering)` instead of manually clearing localStorage. The session manager handles:
+- All storage layers (localStorage, sessionStorage, cookie)
+- Re-register flag to prevent auto-login race conditions
+- Proper error handling
+
+**Related Files**:
+- `public/static/js/profile.js` (lines 232-274: `clearRegistrationAndReload` function)
+- `public/static/js/sessionManager.js` (lines 233-283: `clearSession` method)
+- `src/routes/users.js` (lines 570-614: DELETE user API endpoint)
+- `src/database/operations.js` (lines 331-379: `deleteUser` function)
+
+**Technical Details**:
+- Backend correctly deletes: votes, vote_restrictions, and users record (including device_fingerprint)
+- Frontend REREGISTER_FLAG expires after 60 seconds to prevent getting stuck
+- `sessionManager.restoreSession()` checks flag at line 87 and skips auto-login if re-registering
+
+**Date**: 2026-02-05
+
+---

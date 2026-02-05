@@ -159,14 +159,14 @@ app.use('/static', express.static(path.join(__dirname, 'public/static'), {
   }
 }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads'), {
   setHeaders: (res, path) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
   }
 }));
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
+// Ensure uploads directory exists in data folder
+const uploadsDir = path.join(__dirname, 'data', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -174,7 +174,7 @@ if (!fs.existsSync(uploadsDir)) {
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    cb(null, path.join('data', 'uploads'));
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -185,7 +185,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 2 * 1024 * 1024 // 2MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: function (req, file, cb) {
     if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
@@ -215,7 +215,7 @@ app.use((error, req, res, next) => {
       return res.status(400).json({
         success: false,
         errorCode: 'FILE_TOO_LARGE',
-        message: '文件大小超过限制（最大2MB）'
+        message: '文件大小超过限制（最大10MB）'
       });
     }
   }

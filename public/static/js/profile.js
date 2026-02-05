@@ -130,8 +130,8 @@ async function uploadAvatar(userId, file) {
         return;
     }
     
-    if (file.size > 2 * 1024 * 1024) {
-        showError('图片大小不能超过2MB');
+    if (file.size > 10 * 1024 * 1024) {
+        showError('图片大小不能超过10MB');
         return;
     }
     
@@ -214,10 +214,6 @@ function setupQRCodeReregisterTrigger(userId) {
             clickCount = 0;
             showReregisterConfirmDialog(userId);
         } else if (clickCount > 0) {
-            // 显示点击次数提示（可选，为了用户体验）
-            const remaining = requiredClicks - clickCount;
-            showMessage(`再点击 ${remaining} 次可触发重新注册`, 'info');
-
             // 2秒后重置点击计数
             setTimeout(() => {
                 clickCount = 0;
@@ -238,14 +234,7 @@ async function clearRegistrationAndReload(userId) {
     try {
         showMessage('正在删除账号数据...', 'info');
 
-        // 清除本地存储
-        localStorage.removeItem('user_id');
-        localStorage.removeItem('user_name');
-        localStorage.removeItem('user_gender');
-        localStorage.removeItem('numeric_id');
-        localStorage.removeItem('registration_time');
-
-        // 调用后端API删除用户数据
+        // 调用后端API删除用户数据(这会删除设备指纹)
         const response = await fetch(`/api/users/${userId}`, {
             method: 'DELETE',
             headers: {
@@ -256,19 +245,27 @@ async function clearRegistrationAndReload(userId) {
         const result = await response.json();
 
         if (result.success) {
-            showMessage('账号数据已删除，正在返回首页...', 'success');
+            console.log('✓ Backend user data deleted successfully');
         } else {
             console.error('Backend deletion failed:', result.message);
-            showMessage('本地数据已清除，正在返回首页...', 'success');
         }
 
-        // 延迟跳转，让用户看到提示信息
+        // 清除所有存储层的会话数据(包括设置重新注册标志)
+        sessionManager.clearSession(true);
+
+        showMessage('账号数据已删除，正在返回首页...', 'success');
+
+        // 延迟跳转,让用户看到提示信息
         setTimeout(() => {
             window.location.href = '/';
         }, 1500);
     } catch (error) {
         console.error('Delete user account error:', error);
-        showMessage('本地数据已清除，正在返回首页...', 'success');
+
+        // 即使网络错误,也要清除本地数据
+        sessionManager.clearSession(true);
+
+        showMessage('本地数据已清除,正在返回首页...', 'success');
 
         setTimeout(() => {
             window.location.href = '/';

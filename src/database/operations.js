@@ -63,10 +63,10 @@ async function createUser(userData) {
           try {
             // Try to insert with the generated numeric ID
             const sql = `
-              INSERT INTO users (id, numeric_id, name, gender, avatar_url, qr_code, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+              INSERT INTO users (id, numeric_id, name, gender, avatar_url, qr_code, device_fingerprint, last_login_time, last_login_ip, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             `;
-            const params = [userId, numericId, name.trim(), gender, avatarUrl, qrCode];
+            const params = [userId, numericId, name.trim(), gender, avatarUrl, qrCode, userData.deviceFingerprint || null, userData.lastLoginTime || null, userData.lastLoginIp || null];
             
             await new Promise((resolve, reject) => {
               db.run(sql, params, function(err) {
@@ -103,10 +103,10 @@ async function createUser(userData) {
       } else {
         // No numeric_id column, insert without it
         const sql = `
-          INSERT INTO users (id, name, gender, avatar_url, qr_code, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          INSERT INTO users (id, name, gender, avatar_url, qr_code, device_fingerprint, last_login_time, last_login_ip, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         `;
-        const params = [userId, name.trim(), gender, avatarUrl, qrCode];
+        const params = [userId, name.trim(), gender, avatarUrl, qrCode, userData.deviceFingerprint || null, userData.lastLoginTime || null, userData.lastLoginIp || null];
         
         await new Promise((resolve, reject) => {
           db.run(sql, params, function(err) {
@@ -1417,12 +1417,81 @@ async function getDatabaseInfo() {
  */
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Get user by device fingerprint
+ * @param {string} deviceFingerprint - Device fingerprint hash
+ * @returns {Promise<Object|null>} User object or null if not found
+ */
+async function getUserByDeviceFingerprint(deviceFingerprint) {
+  const db = getDatabase();
+
+  try {
+    const user = await new Promise((resolve, reject) => {
+      const sql = `
+        SELECT u.id, u.numeric_id as numericId, u.name, u.gender, u.avatar_url as avatarUrl,
+               u.qr_code as qrCode, u.device_fingerprint as deviceFingerprint,
+               u.last_login_time as lastLoginTime, u.last_login_ip as lastLoginIp,
+               u.created_at as createdAt, u.updated_at as updatedAt,
+               (SELECT COUNT(*) FROM votes WHERE target_user_id = u.id AND status = 'active') as voteCount
+        FROM users u
+        WHERE u.device_fingerprint = ?
+        LIMIT 1
+      `;
+
+      db.get(sql, [deviceFingerprint], (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
+    });
+
+    return user;
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Update user login info (device fingerprint and login time)
+ * @param {string} userId - User ID
+ * @param {Object} loginData - Login data
+ * @param {string} loginData.deviceFingerprint - Device fingerprint
+ * @param {number} loginData.loginTime - Login timestamp (Unix timestamp)
+ * @param {string} loginData.ipAddress - IP address
+ * @returns {Promise<Object>} Updated user
+ */
+async function updateUserLoginInfo(userId, { deviceFingerprint, loginTime, ipAddress }) {
+  const db = getDatabase();
+
+  try {
+    await new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE users
+        SET device_fingerprint = ?,
+            last_login_time = ?,
+            last_login_ip = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `;
+      const params = [deviceFingerprint, loginTime, ipAddress, userId];
+
+      db.run(sql, params, function(err) {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+
+    return getUserById(userId);
+  } finally {
+    db.close();
+  }
 }
 
 module.exports = {
@@ -1431,7 +1500,9 @@ module.exports = {
   getUserById,
   getUserByName,
   getUserByNumericId,
+  getUserByDeviceFingerprint,
   updateUser,
+  updateUserLoginInfo,
   deleteUser,
   getAllUsers,
   

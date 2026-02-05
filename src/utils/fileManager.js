@@ -5,6 +5,10 @@ const path = require('path');
  * File management utilities for data cleanup and backup
  */
 
+// Get the data directory path (same as database)
+const getDataDir = () => path.join(process.cwd(), 'data');
+const getUploadsDir = () => path.join(getDataDir(), 'uploads');
+
 /**
  * Clean up avatar files from uploads directory
  * @param {Array} userAvatarUrls - Array of avatar URLs to preserve (optional)
@@ -12,7 +16,7 @@ const path = require('path');
  */
 async function cleanupAvatarFiles(userAvatarUrls = []) {
   return new Promise((resolve, reject) => {
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const uploadsDir = getUploadsDir();
     
     // Check if uploads directory exists
     if (!fs.existsSync(uploadsDir)) {
@@ -82,8 +86,8 @@ async function cleanupAvatarFiles(userAvatarUrls = []) {
  */
 async function backupAvatarFiles(userAvatarUrls = []) {
   return new Promise((resolve, reject) => {
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    const backupDir = path.join(process.cwd(), 'backups', `avatars-${Date.now()}`);
+    const uploadsDir = getUploadsDir();
+    const backupDir = path.join(getDataDir(), 'backups', `avatars-${Date.now()}`);
     
     // Check if uploads directory exists
     if (!fs.existsSync(uploadsDir)) {
@@ -145,7 +149,7 @@ async function backupAvatarFiles(userAvatarUrls = []) {
  */
 async function getUploadsInfo() {
   return new Promise((resolve, reject) => {
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const uploadsDir = getUploadsDir();
     
     try {
       if (!fs.existsSync(uploadsDir)) {

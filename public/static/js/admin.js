@@ -2071,7 +2071,7 @@ function showAddParticipantModal() {
                             <label for="participantAvatar">头像</label>
                             <input type="file" id="participantAvatar" name="avatar" 
                                    accept="image/jpeg,image/png" class="file-input">
-                            <small class="form-help">支持JPG、PNG格式，最大2MB</small>
+                            <small class="form-help">支持JPG、PNG格式，最大10MB</small>
                         </div>
                         
                         <div class="form-actions">
@@ -2196,7 +2196,7 @@ function showEditParticipantModal(user) {
                             <label for="participantAvatar">更换头像</label>
                             <input type="file" id="participantAvatar" name="avatar"
                                    accept="image/jpeg,image/png" class="file-input">
-                            <small class="form-help">支持JPG、PNG格式，最大2MB</small>
+                            <small class="form-help">支持JPG、PNG格式，最大10MB</small>
                         </div>
 
                         <div class="form-group">

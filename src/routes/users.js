@@ -1,7 +1,8 @@
 const express = require('express');
 const path = require('path');
-const { createUser, getUserById, getUserByName, getUserByNumericId, updateUser, deleteUser, getAllUsers } = require('../database/operations');
+const { createUser, getUserById, getUserByName, getUserByNumericId, getUserByDeviceFingerprint, updateUser, updateUserLoginInfo, deleteUser, getAllUsers } = require('../database/operations');
 const { generateCompleteQRCode, validateQRData, generateQRCodeImage, getServerBaseURL } = require('../utils/qrcode');
+const { generateDeviceFingerprint, getClientIP } = require('../utils/deviceFingerprint');
 const rosterValidationService = require('../services/RosterValidationService');
 
 const router = express.Router();
@@ -32,6 +33,68 @@ function sanitizeAvatarUrl(url) {
   
   return url;
 }
+
+/**
+ * Auto-login endpoint
+ * Attempts to find user by device fingerprint and restore session
+ * This enables persistent login even when browser storage is cleared
+ * IMPORTANT: This route must be defined before /:userId to avoid conflicts
+ */
+router.get('/auth/auto-login', async (req, res) => {
+  try {
+    // Generate device fingerprint from request
+    const deviceFingerprint = generateDeviceFingerprint(req);
+
+    if (!deviceFingerprint) {
+      return res.json({
+        success: false,
+        errorCode: 'NO_FINGERPRINT',
+        message: '无法生成设备指纹'
+      });
+    }
+
+    // Try to find user by device fingerprint
+    const user = await getUserByDeviceFingerprint(deviceFingerprint);
+
+    if (!user) {
+      return res.json({
+        success: false,
+        errorCode: 'USER_NOT_FOUND',
+        message: '未找到已注册用户'
+      });
+    }
+
+    // Update login info (last login time and IP)
+    const clientIP = getClientIP(req);
+    const currentTime = Math.floor(Date.now() / 1000);
+    await updateUserLoginInfo(user.id, {
+      deviceFingerprint,
+      loginTime: currentTime,
+      ipAddress: clientIP
+    });
+
+    // Return user data for session restoration
+    res.json({
+      success: true,
+      user: {
+        userId: user.id,
+        numericId: user.numericId,
+        name: user.name,
+        gender: user.gender,
+        avatarUrl: sanitizeAvatarUrl(user.avatarUrl),
+        lastLoginTime: user.lastLoginTime,
+        registrationTime: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Auto-login error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'AUTO_LOGIN_FAILED',
+      message: '自动登录失败'
+    });
+  }
+});
 
 // Get all users (public info only)
 router.get('/', async (req, res) => {
@@ -118,12 +181,20 @@ router.post('/register', async (req, res) => {
     
     // Assign default avatar based on gender
     const avatarUrl = DEFAULT_AVATARS[gender];
-    
+
+    // Generate device fingerprint for persistent login
+    const deviceFingerprint = generateDeviceFingerprint(req);
+    const clientIP = getClientIP(req);
+    const currentTime = Math.floor(Date.now() / 1000);
+
     // Create user first to get the ID
     const user = await createUser({
       name: name.trim(),
       gender,
-      avatarUrl
+      avatarUrl,
+      deviceFingerprint,
+      lastLoginTime: currentTime,
+      lastLoginIp: clientIP
     });
     
     // Get existing QR codes to ensure uniqueness
@@ -294,7 +365,7 @@ router.post('/upload-avatar', (req, res) => {
         return res.status(400).json({
           success: false,
           errorCode: 'FILE_TOO_LARGE',
-          message: '文件大小超过限制（最大2MB）'
+          message: '文件大小超过限制（最大10MB）'
         });
       }
       

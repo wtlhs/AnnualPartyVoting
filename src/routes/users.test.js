@@ -37,7 +37,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 2 * 1024 * 1024 // 2MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: function (req, file, cb) {
     if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
@@ -530,9 +530,9 @@ describe('User Registration API', () => {
       expect(response.body.message).toBe('只支持JPG和PNG格式的图片文件');
     });
 
-    it('should reject files larger than 2MB', async () => {
-      // Create a buffer larger than 2MB
-      const largeBuffer = Buffer.alloc(3 * 1024 * 1024); // 3MB
+    it('should reject files larger than 10MB', async () => {
+      // Create a buffer larger than 10MB
+      const largeBuffer = Buffer.alloc(11 * 1024 * 1024); // 11MB
       // Add JPG header to make it a valid JPEG
       largeBuffer[0] = 0xFF;
       largeBuffer[1] = 0xD8;
@@ -545,7 +545,7 @@ describe('User Registration API', () => {
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
       expect(response.body.errorCode).toBe('FILE_TOO_LARGE');
-      expect(response.body.message).toBe('文件大小超过限制（最大2MB）');
+      expect(response.body.message).toBe('文件大小超过限制（最大10MB）');
     });
 
     it('should return error when no file is provided', async () => {
