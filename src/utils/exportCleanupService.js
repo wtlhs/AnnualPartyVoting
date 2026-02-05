@@ -23,15 +23,18 @@ class ExportCleanupService {
     }
 
     console.log(`启动导出文件清理服务，清理间隔: ${intervalHours}小时，文件保存时间: ${maxFileAgeHours}小时`);
-    
-    // 立即执行一次清理
-    this.performCleanup(maxFileAgeHours);
-    
-    // 设置定时清理
-    this.cleanupInterval = setInterval(() => {
+
+    // 延迟首次清理，避免启动时与投票操作争夺数据库连接
+    // 等待5分钟后才开始第一次清理，给系统时间稳定
+    setTimeout(() => {
       this.performCleanup(maxFileAgeHours);
-    }, intervalHours * 60 * 60 * 1000); // 转换为毫秒
-    
+
+      // 首次清理完成后，设置定时清理
+      this.cleanupInterval = setInterval(() => {
+        this.performCleanup(maxFileAgeHours);
+      }, intervalHours * 60 * 60 * 1000); // 转换为毫秒
+    }, 5 * 60 * 1000); // 5分钟延迟
+
     this.isRunning = true;
   }
 

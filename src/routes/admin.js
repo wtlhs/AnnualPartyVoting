@@ -9,6 +9,7 @@ const {
   archiveAndClearData,
   getDatabaseInfo
 } = require('../database/operations');
+const { getPoolStats } = require('../database/init');
 
 // Import new managers for vote records functionality
 const VoteRecordManager = require('../database/VoteRecordManager');
@@ -118,6 +119,27 @@ router.get('/session', requireAdmin, async (req, res) => {
       success: false,
       errorCode: 'GET_SESSION_FAILED',
       message: '获取会话信息失败'
+    });
+  }
+});
+
+// Get connection pool statistics (for monitoring)
+router.get('/pool/stats', requireAdmin, async (req, res) => {
+  try {
+    const stats = getPoolStats();
+
+    res.json({
+      success: true,
+      pool: stats,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Get pool stats error:', error);
+    res.status(500).json({
+      success: false,
+      errorCode: 'GET_POOL_STATS_FAILED',
+      message: '获取连接池统计失败'
     });
   }
 });

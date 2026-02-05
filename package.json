@@ -5,11 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:cluster": "node server-cluster.js",
     "start:lan": "node server-lan.js",
     "start:https": "node server-https.js",
     "start:prod": "node start-production.js",
     "generate-ssl": "node generate-ssl-fixed.js",
     "dev": "nodemon server.js",
+    "dev:cluster": "nodemon server-cluster.js",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "type-check": "tsc --noEmit",

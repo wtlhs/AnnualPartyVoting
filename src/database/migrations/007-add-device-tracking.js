@@ -20,14 +20,14 @@ module.exports = {
      * @param {import('better-sqlite3').Database} db - Database instance
      */
     async up() {
-        const { getDatabase } = require('../init');
-        const db = getDatabase();
+        const { getDatabase, releaseConnection } = require('../init');
+        const db = await getDatabase();
 
         console.log('Applying migration 007: Adding device tracking fields...');
 
         // Helper function to check if column exists
         const columnExists = (columnName) => {
-            return new Promise((resolve, reject) => {
+            return new Promise(async (resolve, reject) => {
                 db.all("PRAGMA table_info(users)", (err, columns) => {
                     if (err) return reject(err);
                     resolve(columns.some(col => col.name === columnName));
@@ -37,7 +37,7 @@ module.exports = {
 
         // Helper function to execute SQL
         const execSQL = (sql) => {
-            return new Promise((resolve, reject) => {
+            return new Promise(async (resolve, reject) => {
                 db.exec(sql, (err) => {
                     if (err) return reject(err);
                     resolve();
@@ -85,7 +85,7 @@ module.exports = {
             console.log('  ⊘ last_login_ip column already exists');
         }
 
-        db.close();
+        releaseConnection(db);
         console.log('✓ Migration 007 completed successfully');
     }
 };

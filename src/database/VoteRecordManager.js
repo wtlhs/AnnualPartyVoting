@@ -1,4 +1,4 @@
-const { getDatabase } = require('./init');
+const { getDatabase, releaseConnection } = require('./init');
 
 /**
  * VoteRecordManager - 管理投票记录的查询、筛选和状态管理
@@ -23,8 +23,8 @@ class VoteRecordManager {
    * @returns {Promise<Object>} 包含记录列表和分页信息的对象
    */
   async getVoteRecords(filters = {}, pagination = {}) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const {
         status,
@@ -129,7 +129,7 @@ class VoteRecordManager {
       // 执行计数查询
       db.get(countSql, params, (err, countResult) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -139,7 +139,7 @@ class VoteRecordManager {
         // 执行主查询
         const mainParams = [...params, limit, offset];
         db.all(mainSql, mainParams, (err, rows) => {
-          db.close();
+          releaseConnection(db);
           
           if (err) {
             return reject(err);
@@ -187,8 +187,8 @@ class VoteRecordManager {
    * @returns {Promise<Object|null>} 投票记录详情对象或null
    */
   async getVoteRecordDetail(voteId) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const sql = `
         SELECT 
@@ -217,7 +217,7 @@ class VoteRecordManager {
       `;
       
       db.get(sql, [voteId], (err, row) => {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);
@@ -260,19 +260,19 @@ class VoteRecordManager {
    * @returns {Promise<Object>} 更新结果
    */
   async updateVoteStatus(voteId, status, adminId, reason = null) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       // 验证状态值
       if (!['active', 'inactive', 'disabled', 'discarded'].includes(status)) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('状态值必须是 active、inactive、disabled 或 discarded'));
       }
       
       db.serialize(() => {
         db.run('BEGIN TRANSACTION', (err) => {
           if (err) {
-            db.close();
+            releaseConnection(db);
             return reject(err);
           }
           
@@ -280,20 +280,20 @@ class VoteRecordManager {
           db.get('SELECT * FROM votes WHERE id = ?', [voteId], (err, vote) => {
             if (err) {
               db.run('ROLLBACK');
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
             
             if (!vote) {
               db.run('ROLLBACK');
-              db.close();
+              releaseConnection(db);
               return reject(new Error('投票记录不存在'));
             }
             
             // 检查状态是否需要更新
             if (vote.status === status) {
               db.run('ROLLBACK');
-              db.close();
+              releaseConnection(db);
               return resolve({
                 success: true,
                 message: '状态未发生变化',
@@ -313,7 +313,7 @@ class VoteRecordManager {
             db.run(updateSql, [status, voteId], function(err) {
               if (err) {
                 db.run('ROLLBACK');
-                db.close();
+                releaseConnection(db);
                 return reject(err);
               }
               
@@ -327,12 +327,12 @@ class VoteRecordManager {
               db.run(logSql, [voteId, adminId, operation, reason], (err) => {
                 if (err) {
                   db.run('ROLLBACK');
-                  db.close();
+                  releaseConnection(db);
                   return reject(err);
                 }
                 
                 db.run('COMMIT', (err) => {
-                  db.close();
+                  releaseConnection(db);
                   if (err) {
                     return reject(err);
                   }
@@ -365,17 +365,17 @@ class VoteRecordManager {
    * @returns {Promise<Object>} 批量更新结果
    */
   async batchUpdateVoteStatus(voteIds, status, adminId, reason = null) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       // 验证输入
       if (!Array.isArray(voteIds) || voteIds.length === 0) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('投票记录ID数组不能为空'));
       }
       
       if (!['active', 'inactive', 'disabled', 'discarded'].includes(status)) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('状态值必须是 active、inactive、disabled 或 discarded'));
       }
       
@@ -392,7 +392,7 @@ class VoteRecordManager {
       db.serialize(() => {
         db.run('BEGIN TRANSACTION', (err) => {
           if (err) {
-            db.close();
+            releaseConnection(db);
             return reject(err);
           }
           
@@ -405,7 +405,7 @@ class VoteRecordManager {
               if (results.failed > 0 && results.updated === 0) {
                 // 全部失败，回滚事务
                 db.run('ROLLBACK', (rollbackErr) => {
-                  db.close();
+                  releaseConnection(db);
                   if (rollbackErr) {
                     return reject(rollbackErr);
                   }
@@ -415,7 +415,7 @@ class VoteRecordManager {
               } else {
                 // 提交事务
                 db.run('COMMIT', (commitErr) => {
-                  db.close();
+                  releaseConnection(db);
                   if (commitErr) {
                     return reject(commitErr);
                   }
@@ -508,8 +508,8 @@ class VoteRecordManager {
       candidate: searchTerm
     };
     
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const {
         status,
@@ -610,7 +610,7 @@ class VoteRecordManager {
       // 执行计数查询
       db.get(countSql, params, (err, countResult) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -620,7 +620,7 @@ class VoteRecordManager {
         // 执行主查询
         const mainParams = [...params, limit, offset];
         db.all(mainSql, mainParams, (err, rows) => {
-          db.close();
+          releaseConnection(db);
           
           if (err) {
             return reject(err);

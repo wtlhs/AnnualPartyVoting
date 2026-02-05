@@ -1,12 +1,12 @@
-const { getDatabase } = require('../init');
+const { getDatabase, releaseConnection } = require('../init');
 
 /**
  * Migration: Create guests table for managing guest users
  * Allows admins to pre-approve guest registrations alongside employee roster
  */
 async function up() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
 
     console.log('Running migration: Create guests table');
 
@@ -28,7 +28,7 @@ async function up() {
 
       db.run(createTableSql, (err) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
 
@@ -64,7 +64,7 @@ async function up() {
           db.run(index.sql, (err) => {
             if (err) {
               console.error(`Failed to create ${index.name}:`, err);
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
 
@@ -72,7 +72,7 @@ async function up() {
             indexesCreated++;
 
             if (indexesCreated === indexes.length) {
-              db.close();
+              releaseConnection(db);
               console.log('✓ Guests table migration completed successfully');
               resolve();
             }
@@ -87,19 +87,19 @@ async function up() {
  * Rollback migration - drop guests table
  */
 async function down() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
 
     console.log('Rolling back migration: Drop guests table');
 
     db.run('DROP TABLE IF EXISTS guests', (err) => {
       if (err) {
-        db.close();
+        releaseConnection(db);
         return reject(err);
       }
 
       console.log('✓ Guests table dropped');
-      db.close();
+      releaseConnection(db);
       console.log('✓ Guests table rollback completed');
       resolve();
     });

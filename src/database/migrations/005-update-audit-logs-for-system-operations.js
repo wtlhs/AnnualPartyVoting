@@ -1,12 +1,12 @@
-const { getDatabase } = require('../init');
+const { getDatabase, releaseConnection } = require('../init');
 
 /**
  * Migration: Update audit_logs table to support system operations
  * Allows NULL vote_id for system-level operations like voting settings changes
  */
 async function up() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     console.log('Running migration: Update audit_logs table for system operations');
     
@@ -28,7 +28,7 @@ async function up() {
       
       db.run(createNewTableSql, (err) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -43,7 +43,7 @@ async function up() {
         
         db.run(copyDataSql, (err) => {
           if (err) {
-            db.close();
+            releaseConnection(db);
             return reject(err);
           }
           
@@ -52,7 +52,7 @@ async function up() {
           // Drop old table
           db.run('DROP TABLE audit_logs', (err) => {
             if (err) {
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
             
@@ -61,7 +61,7 @@ async function up() {
             // Rename new table
             db.run('ALTER TABLE audit_logs_new RENAME TO audit_logs', (err) => {
               if (err) {
-                db.close();
+                releaseConnection(db);
                 return reject(err);
               }
               
@@ -97,7 +97,7 @@ async function up() {
                 db.run(index.sql, (err) => {
                   if (err) {
                     console.error(`Failed to create ${index.name}:`, err);
-                    db.close();
+                    releaseConnection(db);
                     return reject(err);
                   }
                   
@@ -105,7 +105,7 @@ async function up() {
                   indexesCreated++;
                   
                   if (indexesCreated === indexes.length) {
-                    db.close();
+                    releaseConnection(db);
                     console.log('✓ Audit logs table update migration completed successfully');
                     resolve();
                   }
@@ -123,8 +123,8 @@ async function up() {
  * Rollback migration - revert to original schema
  */
 async function down() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     console.log('Rolling back migration: Revert audit_logs table schema');
     
@@ -146,7 +146,7 @@ async function down() {
       
       db.run(createOriginalTableSql, (err) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -160,19 +160,19 @@ async function down() {
         
         db.run(copyDataSql, (err) => {
           if (err) {
-            db.close();
+            releaseConnection(db);
             return reject(err);
           }
           
           // Drop current table and rename
           db.run('DROP TABLE audit_logs', (err) => {
             if (err) {
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
             
             db.run('ALTER TABLE audit_logs_original RENAME TO audit_logs', (err) => {
-              db.close();
+              releaseConnection(db);
               if (err) {
                 return reject(err);
               }

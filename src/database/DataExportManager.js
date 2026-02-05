@@ -1,4 +1,4 @@
-const { getDatabase } = require('./init');
+const { getDatabase, releaseConnection } = require('./init');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const ExcelJS = require('exceljs');
 const path = require('path');
@@ -33,8 +33,8 @@ class DataExportManager {
    * @returns {Promise<Array>} 导出数据数组
    */
   async getExportData(filters = {}) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const {
         status,
@@ -108,7 +108,7 @@ class DataExportManager {
       `;
       
       db.all(sql, params, (err, rows) => {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);
@@ -384,8 +384,8 @@ class DataExportManager {
    * @returns {Promise<Object>} 任务记录
    */
   async createExportTask(adminId, filePath, fileType, filters = {}) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const expiresAt = moment().add(24, 'hours').format('YYYY-MM-DD HH:mm:ss');
       
@@ -401,7 +401,7 @@ class DataExportManager {
         JSON.stringify(filters),
         expiresAt
       ], function(err) {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);
@@ -427,8 +427,8 @@ class DataExportManager {
    * @returns {Promise<Object|null>} 任务信息
    */
   async getExportTask(taskId) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const sql = `
         SELECT 
@@ -445,7 +445,7 @@ class DataExportManager {
       `;
       
       db.get(sql, [taskId], (err, row) => {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);
@@ -556,8 +556,8 @@ class DataExportManager {
    * @returns {Promise<Object>} 删除结果
    */
   async cleanupExpiredTasks() {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const sql = `
         DELETE FROM export_tasks
@@ -565,7 +565,7 @@ class DataExportManager {
       `;
       
       db.run(sql, [], function(err) {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);

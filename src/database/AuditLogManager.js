@@ -1,4 +1,4 @@
-const { getDatabase } = require('./init');
+const { getDatabase, releaseConnection } = require('./init');
 
 /**
  * AuditLogManager - 管理操作日志的记录和查询功能
@@ -17,8 +17,8 @@ class AuditLogManager {
    * @returns {Promise<Object>} 创建的日志记录
    */
   async log(logData) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const sql = `
         INSERT INTO audit_logs (
@@ -42,7 +42,7 @@ class AuditLogManager {
       });
       
       db.run(sql, [voteId, adminId, operation, reason, metadata], function(err) {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           console.error('Error creating audit log:', err);
@@ -75,18 +75,18 @@ class AuditLogManager {
    * @returns {Promise<Object>} 创建的日志记录
    */
   async logOperation(voteId, adminId, operation, reason = null, metadata = null) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       // 验证操作类型
       if (!['activate', 'deactivate'].includes(operation)) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('操作类型必须是 activate 或 deactivate'));
       }
       
       // 验证必需参数
       if (!voteId || !adminId) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('投票记录ID和管理员ID是必需的'));
       }
       
@@ -100,7 +100,7 @@ class AuditLogManager {
       
       db.run(sql, params, function(err) {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -121,7 +121,7 @@ class AuditLogManager {
         `;
         
         db.get(selectSql, [logId], (err, row) => {
-          db.close();
+          releaseConnection(db);
           
           if (err) {
             return reject(err);
@@ -153,8 +153,8 @@ class AuditLogManager {
    * @returns {Promise<Array>} 操作历史记录数组
    */
   async getVoteOperationHistory(voteId, options = {}) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const { limit, sortOrder = 'DESC' } = options;
       
@@ -186,7 +186,7 @@ class AuditLogManager {
       }
       
       db.all(sql, params, (err, rows) => {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);
@@ -227,8 +227,8 @@ class AuditLogManager {
    * @returns {Promise<Object>} 包含日志记录和分页信息的对象
    */
   async getAdminOperationLogs(adminId, options = {}) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const {
         dateFrom,
@@ -298,7 +298,7 @@ class AuditLogManager {
       // 执行计数查询
       db.get(countSql, params, (err, countResult) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -308,7 +308,7 @@ class AuditLogManager {
         // 执行主查询
         const mainParams = [...params, limit, offset];
         db.all(mainSql, mainParams, (err, rows) => {
-          db.close();
+          releaseConnection(db);
           
           if (err) {
             return reject(err);
@@ -358,8 +358,8 @@ class AuditLogManager {
    * @returns {Promise<Object>} 操作统计信息
    */
   async getOperationStatistics(options = {}) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const { dateFrom, dateTo, adminId } = options;
       
@@ -400,7 +400,7 @@ class AuditLogManager {
       
       db.get(sql, params, (err, row) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -419,7 +419,7 @@ class AuditLogManager {
         `;
         
         db.all(topAdminSql, params, (err, adminRows) => {
-          db.close();
+          releaseConnection(db);
           
           if (err) {
             return reject(err);
@@ -458,8 +458,8 @@ class AuditLogManager {
    * @returns {Promise<Array>} 最近的操作日志数组
    */
   async getRecentOperations(limit = 10, adminId = null) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       let sql = `
         SELECT 
@@ -488,7 +488,7 @@ class AuditLogManager {
       params.push(limit);
       
       db.all(sql, params, (err, rows) => {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);
@@ -524,8 +524,8 @@ class AuditLogManager {
    * @returns {Promise<Object>} 清理结果
    */
   async cleanupOldLogs(daysToKeep = 90) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       
       const sql = `
         DELETE FROM audit_logs 
@@ -533,7 +533,7 @@ class AuditLogManager {
       `;
       
       db.run(sql, [], function(err) {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);

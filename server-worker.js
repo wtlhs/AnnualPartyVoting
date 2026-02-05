@@ -24,6 +24,7 @@ const app = express();
 // Trust proxy to get real IP addresses (useful when behind reverse proxy)
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
+const WORKER_ID = process.env.WORKER_ID || 0;
 
 // Security middleware - 针对局域网访问优化
 app.use(helmet({
@@ -53,35 +54,35 @@ app.use(helmet({
 // 添加协议检测中间件
 app.use((req, res, next) => {
   // 检测是否是通过HTTPS访问的HTTP服务器
-  const isHTTPSRequest = req.headers['x-forwarded-proto'] === 'https' || 
-                         req.connection.encrypted || 
+  const isHTTPSRequest = req.headers['x-forwarded-proto'] === 'https' ||
+                         req.connection.encrypted ||
                          req.secure;
-  
+
   // 如果检测到HTTPS请求但服务器是HTTP，重定向到协议修复页面
   if (isHTTPSRequest && req.path !== '/protocol-fix.html') {
     return res.redirect('http://' + req.get('host') + '/protocol-fix.html');
   }
-  
+
   next();
 });
 app.use((req, res, next) => {
   // 强制禁用HSTS - 使用最强的设置
   res.removeHeader('Strict-Transport-Security');
   res.setHeader('Strict-Transport-Security', 'max-age=0; includeSubDomains; preload');
-  
+
   // 添加强制缓存控制头
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
-  
+
   // 添加明确的协议头
   res.setHeader('X-Forwarded-Proto', 'http');
   res.setHeader('X-Forwarded-SSL', 'off');
   res.setHeader('X-Forwarded-Port', '3000');
-  
+
   // 添加内容安全策略，确保使用HTTP
-  res.setHeader('Content-Security-Policy', 
+  res.setHeader('Content-Security-Policy',
     "default-src 'self' http:; " +
     "script-src 'self' 'unsafe-inline' http:; " +
     "style-src 'self' 'unsafe-inline' http:; " +
@@ -89,33 +90,30 @@ app.use((req, res, next) => {
     "connect-src 'self' http:; " +
     "font-src 'self' http:"
   );
-  
+
   next();
 });
 
-// Rate limiting - 放宽限制以适应年会场景
+// Rate limiting - 在集群模式下调整限制
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // limit each IP to 500 requests per windowMs (increased from 100)
+  max: 500, // limit each IP to 500 requests per windowMs
   message: {
     success: false,
     errorCode: 'RATE_LIMIT_EXCEEDED',
     message: '请求过于频繁，请稍后再试'
   },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  // Skip rate limiting for certain paths if needed
+  standardHeaders: true,
+  legacyHeaders: false,
   skip: (req, res) => {
-    // Skip rate limiting for static files
     return req.path.startsWith('/static/') || req.path.startsWith('/uploads/');
   }
 });
 app.use(limiter);
 
-// 为投票相关API设置更宽松的速率限制
 const votingLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 50, // 每个IP在5分钟内最多50次投票相关请求
+  windowMs: 5 * 60 * 1000,
+  max: 50,
   message: {
     success: false,
     errorCode: 'VOTING_RATE_LIMIT_EXCEEDED',
@@ -123,18 +121,15 @@ const votingLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // 为大屏展示和统计查询提供更宽松的限制
   skip: (req, res) => {
-    // 跳过对统计和排名查询的限制，这些是只读操作
     const readOnlyPaths = ['/statistics', '/ranking', '/progress', '/top-performers', '/recent-activity'];
     return readOnlyPaths.some(path => req.path.includes(path));
   }
 });
 
-// 为大屏展示创建专门的速率限制器
 const displayLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // 每分钟最多100次请求，足够支持多个大屏同时刷新
+  windowMs: 1 * 60 * 1000,
+  max: 100,
   message: {
     success: false,
     errorCode: 'DISPLAY_RATE_LIMIT_EXCEEDED',
@@ -144,15 +139,11 @@ const displayLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// 应用不同的速率限制到不同的路由
-// 为只读的统计和排名API应用宽松限制
 app.use('/api/votes/statistics', displayLimiter);
 app.use('/api/votes/ranking', displayLimiter);
 app.use('/api/votes/progress', displayLimiter);
 app.use('/api/votes/top-performers', displayLimiter);
 app.use('/api/votes/recent-activity', displayLimiter);
-
-// 为其他投票相关API应用标准限制
 app.use('/api/votes', votingLimiter);
 
 // CORS configuration
@@ -169,7 +160,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/static', express.static(path.join(__dirname, 'public/static')));
 app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
 
-// Ensure uploads directory exists in data folder
+// Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'data', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -189,10 +180,9 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 10 * 1024 * 1024
   },
   fileFilter: function (req, file, cb) {
-    // Accept only JPG and PNG files
     if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
       cb(null, true);
     } else {
@@ -201,7 +191,6 @@ const upload = multer({
   }
 });
 
-// Make upload middleware available to routes
 app.locals.upload = upload;
 
 // API Routes
@@ -210,13 +199,13 @@ app.use('/api/votes', voteRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/voting-settings', votingSettingsRoutes);
 
-// Page Routes (serve HTML pages)
+// Page Routes
 app.use('/', pageRoutes);
 
 // Global error handling middleware
 app.use((error, req, res, next) => {
   console.error('Error:', error);
-  
+
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
@@ -226,7 +215,7 @@ app.use((error, req, res, next) => {
       });
     }
   }
-  
+
   if (error.message === 'Only JPG and PNG files are allowed') {
     return res.status(400).json({
       success: false,
@@ -234,11 +223,11 @@ app.use((error, req, res, next) => {
       message: '只支持JPG和PNG格式的图片文件'
     });
   }
-  
+
   res.status(500).json({
     success: false,
     errorCode: 'INTERNAL_ERROR',
-    message: '服务器内部错误，请稍后重试'
+    message: '服务器内部错误，请稍后再试'
   });
 });
 
@@ -251,48 +240,83 @@ app.use((req, res) => {
   });
 });
 
-// Initialize database and start server
+/**
+ * Start the worker server
+ */
 async function startServer() {
   try {
     await initializeDatabase();
-    console.log('Database initialized successfully');
-    
-    // Start export cleanup service
-    exportCleanupService.start(6, 24); // Clean every 6 hours, keep files for 24 hours
-    console.log('Export cleanup service started');
-    
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`Access the application at: http://localhost:${PORT}`);
+    console.log(`[Worker ${WORKER_ID}] Database initialized successfully`);
+
+    // Only start export cleanup service in first worker to avoid duplicates
+    if (WORKER_ID === 0) {
+      exportCleanupService.start(6, 24);
+      console.log(`[Worker ${WORKER_ID}] Export cleanup service started`);
+    }
+
+    const server = app.listen(PORT, () => {
+      console.log(`[Worker ${WORKER_ID}] Server is running on port ${PORT}`);
+      console.log(`[Worker ${WORKER_ID}] Access the application at: http://localhost:${PORT}`);
     });
+
+    // Notify master that worker is ready
+    if (process.send) {
+      process.send({ type: 'ready', workerId: WORKER_ID });
+    }
+
+    // Handle master shutdown signal
+    process.on('message', (msg) => {
+      if (msg === 'shutdown') {
+        console.log(`[Worker ${WORKER_ID}] Shutdown signal received`);
+        gracefulShutdown(server);
+      }
+    });
+
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error(`[Worker ${WORKER_ID}] Failed to start server:`, error);
     process.exit(1);
   }
 }
 
-startServer();
-
-// Graceful shutdown handling
-async function gracefulShutdown(signal) {
-  console.log(`${signal} received, shutting down gracefully`);
-
+/**
+ * Graceful shutdown for worker
+ */
+async function gracefulShutdown(server) {
   try {
-    // Stop export cleanup service
-    exportCleanupService.stop();
+    // Stop accepting new connections
+    server.close(() => {
+      console.log(`[Worker ${WORKER_ID}] HTTP server closed`);
+    });
 
-    // Close all database connections
+    // Stop export cleanup service (only in worker 0)
+    if (WORKER_ID === 0) {
+      exportCleanupService.stop();
+    }
+
+    // Close database connections
     await closeAllConnections();
-    console.log('All database connections closed');
+    console.log(`[Worker ${WORKER_ID}] Database connections closed`);
 
     process.exit(0);
   } catch (error) {
-    console.error('Error during graceful shutdown:', error);
+    console.error(`[Worker ${WORKER_ID}] Error during shutdown:`, error);
     process.exit(1);
   }
 }
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+// Also handle direct signals
+process.on('SIGTERM', () => {
+  console.log(`[Worker ${WORKER_ID}] SIGTERM received`);
+  // Let master handle graceful shutdown
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log(`[Worker ${WORKER_ID}] SIGINT received`);
+  process.exit(0);
+});
+
+// Start the worker
+startServer();
 
 module.exports = app;

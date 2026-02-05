@@ -11,9 +11,9 @@ const path = require('path');
  * @param {Object} db - 数据库连接对象
  */
 function up() {
-    return new Promise((resolve, reject) => {
-        const { getDatabase } = require('../init');
-        const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+        const { getDatabase, releaseConnection } = require('../init');
+        const db = await getDatabase();
         
         console.log('Running migration: 004-create-voting-settings-table');
         
@@ -32,7 +32,7 @@ function up() {
             
             db.run(createVotingSettingsTable, (err) => {
                 if (err) {
-                    db.close();
+                    releaseConnection(db);
                     return reject(err);
                 }
                 console.log('Created voting_settings table');
@@ -61,7 +61,7 @@ function up() {
                 `;
                 
                 db.run(createUpdateTrigger, (err) => {
-                    db.close();
+                    releaseConnection(db);
                     if (err) {
                         return reject(err);
                     }
@@ -78,9 +78,9 @@ function up() {
  * @param {Object} db - 数据库连接对象
  */
 function down() {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         const { getDatabase } = require('../init');
-        const db = getDatabase();
+        const db = await getDatabase();
         
         console.log('Rolling back migration: 004-create-voting-settings-table');
         
@@ -88,13 +88,13 @@ function down() {
             // 删除触发器
             db.run('DROP TRIGGER IF EXISTS update_voting_settings_timestamp', (err) => {
                 if (err) {
-                    db.close();
+                    releaseConnection(db);
                     return reject(err);
                 }
                 
                 // 删除表
                 db.run('DROP TABLE IF EXISTS voting_settings', (err) => {
-                    db.close();
+                    releaseConnection(db);
                     if (err) {
                         return reject(err);
                     }

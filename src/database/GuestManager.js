@@ -3,7 +3,7 @@
  * 负责嘉宾信息的CRUD操作
  */
 
-const { getDatabase } = require('./init');
+const { getDatabase, releaseConnection } = require('./init');
 const { v4: uuidv4 } = require('uuid');
 
 class GuestManager {
@@ -13,18 +13,18 @@ class GuestManager {
    * @returns {Promise<Object>} 创建的嘉宾记录
    */
   async addGuest(guestData) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       const { name, gender, notes, source = 'admin', addedBy } = guestData;
 
       // 验证参数
       if (!name || !name.trim()) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('嘉宾姓名不能为空'));
       }
 
       if (!gender || !['male', 'female'].includes(gender)) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('性别必须为 male 或 female'));
       }
 
@@ -35,7 +35,7 @@ class GuestManager {
       `;
 
       db.run(sql, [id, name.trim(), gender, source, addedBy, notes || null], function(err) {
-        db.close();
+        releaseConnection(db);
 
         if (err) {
           // 唯一约束冲突（姓名+性别重复）
@@ -64,8 +64,8 @@ class GuestManager {
    * @returns {Promise<Object>} 嘉宾列表和总数
    */
   async getGuests(options = {}) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       const {
         page = 1,
         limit = 50,
@@ -110,14 +110,14 @@ class GuestManager {
 
       db.get(countSql, params, (err, countResult) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
 
         const total = countResult.total;
 
         db.all(dataSql, [...params, limit, offset], (err, rows) => {
-          db.close();
+          releaseConnection(db);
 
           if (err) {
             return reject(err);
@@ -141,8 +141,8 @@ class GuestManager {
    * @returns {Promise<Object>} 嘉宾记录
    */
   async getGuestById(id) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
 
       const sql = `
         SELECT id, name, gender, source, added_by, notes, created_at, updated_at
@@ -151,7 +151,7 @@ class GuestManager {
       `;
 
       db.get(sql, [id], (err, row) => {
-        db.close();
+        releaseConnection(db);
 
         if (err) {
           return reject(err);
@@ -173,18 +173,18 @@ class GuestManager {
    * @returns {Promise<Object>} 更新后的嘉宾记录
    */
   async updateGuest(id, updateData) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
       const { name, gender, notes } = updateData;
 
       // 验证参数
       if (name !== undefined && !name?.trim()) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('嘉宾姓名不能为空'));
       }
 
       if (gender && !['male', 'female'].includes(gender)) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('性别必须为 male 或 female'));
       }
 
@@ -216,7 +216,7 @@ class GuestManager {
       `;
 
       db.run(sql, params, function(err) {
-        db.close();
+        releaseConnection(db);
 
         if (err) {
           if (err.message.includes('UNIQUE constraint failed')) {
@@ -244,13 +244,13 @@ class GuestManager {
    * @returns {Promise<boolean>} 是否删除成功
    */
   async deleteGuest(id) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
 
       const sql = `DELETE FROM guests WHERE id = ?`;
 
       db.run(sql, [id], function(err) {
-        db.close();
+        releaseConnection(db);
 
         if (err) {
           return reject(err);
@@ -272,8 +272,8 @@ class GuestManager {
    * @returns {Promise<boolean>} 是否存在
    */
   async guestExists(name, gender) {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
 
       const sql = `
         SELECT id FROM guests
@@ -281,7 +281,7 @@ class GuestManager {
       `;
 
       db.get(sql, [name.trim(), gender], (err, row) => {
-        db.close();
+        releaseConnection(db);
 
         if (err) {
           return reject(err);
@@ -331,8 +331,8 @@ class GuestManager {
    * @returns {Promise<Object>} 统计数据
    */
   async getStatistics() {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
 
       const sql = `
         SELECT
@@ -345,7 +345,7 @@ class GuestManager {
       `;
 
       db.get(sql, [], (err, row) => {
-        db.close();
+        releaseConnection(db);
 
         if (err) {
           return reject(err);

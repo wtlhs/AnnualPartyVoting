@@ -1,4 +1,4 @@
-const { getDatabase } = require('../init');
+const { getDatabase, releaseConnection } = require('../init');
 
 /**
  * Migration: Extend votes table with admin vote records functionality
@@ -6,8 +6,8 @@ const { getDatabase } = require('../init');
  * Note: ip_address already exists in the current votes table
  */
 async function up() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     console.log('Running migration: Extend votes table for admin vote records');
     
@@ -15,7 +15,7 @@ async function up() {
       // Check current table structure
       db.all("PRAGMA table_info(votes)", (err, columns) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -66,7 +66,7 @@ async function up() {
         
         if (migrations.length === 0) {
           console.log('All required columns already exist in votes table');
-          db.close();
+          releaseConnection(db);
           return resolve();
         }
         
@@ -78,7 +78,7 @@ async function up() {
           db.run(migration.sql, (err) => {
             if (err) {
               console.error(`Failed: ${migration.description}`, err);
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
             
@@ -89,12 +89,12 @@ async function up() {
               // Update existing records to have proper timestamps and status
               updateExistingRecords(db)
                 .then(() => {
-                  db.close();
+                  releaseConnection(db);
                   console.log('✓ Votes table extension migration completed successfully');
                   resolve();
                 })
                 .catch((err) => {
-                  db.close();
+                  releaseConnection(db);
                   reject(err);
                 });
             }
@@ -109,7 +109,7 @@ async function up() {
  * Update existing vote records with proper timestamps and status
  */
 async function updateExistingRecords(db) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     // Update existing records that don't have created_at set
     const updateSql = `
       UPDATE votes 
@@ -136,8 +136,8 @@ async function updateExistingRecords(db) {
  * Note: SQLite doesn't support DROP COLUMN, so this creates a new table without the columns
  */
 async function down() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     console.log('Rolling back migration: Remove votes table extensions');
     
@@ -151,14 +151,14 @@ async function down() {
       
       db.run(createBackupSql, (err) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
         // Drop original table
         db.run('DROP TABLE votes', (err) => {
           if (err) {
-            db.close();
+            releaseConnection(db);
             return reject(err);
           }
           
@@ -176,7 +176,7 @@ async function down() {
           
           db.run(createOriginalSql, (err) => {
             if (err) {
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
             
@@ -189,13 +189,13 @@ async function down() {
             
             db.run(restoreDataSql, (err) => {
               if (err) {
-                db.close();
+                releaseConnection(db);
                 return reject(err);
               }
               
               // Drop backup table
               db.run('DROP TABLE votes_backup', (err) => {
-                db.close();
+                releaseConnection(db);
                 if (err) {
                   return reject(err);
                 }

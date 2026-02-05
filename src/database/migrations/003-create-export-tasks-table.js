@@ -1,12 +1,12 @@
-const { getDatabase } = require('../init');
+const { getDatabase, releaseConnection } = require('../init');
 
 /**
  * Migration: Create export_tasks table for managing data export operations
  * Creates table to track export tasks with file lifecycle management
  */
 async function up() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     console.log('Running migration: Create export_tasks table');
     
@@ -32,7 +32,7 @@ async function up() {
       
       db.run(createTableSql, (err) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -73,7 +73,7 @@ async function up() {
           db.run(index.sql, (err) => {
             if (err) {
               console.error(`Failed to create ${index.name}:`, err);
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
             
@@ -95,7 +95,7 @@ async function up() {
               `;
               
               db.run(createTriggerSql, (err) => {
-                db.close();
+                releaseConnection(db);
                 if (err) {
                   console.error('Failed to create expiry trigger:', err);
                   return reject(err);
@@ -117,8 +117,8 @@ async function up() {
  * Rollback migration - drop export_tasks table, indexes, and triggers
  */
 async function down() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     console.log('Rolling back migration: Drop export_tasks table');
     
@@ -127,7 +127,7 @@ async function down() {
       db.run('DROP TRIGGER IF EXISTS set_export_expiry', (err) => {
         if (err) {
           console.error('Failed to drop trigger:', err);
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -146,7 +146,7 @@ async function down() {
           db.run(sql, (err) => {
             if (err) {
               console.error('Failed to drop index:', err);
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
             
@@ -155,7 +155,7 @@ async function down() {
             if (indexesDropped === dropIndexes.length) {
               // Drop the table
               db.run('DROP TABLE IF EXISTS export_tasks', (err) => {
-                db.close();
+                releaseConnection(db);
                 if (err) {
                   return reject(err);
                 }

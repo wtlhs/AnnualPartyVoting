@@ -1,4 +1,4 @@
-const { getDatabase } = require('./init');
+const { getDatabase, releaseConnection } = require('./init');
 const { v4: uuidv4 } = require('uuid');
 
 /**
@@ -21,27 +21,27 @@ const { v4: uuidv4 } = require('uuid');
  */
 async function createUser(userData) {
   return new Promise(async (resolve, reject) => {
-    const db = getDatabase();
+    const db = await getDatabase();
     const userId = uuidv4();
     const { name, gender, avatarUrl = null, qrCode = null } = userData;
     
     // Validate required fields
     if (!name || !name.trim()) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Name is required and cannot be empty'));
     }
     
     if (!gender || !['male', 'female'].includes(gender)) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Gender must be either "male" or "female"'));
     }
     
     try {
       // Check if numeric_id column exists by querying table info
-      const hasNumericIdColumn = await new Promise((resolve, reject) => {
-        const checkDb = getDatabase();
+      const checkDb = await getDatabase();
+      const hasNumericIdColumn = await new Promise(async (resolve, reject) => {
         checkDb.all("PRAGMA table_info(users)", (err, columns) => {
-          checkDb.close();
+          releaseConnection(checkDb);
           if (err) return reject(err);
           resolve(columns.some(col => col.name === 'numeric_id'));
         });
@@ -68,7 +68,7 @@ async function createUser(userData) {
             `;
             const params = [userId, numericId, name.trim(), gender, avatarUrl, qrCode, userData.deviceFingerprint || null, userData.lastLoginTime || null, userData.lastLoginIp || null];
             
-            await new Promise((resolve, reject) => {
+            await new Promise(async (resolve, reject) => {
               db.run(sql, params, function(err) {
                 if (err) {
                   // Check if it's a unique constraint violation for numeric_id
@@ -88,7 +88,7 @@ async function createUser(userData) {
             
           } catch (error) {
             if (attempts >= maxAttempts) {
-              db.close();
+              releaseConnection(db);
               return reject(new Error(`Failed to generate unique numeric ID after ${maxAttempts} attempts: ${error.message}`));
             }
             // Continue to next attempt
@@ -96,7 +96,7 @@ async function createUser(userData) {
         }
         
         if (!insertSuccess) {
-          db.close();
+          releaseConnection(db);
           return reject(new Error(`Failed to generate unique numeric ID after ${maxAttempts} attempts`));
         }
         
@@ -108,7 +108,7 @@ async function createUser(userData) {
         `;
         const params = [userId, name.trim(), gender, avatarUrl, qrCode, userData.deviceFingerprint || null, userData.lastLoginTime || null, userData.lastLoginIp || null];
         
-        await new Promise((resolve, reject) => {
+        await new Promise(async (resolve, reject) => {
           db.run(sql, params, function(err) {
             if (err) return reject(err);
             resolve();
@@ -116,7 +116,7 @@ async function createUser(userData) {
         });
       }
       
-      db.close();
+      releaseConnection(db);
       
       resolve({
         id: userId,
@@ -130,7 +130,7 @@ async function createUser(userData) {
       });
       
     } catch (error) {
-      db.close();
+      releaseConnection(db);
       reject(error);
     }
   });
@@ -142,13 +142,13 @@ async function createUser(userData) {
  * @returns {Promise<Object|null>} User object or null if not found
  */
 async function getUserById(userId) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     // First check if numeric_id column exists
     db.all("PRAGMA table_info(users)", (err, columns) => {
       if (err) {
-        db.close();
+        releaseConnection(db);
         return reject(err);
       }
       
@@ -176,7 +176,7 @@ async function getUserById(userId) {
       }
       
       db.get(sql, [userId], (err, row) => {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);
@@ -208,18 +208,18 @@ async function getUserById(userId) {
  * @returns {Promise<Object|null>} User object or null if not found
  */
 async function getUserByNumericId(numericId) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     if (!numericId || !numericId.toString().trim()) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Numeric ID is required'));
     }
     
     // Validate numeric ID format (6 digits)
     const numericIdStr = numericId.toString().trim();
     if (!/^\d{6}$/.test(numericIdStr)) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Numeric ID must be exactly 6 digits'));
     }
     
@@ -233,7 +233,7 @@ async function getUserByNumericId(numericId) {
     `;
     
     db.get(sql, [numericIdStr], (err, row) => {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -268,8 +268,8 @@ async function getUserByNumericId(numericId) {
  * @returns {Promise<Object>} Updated user object
  */
 async function updateUser(userId, updateData) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     // Build dynamic update query
     const updateFields = [];
@@ -277,7 +277,7 @@ async function updateUser(userId, updateData) {
     
     if (updateData.name !== undefined) {
       if (!updateData.name || !updateData.name.trim()) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('Name cannot be empty'));
       }
       updateFields.push('name = ?');
@@ -295,7 +295,7 @@ async function updateUser(userId, updateData) {
     }
     
     if (updateFields.length === 0) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('No fields to update'));
     }
     
@@ -306,12 +306,12 @@ async function updateUser(userId, updateData) {
     
     db.run(sql, updateValues, function(err) {
       if (err) {
-        db.close();
+        releaseConnection(db);
         return reject(err);
       }
       
       if (this.changes === 0) {
-        db.close();
+        releaseConnection(db);
         return reject(new Error('User not found'));
       }
       
@@ -329,8 +329,8 @@ async function updateUser(userId, updateData) {
  * @returns {Promise<boolean>} True if deleted successfully
  */
 async function deleteUser(userId) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     db.serialize(() => {
       db.run('BEGIN TRANSACTION');
@@ -339,7 +339,7 @@ async function deleteUser(userId) {
       db.run('DELETE FROM votes WHERE target_user_id = ? OR voter_id = ?', [userId, userId], (err) => {
         if (err) {
           db.run('ROLLBACK');
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
       });
@@ -349,7 +349,7 @@ async function deleteUser(userId) {
         [userId, userId, userId], (err) => {
         if (err) {
           db.run('ROLLBACK');
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
       });
@@ -358,18 +358,18 @@ async function deleteUser(userId) {
       db.run('DELETE FROM users WHERE id = ?', [userId], function(err) {
         if (err) {
           db.run('ROLLBACK');
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
         if (this.changes === 0) {
           db.run('ROLLBACK');
-          db.close();
+          releaseConnection(db);
           return reject(new Error('User not found'));
         }
         
         db.run('COMMIT', (err) => {
-          db.close();
+          releaseConnection(db);
           if (err) {
             return reject(err);
           }
@@ -385,13 +385,13 @@ async function deleteUser(userId) {
  * @returns {Promise<Array>} Array of user objects with vote counts
  */
 async function getAllUsers() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     // First check if numeric_id column exists
     db.all("PRAGMA table_info(users)", (err, columns) => {
       if (err) {
-        db.close();
+        releaseConnection(db);
         return reject(err);
       }
       
@@ -419,7 +419,7 @@ async function getAllUsers() {
       }
       
       db.all(sql, [], (err, rows) => {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);
@@ -449,18 +449,18 @@ async function getAllUsers() {
  * @returns {Promise<Object|null>} User object or null if not found
  */
 async function getUserByName(name) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     if (!name || !name.trim()) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Name is required'));
     }
     
     // First check if numeric_id column exists
     db.all("PRAGMA table_info(users)", (err, columns) => {
       if (err) {
-        db.close();
+        releaseConnection(db);
         return reject(err);
       }
       
@@ -488,7 +488,7 @@ async function getUserByName(name) {
       }
       
       db.get(sql, [name.trim()], (err, row) => {
-        db.close();
+        releaseConnection(db);
         
         if (err) {
           return reject(err);
@@ -525,12 +525,12 @@ async function getUserByName(name) {
  * @returns {Promise<Object>} Created vote object
  */
 async function recordVote(voteData) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     const { voterId = null, targetUserId, ipAddress = null } = voteData;
     
     if (!targetUserId) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Target user ID is required'));
     }
     
@@ -540,7 +540,7 @@ async function recordVote(voteData) {
     `;
     
     db.run(sql, [voterId, targetUserId, ipAddress], function(err) {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -568,23 +568,23 @@ async function recordVote(voteData) {
  * @returns {Promise<Object>} Vote result with success status and details
  */
 async function atomicVote(voteData) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     const { voterId, targetUserId, targetGender, ipAddress = null } = voteData;
     
     // Validate required fields
     if (!voterId) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Voter ID is required for atomic voting'));
     }
     
     if (!targetUserId) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Target user ID is required'));
     }
     
     if (!['male', 'female'].includes(targetGender)) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Target gender must be either "male" or "female"'));
     }
     
@@ -592,7 +592,7 @@ async function atomicVote(voteData) {
       // Start transaction
       db.run('BEGIN IMMEDIATE TRANSACTION', (err) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
@@ -601,7 +601,7 @@ async function atomicVote(voteData) {
         db.get(checkSql, [voterId], (err, row) => {
           if (err) {
             db.run('ROLLBACK');
-            db.close();
+            releaseConnection(db);
             return reject(err);
           }
           
@@ -621,7 +621,7 @@ async function atomicVote(voteData) {
           
           if (!canVote) {
             db.run('ROLLBACK');
-            db.close();
+            releaseConnection(db);
             return resolve({
               success: false,
               reason: 'already_voted',
@@ -638,7 +638,7 @@ async function atomicVote(voteData) {
           db.run(voteSql, [voterId, targetUserId, ipAddress], function(voteErr) {
             if (voteErr) {
               db.run('ROLLBACK');
-              db.close();
+              releaseConnection(db);
               return reject(voteErr);
             }
             
@@ -657,13 +657,13 @@ async function atomicVote(voteData) {
               db.run(updateSql, [targetUserId, voterId], (updateErr) => {
                 if (updateErr) {
                   db.run('ROLLBACK');
-                  db.close();
+                  releaseConnection(db);
                   return reject(updateErr);
                 }
                 
                 // Commit transaction
                 db.run('COMMIT', (commitErr) => {
-                  db.close();
+                  releaseConnection(db);
                   if (commitErr) {
                     return reject(commitErr);
                   }
@@ -692,13 +692,13 @@ async function atomicVote(voteData) {
               db.run(insertSql, [voterId, maleVotedUserId, femaleVotedUserId], (insertErr) => {
                 if (insertErr) {
                   db.run('ROLLBACK');
-                  db.close();
+                  releaseConnection(db);
                   return reject(insertErr);
                 }
                 
                 // Commit transaction
                 db.run('COMMIT', (commitErr) => {
-                  db.close();
+                  releaseConnection(db);
                   if (commitErr) {
                     return reject(commitErr);
                   }
@@ -727,8 +727,8 @@ async function atomicVote(voteData) {
  * @returns {Promise<Object>} Vote statistics object
  */
 async function getVoteStatistics() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     const sql = `
       SELECT 
@@ -743,7 +743,7 @@ async function getVoteStatistics() {
     `;
     
     db.get(sql, [], (err, row) => {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -767,8 +767,8 @@ async function getVoteStatistics() {
  * @returns {Promise<Object>} Ranking object with male and female arrays
  */
 async function getRanking(gender = null) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     let sql = `
       SELECT u.id, u.name, u.gender, u.avatar_url,
@@ -789,7 +789,7 @@ async function getRanking(gender = null) {
     `;
     
     db.all(sql, params, (err, rows) => {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -826,8 +826,8 @@ async function getRanking(gender = null) {
  * @returns {Promise<Array>} Array of vote objects
  */
 async function getVotesForUser(targetUserId) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     const sql = `
       SELECT v.*, u.name as voter_name
@@ -838,7 +838,7 @@ async function getVotesForUser(targetUserId) {
     `;
     
     db.all(sql, [targetUserId], (err, rows) => {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -866,8 +866,8 @@ async function getVotesForUser(targetUserId) {
  * @returns {Promise<Object>} Vote restriction status
  */
 async function checkVoteRestrictions(voterId) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     const sql = `
       SELECT vr.*,
@@ -880,7 +880,7 @@ async function checkVoteRestrictions(voterId) {
     `;
     
     db.get(sql, [voterId], (err, row) => {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -938,33 +938,37 @@ async function checkVoteRestrictions(voterId) {
  * @returns {Promise<Object>} Updated vote restriction object
  */
 async function updateVoteRestrictions(voterId, targetUserId, targetGender) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
+
     if (!['male', 'female'].includes(targetGender)) {
-      db.close();
+      releaseConnection(db);
       return reject(new Error('Target gender must be either "male" or "female"'));
     }
-    
+
     db.serialize(() => {
       // Check if restriction record exists
       db.get('SELECT * FROM vote_restrictions WHERE voter_id = ?', [voterId], (err, row) => {
         if (err) {
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
-        
+
         if (row) {
           // Update existing record
           const field = targetGender === 'male' ? 'male_voted_user_id' : 'female_voted_user_id';
           const sql = `UPDATE vote_restrictions SET ${field} = ?, updated_at = CURRENT_TIMESTAMP WHERE voter_id = ?`;
-          
+
           db.run(sql, [targetUserId, voterId], function(err) {
             if (err) {
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
-            
+
+            // IMPORTANT: Release connection before calling checkVoteRestrictions
+            // checkVoteRestrictions will acquire its own connection
+            releaseConnection(db);
+
             // Get updated restrictions
             checkVoteRestrictions(voterId)
               .then(resolve)
@@ -974,18 +978,22 @@ async function updateVoteRestrictions(voterId, targetUserId, targetGender) {
           // Create new record
           const maleVotedUserId = targetGender === 'male' ? targetUserId : null;
           const femaleVotedUserId = targetGender === 'female' ? targetUserId : null;
-          
+
           const sql = `
             INSERT INTO vote_restrictions (voter_id, male_voted_user_id, female_voted_user_id, created_at, updated_at)
             VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           `;
-          
+
           db.run(sql, [voterId, maleVotedUserId, femaleVotedUserId], function(err) {
             if (err) {
-              db.close();
+              releaseConnection(db);
               return reject(err);
             }
-            
+
+            // IMPORTANT: Release connection before calling checkVoteRestrictions
+            // checkVoteRestrictions will acquire its own connection
+            releaseConnection(db);
+
             // Get created restrictions
             checkVoteRestrictions(voterId)
               .then(resolve)
@@ -1024,11 +1032,11 @@ async function canVoteForGender(voterId, targetGender) {
  * @returns {Promise<boolean>} True if cleared successfully
  */
 async function clearAllVoteRestrictions() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     db.run('DELETE FROM vote_restrictions', [], function(err) {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -1045,8 +1053,8 @@ async function clearAllVoteRestrictions() {
  * @returns {Promise<Array>} Array of recent vote objects with user info
  */
 async function getRecentVotes(limit = 20) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     const sql = `
       SELECT v.*, 
@@ -1062,7 +1070,7 @@ async function getRecentVotes(limit = 20) {
     `;
     
     db.all(sql, [limit], (err, rows) => {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -1090,8 +1098,8 @@ async function getRecentVotes(limit = 20) {
  * @returns {Promise<Object>} Voting progress statistics
  */
 async function getVotingProgress() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     const sql = `
       SELECT 
@@ -1103,7 +1111,7 @@ async function getVotingProgress() {
     `;
     
     db.get(sql, [], (err, row) => {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -1121,8 +1129,8 @@ async function getVotingProgress() {
   });
 }
 async function clearAllData() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     db.serialize(() => {
       db.run('BEGIN TRANSACTION');
@@ -1131,7 +1139,7 @@ async function clearAllData() {
       db.run('DELETE FROM audit_logs', [], (err) => {
         if (err && !err.message.includes('no such table')) {
           db.run('ROLLBACK');
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
       });
@@ -1140,7 +1148,7 @@ async function clearAllData() {
       db.run('DELETE FROM export_tasks', [], (err) => {
         if (err && !err.message.includes('no such table')) {
           db.run('ROLLBACK');
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
       });
@@ -1148,7 +1156,7 @@ async function clearAllData() {
       db.run('DELETE FROM vote_restrictions', [], (err) => {
         if (err) {
           db.run('ROLLBACK');
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
       });
@@ -1156,7 +1164,7 @@ async function clearAllData() {
       db.run('DELETE FROM votes', [], (err) => {
         if (err) {
           db.run('ROLLBACK');
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
       });
@@ -1164,12 +1172,12 @@ async function clearAllData() {
       db.run('DELETE FROM users', [], function(err) {
         if (err) {
           db.run('ROLLBACK');
-          db.close();
+          releaseConnection(db);
           return reject(err);
         }
         
         db.run('COMMIT', (err) => {
-          db.close();
+          releaseConnection(db);
           if (err) {
             return reject(err);
           }
@@ -1262,8 +1270,8 @@ async function createDataBackup() {
  * @returns {Promise<Array>} Array of all vote restriction records
  */
 async function getAllVoteRestrictions() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
+  return new Promise(async (resolve, reject) => {
+    const db = await getDatabase();
     
     const sql = `
       SELECT vr.*,
@@ -1278,7 +1286,7 @@ async function getAllVoteRestrictions() {
     `;
     
     db.all(sql, [], (err, rows) => {
-      db.close();
+      releaseConnection(db);
       
       if (err) {
         return reject(err);
@@ -1431,10 +1439,10 @@ function formatFileSize(bytes) {
  * @returns {Promise<Object|null>} User object or null if not found
  */
 async function getUserByDeviceFingerprint(deviceFingerprint) {
-  const db = getDatabase();
+  const db = await getDatabase();
 
   try {
-    const user = await new Promise((resolve, reject) => {
+    const user = await new Promise(async (resolve, reject) => {
       const sql = `
         SELECT u.id, u.numeric_id as numericId, u.name, u.gender, u.avatar_url as avatarUrl,
                u.qr_code as qrCode, u.device_fingerprint as deviceFingerprint,
@@ -1454,7 +1462,7 @@ async function getUserByDeviceFingerprint(deviceFingerprint) {
 
     return user;
   } finally {
-    db.close();
+    releaseConnection(db);
   }
 }
 
@@ -1468,10 +1476,10 @@ async function getUserByDeviceFingerprint(deviceFingerprint) {
  * @returns {Promise<Object>} Updated user
  */
 async function updateUserLoginInfo(userId, { deviceFingerprint, loginTime, ipAddress }) {
-  const db = getDatabase();
+  const db = await getDatabase();
 
   try {
-    await new Promise((resolve, reject) => {
+    await new Promise(async (resolve, reject) => {
       const sql = `
         UPDATE users
         SET device_fingerprint = ?,
@@ -1490,7 +1498,7 @@ async function updateUserLoginInfo(userId, { deviceFingerprint, loginTime, ipAdd
 
     return getUserById(userId);
   } finally {
-    db.close();
+    releaseConnection(db);
   }
 }
 
