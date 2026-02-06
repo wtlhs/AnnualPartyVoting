@@ -1,11 +1,59 @@
+# 依赖
 node_modules
 npm-debug.log
+yarn-error.log
+
+# 版本控制
 .git
 .gitignore
+
+# 文档
 README.md
+CLAUDE.md
+PERFORMANCE_ANALYSIS.md
+
+# 环境配置
 .env
-.nyc_output
+.env.local
+.env.*.local
+
+# 测试
 coverage
 .nyc_output
+*.test.js
+*.spec.js
+
+# IDE
 .vscode
+.idea
 .kiro
+
+# 数据目录（运行时通过 volume 挂载）
+data/
+uploads/
+
+# 导出文件
+exports/
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Docker 相关
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# 脚本文件
+scripts/*.js
+!scripts/migrationRunner.js
+check-concurrency*.js
+
+# 其他
+*.tar
+*.gz

@@ -400,8 +400,8 @@ async function getAllUsers() {
       let sql;
       if (hasNumericId) {
         sql = `
-          SELECT u.*, 
-                 COUNT(v.id) as vote_count
+          SELECT u.*,
+                 COUNT(CASE WHEN v.status = 'active' THEN v.id END) as vote_count
           FROM users u
           LEFT JOIN votes v ON u.id = v.target_user_id
           GROUP BY u.id
@@ -410,7 +410,7 @@ async function getAllUsers() {
       } else {
         sql = `
           SELECT u.id, u.name, u.gender, u.avatar_url, u.qr_code, u.created_at, u.updated_at,
-                 COUNT(v.id) as vote_count
+                 COUNT(CASE WHEN v.status = 'active' THEN v.id END) as vote_count
           FROM users u
           LEFT JOIN votes v ON u.id = v.target_user_id
           GROUP BY u.id
@@ -731,13 +731,13 @@ async function getVoteStatistics() {
     const db = await getDatabase();
     
     const sql = `
-      SELECT 
+      SELECT
         COUNT(DISTINCT u.id) as total_participants,
-        COUNT(v.id) as total_votes,
+        COUNT(CASE WHEN v.status = 'active' THEN v.id END) as total_votes,
         COUNT(DISTINCT CASE WHEN u.gender = 'male' THEN u.id END) as male_participants,
         COUNT(DISTINCT CASE WHEN u.gender = 'female' THEN u.id END) as female_participants,
-        COUNT(CASE WHEN u.gender = 'male' THEN v.id END) as male_votes,
-        COUNT(CASE WHEN u.gender = 'female' THEN v.id END) as female_votes
+        COUNT(CASE WHEN u.gender = 'male' AND v.status = 'active' THEN v.id END) as male_votes,
+        COUNT(CASE WHEN u.gender = 'female' AND v.status = 'active' THEN v.id END) as female_votes
       FROM users u
       LEFT JOIN votes v ON u.id = v.target_user_id
     `;
@@ -774,7 +774,7 @@ async function getRanking(gender = null) {
       SELECT u.id, u.name, u.gender, u.avatar_url,
              COUNT(v.id) as vote_count
       FROM users u
-      LEFT JOIN votes v ON u.id = v.target_user_id
+      LEFT JOIN votes v ON u.id = v.target_user_id AND v.status = 'active'
     `;
     
     const params = [];

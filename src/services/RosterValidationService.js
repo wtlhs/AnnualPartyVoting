@@ -5,7 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getDatabase } = require('../database/init');
+const { getDatabase, releaseConnection } = require('../database/init');
 
 class RosterValidationService {
   constructor() {
@@ -73,8 +73,8 @@ class RosterValidationService {
    * 从数据库获取嘉宾列表
    */
   async getGuestsFromDatabase() {
-    return new Promise((resolve, reject) => {
-      const db = getDatabase();
+    return new Promise(async (resolve, reject) => {
+      const db = await getDatabase();
 
       const sql = `
         SELECT id, name, gender, source, added_by, notes, created_at
@@ -83,13 +83,13 @@ class RosterValidationService {
       `;
 
       db.all(sql, [], (err, rows) => {
+        releaseConnection(db);
+
         if (err) {
           console.error('Error fetching guests from database:', err);
-          db.close();
           return resolve([]);
         }
 
-        db.close();
         resolve(rows || []);
       });
     });
