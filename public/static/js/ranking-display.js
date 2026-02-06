@@ -1,14 +1,14 @@
 // 电脑端排名展示页面 JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     loadRankingData();
-    
-    // 每30秒自动刷新数据
-    setInterval(loadRankingData, 30000);
-    
+
+    // 启动自动刷新（由空格键控制暂停/恢复）
+    startAutoRefresh();
+
     // 更新时间显示
     updateTimeDisplay();
     setInterval(updateTimeDisplay, 1000);
-    
+
     // 添加键盘快捷键提示
     showKeyboardShortcuts();
 });
@@ -21,7 +21,9 @@ async function loadRankingData() {
         if (statsResponse.status === 429) {
             console.warn('Statistics API rate limited, retrying in 5 seconds...');
             showNotification('数据刷新过于频繁，5秒后重试', 'info');
-            setTimeout(loadRankingData, 5000);
+            if (autoRefreshEnabled) {
+                setTimeout(loadRankingData, 5000);
+            }
             return;
         }
 
@@ -37,7 +39,9 @@ async function loadRankingData() {
         if (rankingResponse.status === 429) {
             console.warn('Ranking API rate limited, retrying in 5 seconds...');
             showNotification('排名数据刷新过于频繁，5秒后重试', 'info');
-            setTimeout(loadRankingData, 5000);
+            if (autoRefreshEnabled) {
+                setTimeout(loadRankingData, 5000);
+            }
             return;
         }
 
@@ -61,7 +65,9 @@ async function loadRankingData() {
         showConnectionError();
 
         // 如果是网络错误，5秒后重试
-        setTimeout(loadRankingData, 5000);
+        if (autoRefreshEnabled) {
+            setTimeout(loadRankingData, 5000);
+        }
     }
 }
 
@@ -294,25 +300,43 @@ function showKeyboardShortcuts() {
 
 // 页面可见性API - 当页面重新可见时刷新数据
 document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) {
+    // 只有在自动刷新启用时才刷新
+    if (!document.hidden && autoRefreshEnabled) {
         loadRankingData();
     }
 });
 
 // 自动刷新控制
 let autoRefreshEnabled = true;
-let refreshInterval;
+let refreshInterval = null;
 
 function toggleAutoRefresh() {
     autoRefreshEnabled = !autoRefreshEnabled;
-    
+
     if (autoRefreshEnabled) {
+        // 清除可能存在的旧 interval
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+        // 创建新的 interval
         refreshInterval = setInterval(loadRankingData, 30000);
         showNotification('自动刷新已启用', 'success');
     } else {
-        clearInterval(refreshInterval);
+        // 清除 interval 并重置变量
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+            refreshInterval = null;
+        }
         showNotification('自动刷新已暂停', 'info');
     }
+}
+
+// 启动自动刷新
+function startAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+    refreshInterval = setInterval(loadRankingData, 30000);
 }
 
 function showNotification(message, type = 'info') {
@@ -422,4 +446,4 @@ document.addEventListener('wheel', function(event) {
 });
 
 // 初始化自动刷新
-refreshInterval = setInterval(loadRankingData, 30000);
+startAutoRefresh();

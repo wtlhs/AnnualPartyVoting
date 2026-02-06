@@ -46,10 +46,10 @@ function displayUserInfo(result) {
     document.getElementById('userGender').textContent = `性别: ${result.gender === 'male' ? '男士' : '女士'}`;
     document.getElementById('numericId').textContent = `数字ID: ${result.numericId || '未分配'}`;
     document.getElementById('voteCount').textContent = `获得票数: ${result.voteCount || 0}`;
-    
+
     const avatarImg = document.getElementById('userAvatar');
     let avatarUrl = result.avatarUrl || getDefaultAvatar(result.gender);
-    
+
     // 错误处理：如果头像加载失败（例如由于跨域或硬编码的 localhost 地址）
     avatarImg.onerror = function() {
         console.warn('Avatar failed to load:', avatarUrl);
@@ -67,9 +67,13 @@ function displayUserInfo(result) {
         }
         this.onerror = null; // 防止死循环
     };
-    
+
     avatarImg.src = avatarUrl;
     avatarImg.alt = `${result.name}的头像`;
+    avatarImg.title = '点击放大图片';
+
+    // 设置头像点击预览功能
+    setupImagePreview(avatarImg);
 }
 
 function getDefaultAvatar(gender) {
@@ -272,3 +276,37 @@ async function clearRegistrationAndReload(userId) {
         }, 1500);
     }
 }
+
+/**
+ * 设置头像图片预览功能
+ * 点击头像时显示大图预览
+ * @param {HTMLElement} avatarEl - 头像元素
+ */
+function setupImagePreview(avatarEl) {
+    if (!avatarEl) return;
+
+    avatarEl.style.cursor = 'zoom-in';
+    avatarEl.title = '点击放大图片';
+
+    avatarEl.onclick = function(e) {
+        e.stopPropagation();
+        const modal = document.getElementById('imagePreviewModal');
+        const previewImg = document.getElementById('previewImage');
+
+        if (modal && previewImg) {
+            previewImg.src = this.src;
+            modal.classList.add('active');
+        }
+    };
+}
+
+/**
+ * 关闭图片预览
+ * 供HTML中的onclick调用
+ */
+window.closeImagePreview = function() {
+    const modal = document.getElementById('imagePreviewModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+};

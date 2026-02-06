@@ -5,6 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>个人信息 - 年会最佳服装评选</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* 图片预览模态框 */
+        #imagePreviewModal {
+            background: rgba(0, 0, 0, 0.9);
+            cursor: zoom-out;
+        }
+
+        #previewImage {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .avatar {
+            cursor: zoom-in;
+        }
+    </style>
 <link rel="icon" href="data:,">
 </head>
 <body>
@@ -43,7 +68,14 @@
             </div>
         </main>
     </div>
-    
+
+    <!-- 图片预览模态框 -->
+    <div id="imagePreviewModal" class="modal-overlay" onclick="closeImagePreview()">
+        <div class="preview-content">
+            <img id="previewImage" src="" alt="预览图片">
+        </div>
+    </div>
+
     <script src="/static/libs/qrcode.min.js"></script>
     <script src="/static/js/sessionManager.js"></script>
     <script src="/static/js/profile.js"></script>
