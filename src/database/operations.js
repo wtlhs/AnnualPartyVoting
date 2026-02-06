@@ -1100,30 +1100,74 @@ async function getRecentVotes(limit = 20) {
 async function getVotingProgress() {
   return new Promise(async (resolve, reject) => {
     const db = await getDatabase();
-    
-    const sql = `
-      SELECT 
-        COUNT(DISTINCT vr.voter_id) as active_voters,
-        COUNT(CASE WHEN vr.male_voted_user_id IS NOT NULL THEN 1 END) as male_votes_cast,
-        COUNT(CASE WHEN vr.female_voted_user_id IS NOT NULL THEN 1 END) as female_votes_cast,
-        COUNT(CASE WHEN vr.male_voted_user_id IS NOT NULL AND vr.female_voted_user_id IS NOT NULL THEN 1 END) as completed_voters
+
+    // 获取男士组的投票进度
+    const maleSql = `
+      SELECT
+        COUNT(DISTINCT CASE WHEN u.gender = 'male' THEN vr.voter_id END) as male_voters,
+        COUNT(CASE WHEN u.gender = 'male' AND vr.male_voted_user_id IS NOT NULL THEN 1 END) as male_to_male_cast,
+        COUNT(CASE WHEN u.gender = 'male' AND vr.female_voted_user_id IS NOT NULL THEN 1 END) as male_to_female_cast
       FROM vote_restrictions vr
+      INNER JOIN users u ON vr.voter_id = u.id
     `;
-    
-    db.get(sql, [], (err, row) => {
-      releaseConnection(db);
-      
-      if (err) {
-        return reject(err);
-      }
-      
-      resolve({
-        activeVoters: row.active_voters || 0,
-        maleVotesCast: row.male_votes_cast || 0,
-        femaleVotesCast: row.female_votes_cast || 0,
-        completedVoters: row.completed_voters || 0,
-        votingCompletionRate: row.active_voters > 0 ? 
-          ((row.completed_voters || 0) / row.active_voters * 100).toFixed(2) : '0.00'
+
+    // 获取女士组的投票进度
+    const femaleSql = `
+      SELECT
+        COUNT(DISTINCT CASE WHEN u.gender = 'female' THEN vr.voter_id END) as female_voters,
+        COUNT(CASE WHEN u.gender = 'female' AND vr.male_voted_user_id IS NOT NULL THEN 1 END) as female_to_male_cast,
+        COUNT(CASE WHEN u.gender = 'female' AND vr.female_voted_user_id IS NOT NULL THEN 1 END) as female_to_female_cast
+      FROM vote_restrictions vr
+      INNER JOIN users u ON vr.voter_id = u.id
+    `;
+
+    db.serialize(() => {
+      db.get(maleSql, [], (err, maleRow) => {
+        if (err) {
+          releaseConnection(db);
+          return reject(err);
+        }
+
+        db.get(femaleSql, [], (err, femaleRow) => {
+          releaseConnection(db);
+
+          if (err) {
+            return reject(err);
+          }
+
+          // 男士组：投出的总票数 = 投给男士的票数 + 投给女士的票数
+          const maleVoters = maleRow.male_voters || 0;
+          const maleCastTotal = (maleRow.male_to_male_cast || 0) + (maleRow.male_to_female_cast || 0);
+          const maleExpectedTotal = maleVoters * 2; // 每人2票
+          const maleRate = maleExpectedTotal > 0 ? (maleCastTotal / maleExpectedTotal * 100) : 0;
+
+          // 女士组：投出的总票数 = 投给男士的票数 + 投给女士的票数
+          const femaleVoters = femaleRow.female_voters || 0;
+          const femaleCastTotal = (femaleRow.female_to_male_cast || 0) + (femaleRow.female_to_female_cast || 0);
+          const femaleExpectedTotal = femaleVoters * 2; // 每人2票
+          const femaleRate = femaleExpectedTotal > 0 ? (femaleCastTotal / femaleExpectedTotal * 100) : 0;
+
+          resolve({
+            // 男士组数据
+            maleVoters: maleVoters,
+            maleCastTotal: maleCastTotal,
+            maleExpectedTotal: maleExpectedTotal,
+            maleRate: parseFloat(maleRate.toFixed(2)),
+
+            // 女士组数据
+            femaleVoters: femaleVoters,
+            femaleCastTotal: femaleCastTotal,
+            femaleExpectedTotal: femaleExpectedTotal,
+            femaleRate: parseFloat(femaleRate.toFixed(2)),
+
+            // 总体数据（保持兼容）
+            activeVoters: maleVoters + femaleVoters,
+            maleVotesCast: maleRow.male_to_male_cast || 0,
+            femaleVotesCast: femaleRow.female_to_female_cast || 0,
+            completedVoters: 0,
+            votingCompletionRate: '0.00'
+          });
+        });
       });
     });
   });

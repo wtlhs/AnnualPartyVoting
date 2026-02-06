@@ -110,36 +110,36 @@ function bindEventListeners() {
             loadAllData();
         }
     });
-    
-    // 下拉刷新支持
-    let startY = 0;
-    let pullDistance = 0;
-    const pullThreshold = 80;
-    
-    document.addEventListener('touchstart', function(e) {
-        if (window.scrollY === 0) {
-            startY = e.touches[0].clientY;
-        }
-    });
-    
-    document.addEventListener('touchmove', function(e) {
-        if (window.scrollY === 0 && startY > 0) {
-            pullDistance = e.touches[0].clientY - startY;
-            if (pullDistance > 0 && pullDistance < pullThreshold * 2) {
-                e.preventDefault();
-                showPullRefreshHint(pullDistance >= pullThreshold);
-            }
-        }
-    });
-    
-    document.addEventListener('touchend', function(e) {
-        if (pullDistance >= pullThreshold) {
-            handleManualRefresh();
-        }
-        hidePullRefreshHint();
-        startY = 0;
-        pullDistance = 0;
-    });
+
+    // 下拉刷新支持已禁用
+    // let startY = 0;
+    // let pullDistance = 0;
+    // const pullThreshold = 80;
+    //
+    // document.addEventListener('touchstart', function(e) {
+    //     if (window.scrollY === 0) {
+    //         startY = e.touches[0].clientY;
+    //     }
+    // });
+    //
+    // document.addEventListener('touchmove', function(e) {
+    //     if (window.scrollY === 0 && startY > 0) {
+    //         pullDistance = e.touches[0].clientY - startY;
+    //         if (pullDistance > 0 && pullDistance < pullThreshold * 2) {
+    //             e.preventDefault();
+    //             showPullRefreshHint(pullDistance >= pullThreshold);
+    //         }
+    //     }
+    // });
+    //
+    // document.addEventListener('touchend', function(e) {
+    //     if (pullDistance >= pullThreshold) {
+    //         handleManualRefresh();
+    //     }
+    //     hidePullRefreshHint();
+    //     startY = 0;
+    //     pullDistance = 0;
+    // });
 }
 
 function setAutoRefresh() {
@@ -320,56 +320,27 @@ function updateRecentActivityDisplay(activities) {
 function updateVotingProgressDisplay(progress) {
     if (!progress) return;
 
-    // 从排名数据获取性别统计
+    // 从统计数据显示获取男女参与人数
     const maleParticipants = parseInt(document.getElementById('maleParticipants').textContent) || 0;
     const femaleParticipants = parseInt(document.getElementById('femaleParticipants').textContent) || 0;
-    const totalVotes = parseInt(document.getElementById('totalVotes').textContent) || 0;
 
-    // 计算各性别的总票数（从排名API或者估算）
-    // 这里需要获取排名数据来准确计算，暂时使用API数据
-    fetch('/api/votes/ranking')
-        .then(response => response.json())
-        .then(result => {
-            if (result.success && result.ranking) {
-                const ranking = result.ranking;
-                const maleList = ranking.male || [];
-                const femaleList = ranking.female || [];
+    // 使用 progress API 返回的正确数据
+    // 男士组：已投出票数 / 应投出票数（人数 × 2）
+    const maleCastTotal = progress.maleCastTotal || 0;
+    const maleExpectedTotal = maleParticipants * 2;
+    const maleRate = maleExpectedTotal > 0 ? Math.min(100, (maleCastTotal / maleExpectedTotal) * 100) : 0;
 
-                // 统计男士和女士的总票数
-                const maleVoteTotal = maleList.reduce((sum, p) => sum + (p.voteCount || 0), 0);
-                const femaleVoteTotal = femaleList.reduce((sum, p) => sum + (p.voteCount || 0), 0);
+    // 女士组：已投出票数 / 应投出票数（人数 × 2）
+    const femaleCastTotal = progress.femaleCastTotal || 0;
+    const femaleExpectedTotal = femaleParticipants * 2;
+    const femaleRate = femaleExpectedTotal > 0 ? Math.min(100, (femaleCastTotal / femaleExpectedTotal) * 100) : 0;
 
-                // 计算投票率：实际票数 / 应投票总数 (人数 × 2)
-                const maleExpectedVotes = maleParticipants * 2;
-                const femaleExpectedVotes = femaleParticipants * 2;
-                const maleRate = maleExpectedVotes > 0 ? Math.min(100, (maleVoteTotal / maleExpectedVotes) * 100) : 0;
-                const femaleRate = femaleExpectedVotes > 0 ? Math.min(100, (femaleVoteTotal / femaleExpectedVotes) * 100) : 0;
+    // 更新显示
+    updateElementText('maleVoteRate', `${Math.round(maleRate)}%`);
+    updateProgressBar('maleProgressBar', maleRate);
 
-                // 更新显示
-                updateElementText('maleVoteRate', `${Math.round(maleRate)}%`);
-                updateProgressBar('maleProgressBar', maleRate);
-
-                updateElementText('femaleVoteRate', `${Math.round(femaleRate)}%`);
-                updateProgressBar('femaleProgressBar', femaleRate);
-            }
-        })
-        .catch(error => {
-            console.warn('Failed to load ranking for progress calculation:', error);
-            // 降级方案：使用API的progress数据计算
-            const activeVoters = progress.activeVoters || 0;
-            const maleVotesCast = progress.maleVotesCast || 0;
-            const femaleVotesCast = progress.femaleVotesCast || 0;
-
-            // 计算各性别的投票率
-            const maleRate = activeVoters > 0 ? Math.min(100, (maleVotesCast / activeVoters) * 100) : 0;
-            const femaleRate = activeVoters > 0 ? Math.min(100, (femaleVotesCast / activeVoters) * 100) : 0;
-
-            updateElementText('maleVoteRate', `${Math.round(maleRate)}%`);
-            updateProgressBar('maleProgressBar', maleRate);
-
-            updateElementText('femaleVoteRate', `${Math.round(femaleRate)}%`);
-            updateProgressBar('femaleProgressBar', femaleRate);
-        });
+    updateElementText('femaleVoteRate', `${Math.round(femaleRate)}%`);
+    updateProgressBar('femaleProgressBar', femaleRate);
 }
 
 function calculateProgressFromStats() {

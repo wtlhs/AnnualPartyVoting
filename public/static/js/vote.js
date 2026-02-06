@@ -23,9 +23,21 @@ async function initializeVotePage() {
         // 检查用户认证状态
         const authStatus = await checkAuthStatus();
         console.log('Auth status:', authStatus);
-        
+
         if (!authStatus.isLoggedIn) {
-            showAuthPrompt(candidateId);
+            if (authStatus.userDeleted) {
+                // 用户信息已被删除，需要重新注册
+                showError(
+                    '账号信息不存在',
+                    '您的账号信息已被清空或不存在',
+                    {
+                        requireReregister: true,
+                        allowedActions: ['返回首页重新注册']
+                    }
+                );
+            } else {
+                showAuthPrompt(candidateId);
+            }
             return;
         }
 
@@ -35,9 +47,17 @@ async function initializeVotePage() {
         // 获取候选人信息
         const candidate = await fetchCandidateInfo(candidateId);
         console.log('Fetched candidate:', candidate);
-        
+
         if (!candidate) {
-            showError('候选人不存在', '无法找到指定的候选人信息');
+            // 候选人不存在，说明后台数据可能已清空
+            showError(
+                '用户信息不存在',
+                '该投票用户信息已被清空或不存在',
+                {
+                    requireReregister: true,
+                    allowedActions: ['返回首页重新注册']
+                }
+            );
             return;
         }
 
@@ -74,6 +94,25 @@ async function checkAuthStatus() {
 
         // 验证注册信息的完整性
         if (session && session.userId && session.name) {
+            // 验证用户在后台是否仍然存在
+            try {
+                const response = await fetch(`/api/users/${session.userId}`);
+                const result = await response.json();
+
+                if (!result.success || !result.name) {
+                    // 用户信息在后台不存在，清除本地会话
+                    console.warn('User not found in backend, clearing session');
+                    sessionManager.clearSession(true);
+                    return {
+                        isLoggedIn: false,
+                        userDeleted: true
+                    };
+                }
+            } catch (error) {
+                console.warn('Failed to verify user with backend:', error);
+                // 网络错误时允许继续，但会在投票时再次验证
+            }
+
             return {
                 isLoggedIn: true,
                 user: {
@@ -275,6 +314,19 @@ function showError(title, message, details = null) {
     
     // 如果有详细信息，显示它们
     if (details) {
+        // 处理需要重新注册的情况
+        if (details.requireReregister && errorDetailsEl) {
+            errorDetailsEl.innerHTML = `
+                <div class="error-detail-item" style="margin-bottom: 16px;">
+                    <strong>📌 说明：</strong>该投票链接对应的信息已被清空或不存在。
+                </div>
+                <div class="error-detail-item" style="margin-bottom: 16px;">
+                    <strong>🔄 解决方案：</strong>请返回首页完成注册后才能参与投票。
+                </div>
+            `;
+            errorDetailsEl.style.display = 'block';
+        }
+
         if (details.votedUser && errorDetailsEl) {
             errorDetailsEl.innerHTML = `
                 <div class="error-detail-item">
@@ -303,6 +355,11 @@ function showError(title, message, details = null) {
                     url = '/mobile-stats';
                     icon = '📊';
                     style += 'background: #fff; color: #475569; border: 1px solid #cbd5e1;';
+                } else if (action.includes('返回首页重新注册')) {
+                    url = '/';
+                    onclick = 'onclick="sessionManager.clearSession(true); window.location.href=\'/\'; return false;"';
+                    icon = '🔄';
+                    style += 'background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2); padding: 16px; font-size: 16px;';
                 } else if (action.includes('返回首页')) {
                     url = '/';
                     onclick = 'onclick="safeNavigateHome(); return false;"';
@@ -455,20 +512,40 @@ function getDefaultAvatar(gender) {
 async function submitVote() {
     const voteBtn = document.getElementById('voteBtn');
     const originalText = voteBtn.innerHTML;
-    
+
     try {
         // 验证必要的数据
         if (!currentUser || !currentUser.id) {
             throw new Error('用户信息无效，请重新登录');
         }
-        
+
         if (!currentCandidate || !currentCandidate.id) {
             throw new Error('候选人信息无效，请刷新页面重试');
         }
-        
-        voteBtn.innerHTML = '⏳ 检查投票资格...';
+
+        voteBtn.innerHTML = '⏳ 验证候选人信息...';
         voteBtn.disabled = true;
-        
+
+        // 在提交前再次验证候选人是否存在（防止后台数据已清空）
+        const candidateStillExists = await fetchCandidateInfo(currentCandidate.id);
+        if (!candidateStillExists) {
+            // 候选人已不存在，清空当前用户数据并提示重新注册
+            voteBtn.innerHTML = originalText;
+            voteBtn.disabled = false;
+
+            showError(
+                '用户信息不存在',
+                '该投票用户信息已被清空或不存在',
+                {
+                    requireReregister: true,
+                    allowedActions: ['返回首页重新注册']
+                }
+            );
+            return;
+        }
+
+        voteBtn.innerHTML = '⏳ 检查投票资格...';
+
         // 在提交前检查投票资格
         const eligibility = await checkVotingEligibility(currentCandidate.id);
         console.log('Voting eligibility check:', eligibility);

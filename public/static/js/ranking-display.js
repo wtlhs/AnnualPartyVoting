@@ -128,7 +128,7 @@ function updateRankingDisplay(ranking) {
 }
 
 /**
- * 更新性别统计（参与人数和票数）
+ * 更新性别统计（参与人数和投票进度）
  */
 function updateGenderStats(ranking) {
     if (!ranking) return;
@@ -140,23 +140,63 @@ function updateGenderStats(ranking) {
     const maleCount = maleParticipants.length;
     const femaleCount = femaleParticipants.length;
 
-    // 统计男士和女士的总票数
-    const maleVoteTotal = maleParticipants.reduce((sum, p) => sum + (p.voteCount || 0), 0);
-    const femaleVoteTotal = femaleParticipants.reduce((sum, p) => sum + (p.voteCount || 0), 0);
+    // 统计男士和女士获得的票数（用于显示）
+    const maleVoteReceived = maleParticipants.reduce((sum, p) => sum + (p.voteCount || 0), 0);
+    const femaleVoteReceived = femaleParticipants.reduce((sum, p) => sum + (p.voteCount || 0), 0);
 
-    // 计算投票率：实际票数 / 应投票总数 (人数 × 2)
-    const maleExpectedVotes = maleCount * 2;
-    const femaleExpectedVotes = femaleCount * 2;
-    const maleRate = maleExpectedVotes > 0 ? Math.round((maleVoteTotal / maleExpectedVotes) * 100) : 0;
-    const femaleRate = femaleExpectedVotes > 0 ? Math.round((femaleVoteTotal / femaleExpectedVotes) * 100) : 0;
+    // 从 progress API 获取投票进度数据
+    fetch('/api/votes/progress')
+        .then(response => response.json())
+        .then(result => {
+            if (result.success && result.progress) {
+                const progress = result.progress;
 
-    // 更新显示
+                // 使用 progress API 返回的正确数据
+                // 男士组：已投出票数 / 应投出票数（人数 × 2）
+                const maleCastTotal = progress.maleCastTotal || 0;
+                const maleExpectedTotal = maleCount * 2;
+                const maleRate = maleExpectedTotal > 0 ? Math.round((maleCastTotal / maleExpectedTotal) * 100) : 0;
+
+                // 女士组：已投出票数 / 应投出票数（人数 × 2）
+                const femaleCastTotal = progress.femaleCastTotal || 0;
+                const femaleExpectedTotal = femaleCount * 2;
+                const femaleRate = femaleExpectedTotal > 0 ? Math.round((femaleCastTotal / femaleExpectedTotal) * 100) : 0;
+
+                // 更新显示
+                document.getElementById('maleParticipants').textContent = maleCount;
+                document.getElementById('maleVotes').textContent = `${maleCastTotal}/${maleExpectedTotal}`;
+                document.getElementById('maleRate').textContent = `${maleRate}%`;
+
+                document.getElementById('femaleParticipants').textContent = femaleCount;
+                document.getElementById('femaleVotes').textContent = `${femaleCastTotal}/${femaleExpectedTotal}`;
+                document.getElementById('femaleRate').textContent = `${femaleRate}%`;
+            } else {
+                // 降级方案：使用旧逻辑（获得的票数）
+                updateGenderStatsFallback(maleCount, femaleCount, maleVoteReceived, femaleVoteReceived);
+            }
+        })
+        .catch(error => {
+            console.warn('Failed to load progress data:', error);
+            // 降级方案：使用旧逻辑（获得的票数）
+            updateGenderStatsFallback(maleCount, femaleCount, maleVoteReceived, femaleVoteReceived);
+        });
+}
+
+/**
+ * 降级方案：使用获得的票数计算（不准确，但保证不会出错）
+ */
+function updateGenderStatsFallback(maleCount, femaleCount, maleVoteReceived, femaleVoteReceived) {
+    const maleExpectedTotal = maleCount * 2;
+    const femaleExpectedTotal = femaleCount * 2;
+    const maleRate = maleExpectedTotal > 0 ? Math.round((maleVoteReceived / maleExpectedTotal) * 100) : 0;
+    const femaleRate = femaleExpectedTotal > 0 ? Math.round((femaleVoteReceived / femaleExpectedTotal) * 100) : 0;
+
     document.getElementById('maleParticipants').textContent = maleCount;
-    document.getElementById('maleVotes').textContent = maleVoteTotal;
+    document.getElementById('maleVotes').textContent = `${maleVoteReceived}/${maleExpectedTotal}`;
     document.getElementById('maleRate').textContent = `${maleRate}%`;
 
     document.getElementById('femaleParticipants').textContent = femaleCount;
-    document.getElementById('femaleVotes').textContent = femaleVoteTotal;
+    document.getElementById('femaleVotes').textContent = `${femaleVoteReceived}/${femaleExpectedTotal}`;
     document.getElementById('femaleRate').textContent = `${femaleRate}%`;
 }
 
