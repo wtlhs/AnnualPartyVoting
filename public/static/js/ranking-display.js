@@ -17,49 +17,49 @@ async function loadRankingData() {
     try {
         // 加载统计数据
         const statsResponse = await fetch('/api/votes/statistics');
-        
+
         if (statsResponse.status === 429) {
             console.warn('Statistics API rate limited, retrying in 5 seconds...');
             showNotification('数据刷新过于频繁，5秒后重试', 'info');
             setTimeout(loadRankingData, 5000);
             return;
         }
-        
+
         const statsResult = await statsResponse.json();
-        
+
         if (statsResult.success) {
             updateStatsDisplay(statsResult.statistics);
         }
-        
+
         // 加载排名数据
         const rankingResponse = await fetch('/api/votes/ranking');
-        
+
         if (rankingResponse.status === 429) {
             console.warn('Ranking API rate limited, retrying in 5 seconds...');
             showNotification('排名数据刷新过于频繁，5秒后重试', 'info');
             setTimeout(loadRankingData, 5000);
             return;
         }
-        
+
         const rankingResult = await rankingResponse.json();
-        
+
         if (rankingResult.success) {
             updateRankingDisplay(rankingResult.ranking);
         }
-        
+
         // 更新最后更新时间
         const lastUpdateElement = document.getElementById('lastUpdateTime');
         if (lastUpdateElement) {
             lastUpdateElement.textContent = new Date().toLocaleTimeString('zh-CN');
         }
-        
+
         // 添加成功加载的视觉反馈
         flashUpdateIndicator();
-        
+
     } catch (error) {
         console.error('Load ranking data error:', error);
         showConnectionError();
-        
+
         // 如果是网络错误，5秒后重试
         setTimeout(loadRankingData, 5000);
     }
@@ -71,10 +71,9 @@ function updateStatsDisplay(stats) {
         console.warn('Stats data is undefined or null');
         return;
     }
-    
-    // 添加数字动画效果
-    animateNumber('displayTotalParticipants', stats.totalParticipants || 0);
-    animateNumber('displayTotalVotes', stats.totalVotes || 0);
+
+    // 更新总参与人数（移除动画效果，与其他项保持一致）
+    document.getElementById('displayTotalParticipants').textContent = stats.totalParticipants || 0;
 }
 
 function animateNumber(elementId, targetValue) {
@@ -114,9 +113,45 @@ function updateRankingDisplay(ranking) {
         console.warn('Ranking data is undefined or null');
         return;
     }
-    
+
     updateGenderRankingDisplay('maleRankingDisplay', ranking.male || [], 'male');
     updateGenderRankingDisplay('femaleRankingDisplay', ranking.female || [], 'female');
+
+    // 更新性别统计
+    updateGenderStats(ranking);
+}
+
+/**
+ * 更新性别统计（参与人数和票数）
+ */
+function updateGenderStats(ranking) {
+    if (!ranking) return;
+
+    const maleParticipants = ranking.male || [];
+    const femaleParticipants = ranking.female || [];
+
+    // 统计男士和女士的人数
+    const maleCount = maleParticipants.length;
+    const femaleCount = femaleParticipants.length;
+
+    // 统计男士和女士的总票数
+    const maleVoteTotal = maleParticipants.reduce((sum, p) => sum + (p.voteCount || 0), 0);
+    const femaleVoteTotal = femaleParticipants.reduce((sum, p) => sum + (p.voteCount || 0), 0);
+
+    // 计算投票率：实际票数 / 应投票总数 (人数 × 2)
+    const maleExpectedVotes = maleCount * 2;
+    const femaleExpectedVotes = femaleCount * 2;
+    const maleRate = maleExpectedVotes > 0 ? Math.round((maleVoteTotal / maleExpectedVotes) * 100) : 0;
+    const femaleRate = femaleExpectedVotes > 0 ? Math.round((femaleVoteTotal / femaleExpectedVotes) * 100) : 0;
+
+    // 更新显示
+    document.getElementById('maleParticipants').textContent = maleCount;
+    document.getElementById('maleVotes').textContent = maleVoteTotal;
+    document.getElementById('maleRate').textContent = `${maleRate}%`;
+
+    document.getElementById('femaleParticipants').textContent = femaleCount;
+    document.getElementById('femaleVotes').textContent = femaleVoteTotal;
+    document.getElementById('femaleRate').textContent = `${femaleRate}%`;
 }
 
 function updateGenderRankingDisplay(containerId, participants, gender) {
@@ -200,11 +235,19 @@ function updateTimeDisplay() {
         minute: '2-digit',
         second: '2-digit'
     });
-    
-    // 如果页面上有时间显示元素，更新它
+
+    // 更新当前时间
+    const currentTimeElement = document.getElementById('currentTime');
+    if (currentTimeElement) {
+        currentTimeElement.textContent = timeString;
+    }
+
+    // 如果页面上有其他时间显示元素，也更新它
     const timeElements = document.querySelectorAll('.current-time');
     timeElements.forEach(element => {
-        element.textContent = timeString;
+        if (element.id !== 'currentTime') {
+            element.textContent = timeString;
+        }
     });
 }
 
@@ -243,7 +286,7 @@ function showKeyboardShortcuts() {
         footer.innerHTML = `
             ${shortcutsText}
             <div style="margin-top: 10px; font-size: 14px; opacity: 0.7;">
-                快捷键: F5/Ctrl+R 刷新数据 | Esc 全屏切换 | 空格键 暂停/恢复自动刷新
+                快捷键: F5 刷新数据 | F11 全屏切换 | Esc 退出全屏 | 空格键 暂停/恢复自动刷新
             </div>
         `;
     }
@@ -319,18 +362,30 @@ document.addEventListener('keydown', function(event) {
         showNotification('数据已刷新', 'success');
     }
     
-    // 按Escape键进入/退出全屏
-    if (event.key === 'Escape') {
+    // 按F11进入/退出全屏
+    if (event.key === 'F11') {
+        event.preventDefault();
         if (document.fullscreenElement) {
-            document.exitFullscreen();
-            showNotification('已退出全屏', 'info');
+            document.exitFullscreen().then(() => {
+                showNotification('已退出全屏', 'info');
+            }).catch(() => {
+                showNotification('退出全屏失败', 'error');
+            });
         } else {
             document.documentElement.requestFullscreen().then(() => {
-                showNotification('已进入全屏模式', 'success');
+                showNotification('已进入全屏模式 (按F11退出)', 'success');
             }).catch(() => {
                 showNotification('无法进入全屏模式', 'error');
             });
         }
+    }
+
+    // 按Escape键退出全屏（仅在全屏时有效）
+    if (event.key === 'Escape' && document.fullscreenElement) {
+        // Escape会自动退出全屏，只需显示提示
+        setTimeout(() => {
+            showNotification('已退出全屏', 'info');
+        }, 100);
     }
     
     // 按空格键暂停/恢复自动刷新

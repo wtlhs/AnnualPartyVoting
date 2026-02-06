@@ -20,27 +20,57 @@ body {
 /* 头部样式 */
 .display-header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 20px;
     color: white;
 }
 
 .display-header h1 {
-    font-size: 42px;
-    margin-bottom: 16px;
+    font-size: 32px;
+    margin-bottom: 12px;
     font-weight: 700;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     letter-spacing: 1px;
 }
 
-.last-update {
-    font-size: 18px;
-    opacity: 0.9;
-    background: rgba(255, 255, 255, 0.15);
+.header-info {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.current-time {
+    font-size: 16px;
+    font-weight: 700;
+    background: rgba(255, 215, 0, 0.2);
     padding: 12px 24px;
     border-radius: 25px;
-    display: inline-block;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    letter-spacing: 1px;
+}
+
+.last-update {
+    font-size: 16px;
+    font-weight: 600;
+    background: rgba(102, 126, 234, 0.2);
+    padding: 12px 24px;
+    border-radius: 25px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(102, 126, 234, 0.4);
+    color: #a5b4fc;
+    letter-spacing: 1px;
+}
+
+.last-update span {
+    color: #fff;
+    font-weight: 700;
 }
 
 /* 主要内容区域 */
@@ -105,8 +135,8 @@ body {
 
 /* 排名列表 */
 .ranking-list-display {
-    min-height: 400px;
-    max-height: 600px;
+    min-height: 480px;
+    max-height: 560px;
     overflow-y: auto;
     padding-right: 10px;
 }
@@ -242,14 +272,16 @@ body {
 .stats-display {
     display: flex;
     justify-content: center;
-    gap: 80px;
-    padding: 30px;
+    gap: 2vw;
+    padding: 1.5vh 2vw;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 16px;
     color: white;
     box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
+    flex-wrap: wrap;
 }
 
 .stats-display::before {
@@ -272,21 +304,49 @@ body {
     text-align: center;
     position: relative;
     z-index: 1;
+    min-width: 10vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .stat-label {
     display: block;
-    font-size: 18px;
-    margin-bottom: 12px;
+    font-size: clamp(11px, 1.3vh, 16px);
+    margin-bottom: 0.5vh;
     opacity: 0.9;
     font-weight: 500;
+    letter-spacing: 1px;
 }
 
 .stat-value {
     display: block;
-    font-size: 42px;
+    font-size: clamp(28px, 3.5vh, 48px);
     font-weight: 900;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stat-detail {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5vw;
+    flex-wrap: wrap;
+}
+
+.stat-number {
+    font-size: clamp(18px, 2.2vh, 28px);
+    font-weight: 700;
+}
+
+.stat-rate {
+    font-size: clamp(16px, 2vh, 24px);
+    font-weight: 700;
+    background: rgba(255, 215, 0, 0.25);
+    padding: 0.3vh 0.8vw;
+    border-radius: 8px;
+    color: #ffd700;
+    border: 1px solid rgba(255, 215, 0, 0.4);
 }
 
 /* 底部样式 */

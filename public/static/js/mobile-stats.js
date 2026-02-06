@@ -319,23 +319,57 @@ function updateRecentActivityDisplay(activities) {
 
 function updateVotingProgressDisplay(progress) {
     if (!progress) return;
-    
-    // 计算投票率 - 基于活跃投票者数量
-    const activeVoters = progress.activeVoters || 0;
-    const maleVotesCast = progress.maleVotesCast || 0;
-    const femaleVotesCast = progress.femaleVotesCast || 0;
-    
-    // 计算各性别的投票率（假设每个活跃投票者都应该为每个性别投票）
-    const maleRate = activeVoters > 0 ? (maleVotesCast / activeVoters * 100) : 0;
-    const femaleRate = activeVoters > 0 ? (femaleVotesCast / activeVoters * 100) : 0;
-    
-    // 更新男士组进度
-    updateElementText('maleVoteRate', `${Math.round(maleRate)}%`);
-    updateProgressBar('maleProgressBar', maleRate);
-    
-    // 更新女士组进度
-    updateElementText('femaleVoteRate', `${Math.round(femaleRate)}%`);
-    updateProgressBar('femaleProgressBar', femaleRate);
+
+    // 从排名数据获取性别统计
+    const maleParticipants = parseInt(document.getElementById('maleParticipants').textContent) || 0;
+    const femaleParticipants = parseInt(document.getElementById('femaleParticipants').textContent) || 0;
+    const totalVotes = parseInt(document.getElementById('totalVotes').textContent) || 0;
+
+    // 计算各性别的总票数（从排名API或者估算）
+    // 这里需要获取排名数据来准确计算，暂时使用API数据
+    fetch('/api/votes/ranking')
+        .then(response => response.json())
+        .then(result => {
+            if (result.success && result.ranking) {
+                const ranking = result.ranking;
+                const maleList = ranking.male || [];
+                const femaleList = ranking.female || [];
+
+                // 统计男士和女士的总票数
+                const maleVoteTotal = maleList.reduce((sum, p) => sum + (p.voteCount || 0), 0);
+                const femaleVoteTotal = femaleList.reduce((sum, p) => sum + (p.voteCount || 0), 0);
+
+                // 计算投票率：实际票数 / 应投票总数 (人数 × 2)
+                const maleExpectedVotes = maleParticipants * 2;
+                const femaleExpectedVotes = femaleParticipants * 2;
+                const maleRate = maleExpectedVotes > 0 ? Math.min(100, (maleVoteTotal / maleExpectedVotes) * 100) : 0;
+                const femaleRate = femaleExpectedVotes > 0 ? Math.min(100, (femaleVoteTotal / femaleExpectedVotes) * 100) : 0;
+
+                // 更新显示
+                updateElementText('maleVoteRate', `${Math.round(maleRate)}%`);
+                updateProgressBar('maleProgressBar', maleRate);
+
+                updateElementText('femaleVoteRate', `${Math.round(femaleRate)}%`);
+                updateProgressBar('femaleProgressBar', femaleRate);
+            }
+        })
+        .catch(error => {
+            console.warn('Failed to load ranking for progress calculation:', error);
+            // 降级方案：使用API的progress数据计算
+            const activeVoters = progress.activeVoters || 0;
+            const maleVotesCast = progress.maleVotesCast || 0;
+            const femaleVotesCast = progress.femaleVotesCast || 0;
+
+            // 计算各性别的投票率
+            const maleRate = activeVoters > 0 ? Math.min(100, (maleVotesCast / activeVoters) * 100) : 0;
+            const femaleRate = activeVoters > 0 ? Math.min(100, (femaleVotesCast / activeVoters) * 100) : 0;
+
+            updateElementText('maleVoteRate', `${Math.round(maleRate)}%`);
+            updateProgressBar('maleProgressBar', maleRate);
+
+            updateElementText('femaleVoteRate', `${Math.round(femaleRate)}%`);
+            updateProgressBar('femaleProgressBar', femaleRate);
+        });
 }
 
 function calculateProgressFromStats() {

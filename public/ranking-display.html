@@ -12,8 +12,11 @@
     <div class="display-container">
         <header class="display-header">
             <h1>年会最佳服装评选 - 实时排名</h1>
-            <div class="last-update">
-                最后更新: <span id="lastUpdateTime">--:--:--</span>
+            <div class="header-info">
+                <div class="current-time" id="currentTime">--:--:--</div>
+                <div class="last-update">
+                    最后更新: <span id="lastUpdateTime">--:--:--</span>
+                </div>
             </div>
         </header>
         
@@ -37,11 +40,25 @@
             <div class="stats-display">
                 <div class="stat-item">
                     <span class="stat-label">总参与人数</span>
-                    <span id="displayTotalParticipants" class="stat-value">0</span>
+                    <div class="stat-detail">
+                        <span id="displayTotalParticipants" class="stat-number">0</span>人
+                    </div>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">总投票数</span>
-                    <span id="displayTotalVotes" class="stat-value">0</span>
+                    <span class="stat-label">男士人数/票数</span>
+                    <div class="stat-detail">
+                        <span id="maleParticipants" class="stat-number">0</span>人
+                        <span id="maleVotes" class="stat-number">0</span>票
+                        <span id="maleRate" class="stat-rate">0%</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">女士人数/票数</span>
+                    <div class="stat-detail">
+                        <span id="femaleParticipants" class="stat-number">0</span>人
+                        <span id="femaleVotes" class="stat-number">0</span>票
+                        <span id="femaleRate" class="stat-rate">0%</span>
+                    </div>
                 </div>
             </div>
         </main>
